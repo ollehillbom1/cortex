@@ -1,0 +1,69 @@
+import { describe, expect, it } from "vitest";
+import { activityByDay, modalityBalance, shiftDay } from "./aggregate";
+import type { SessionRecord } from "@/lib/domain/types";
+
+function session(id: string, startedAt: string, over: Partial<SessionRecord> = {}): SessionRecord {
+  return {
+    id,
+    profileId: "p",
+    type: "recommended",
+    startedAt,
+    endedAt: startedAt,
+    durationMs: 6 * 60_000,
+    exercises: [],
+    xpEarned: 30,
+    unlocked: [],
+    ...over,
+  };
+}
+
+describe("stats aggregation", () => {
+  it("buckets activity per local day over the window", () => {
+    const sessions = [
+      session("a", new Date(2026, 6, 30, 9, 0).toISOString()),
+      session("b", new Date(2026, 6, 30, 20, 0).toISOString()),
+      session("c", new Date(2026, 6, 31, 8, 0).toISOString()),
+      session("old", new Date(2026, 5, 1, 8, 0).toISOString()),
+    ];
+    const days = activityByDay(sessions, "2026-07-31", 7);
+    expect(days).toHaveLength(7);
+    expect(days[days.length - 1]).toMatchObject({ day: "2026-07-31", sessions: 1 });
+    expect(days[days.length - 2]).toMatchObject({ day: "2026-07-30", sessions: 2, xp: 60 });
+    expect(days[0].sessions).toBe(0);
+  });
+
+  it("computes modality balance shares that sum to ~1", () => {
+    const sessions = [
+      session("a", "2026-07-30T10:00:00Z", {
+        exercises: [
+          {
+            exerciseId: "reaction-time",
+            rounds: 5,
+            accuracy: 0.8,
+            levelBefore: 1,
+            levelAfter: 1,
+            xp: 10,
+          },
+          {
+            exerciseId: "visual-pattern",
+            rounds: 5,
+            accuracy: 0.8,
+            levelBefore: 1,
+            levelAfter: 1,
+            xp: 10,
+          },
+        ],
+      }),
+    ];
+    const balance = modalityBalance(sessions);
+    const total = Object.values(balance).reduce((a, b) => a + b, 0);
+    expect(total).toBeCloseTo(1, 5);
+    expect(balance["visual-memory"]).toBeGreaterThan(0);
+    expect(balance["auditory-memory"]).toBe(0);
+  });
+
+  it("shifts day keys across month boundaries", () => {
+    expect(shiftDay("2026-08-01", -1)).toBe("2026-07-31");
+    expect(shiftDay("2026-07-31", 1)).toBe("2026-08-01");
+  });
+});

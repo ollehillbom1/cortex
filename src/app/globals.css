@@ -1,0 +1,173 @@
+@import "tailwindcss";
+
+/*
+ * Cortex design tokens.
+ * Dark, calm, slightly cosmic. System font stack: zero font downloads and a
+ * native feel on iOS (SF Pro) and Android (Roboto).
+ */
+@theme {
+  --font-sans:
+    -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, "Helvetica Neue", Arial,
+    sans-serif;
+  --font-mono: ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, monospace;
+
+  --color-ink: #e9edf6;
+  --color-ink-dim: #9aa4ba;
+  --color-ink-faint: #5d6880;
+
+  --color-night: #070b15;
+  --color-raise: #111827;
+
+  --color-accent: #8b5cf6;
+  --color-accent-2: #22d3ee;
+  --color-good: #34d399;
+  --color-bad: #f97066;
+  --color-warn: #fbbf24;
+
+  --radius-card: 1.25rem;
+}
+
+:root {
+  color-scheme: dark;
+}
+
+html {
+  height: 100%;
+}
+
+body {
+  min-height: 100%;
+  background-color: var(--color-night);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  -webkit-tap-highlight-color: transparent;
+  overscroll-behavior-y: none;
+}
+
+/* Ambient gradient on a fixed layer (background-attachment: fixed is broken
+   on iOS Safari). */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background-image:
+    radial-gradient(60rem 40rem at 85% -10%, rgba(139, 92, 246, 0.16), transparent 60%),
+    radial-gradient(50rem 35rem at -20% 30%, rgba(34, 211, 238, 0.1), transparent 55%),
+    radial-gradient(40rem 40rem at 50% 120%, rgba(139, 92, 246, 0.08), transparent 60%);
+}
+
+/* Larger base text when the profile asks for it (set on <html>). */
+html[data-large-text="true"] {
+  font-size: 112.5%;
+}
+
+/* Glassy raised card */
+.card {
+  background: linear-gradient(160deg, rgba(255, 255, 255, 0.055), rgba(255, 255, 255, 0.02));
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: var(--radius-card);
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.04) inset,
+    0 12px 30px -18px rgba(0, 0, 0, 0.8);
+}
+
+.text-gradient {
+  background: linear-gradient(92deg, var(--color-accent) 0%, var(--color-accent-2) 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.btn-primary {
+  background: linear-gradient(94deg, #7c4dff 0%, #06b6d4 120%);
+  color: #fff;
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.25) inset,
+    0 10px 24px -12px rgba(124, 77, 255, 0.55);
+}
+.btn-primary:active {
+  filter: brightness(1.12);
+}
+
+/* Focus visibility everywhere, keyboard-first. */
+:focus-visible {
+  outline: 2px solid var(--color-accent-2);
+  outline-offset: 2px;
+  border-radius: 6px;
+}
+
+/* Safe-area helpers for iPhone home indicator / notch. */
+.pb-safe {
+  padding-bottom: max(env(safe-area-inset-bottom), 0.5rem);
+}
+.pt-safe {
+  padding-top: max(env(safe-area-inset-top), 0.75rem);
+}
+
+/* Motion: keep transitions subtle, and honour reduced motion (system or profile). */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+html[data-reduce-motion="true"] *,
+html[data-reduce-motion="true"] *::before,
+html[data-reduce-motion="true"] *::after {
+  animation-duration: 0.01ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.01ms !important;
+}
+
+@keyframes rise-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.rise-in {
+  animation: rise-in 0.35s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+}
+
+@keyframes pop-in {
+  0% {
+    opacity: 0;
+    transform: scale(0.92);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+.pop-in {
+  animation: pop-in 0.25s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+}
+
+@keyframes celebrate-pulse {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.06);
+  }
+}
+.celebrate {
+  animation: celebrate-pulse 0.9s ease-in-out 2;
+}
+
+/* Generous touch targets for keypads and game tiles. */
+.touch-target {
+  min-width: 44px;
+  min-height: 44px;
+}
