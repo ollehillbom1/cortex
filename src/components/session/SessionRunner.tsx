@@ -22,6 +22,7 @@ import { getAudioEngine } from "@/lib/audio/audio";
 import { INSTRUCTIONS } from "@/lib/exercises/instructions";
 import { useProfiles } from "@/components/app/ProfileProvider";
 import { Button } from "@/components/ui/Button";
+import { Dialog } from "@/components/ui/Dialog";
 import { CheckIcon, ClockIcon, XIcon } from "@/components/ui/icons";
 import type { GameProps, RoundResult } from "@/components/game/shared";
 import { NumberSpanGame } from "@/components/game/NumberSpanGame";
@@ -450,29 +451,22 @@ export function SessionRunner() {
 
       {/* Quit confirmation */}
       {quitPrompt && (
-        <div
-          role="dialog"
-          aria-modal="true"
-          aria-label="End session?"
-          className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 p-4 backdrop-blur-sm"
-        >
-          <div className="card w-full max-w-md p-5 pb-safe">
-            <p className="text-lg font-bold">End this session?</p>
-            <p className="mt-1 text-sm text-[var(--color-ink-dim)]">
-              {completed.length > 0
-                ? `${completed.length} completed exercise${completed.length > 1 ? "s" : ""} will be saved. The current exercise is discarded.`
-                : "Nothing has been completed yet, so nothing will be saved."}
-            </p>
-            <div className="mt-4 flex gap-3">
-              <Button variant="ghost" onClick={() => setQuitPrompt(false)} className="flex-1">
-                Keep training
-              </Button>
-              <Button variant="danger" onClick={() => void quit(true)} className="flex-1">
-                End session
-              </Button>
-            </div>
+        <Dialog label="End session?" onClose={() => setQuitPrompt(false)}>
+          <p className="text-lg font-bold">End this session?</p>
+          <p className="mt-1 text-sm text-[var(--color-ink-dim)]">
+            {completed.length > 0
+              ? `${completed.length} completed exercise${completed.length > 1 ? "s" : ""} will be saved. The current exercise is discarded.`
+              : "Nothing has been completed yet, so nothing will be saved."}
+          </p>
+          <div className="mt-4 flex gap-3">
+            <Button variant="ghost" onClick={() => setQuitPrompt(false)} className="flex-1">
+              Keep training
+            </Button>
+            <Button variant="danger" onClick={() => void quit(true)} className="flex-1">
+              End session
+            </Button>
           </div>
-        </div>
+        </Dialog>
       )}
     </div>
   );
