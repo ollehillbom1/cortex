@@ -13,7 +13,8 @@
 
   --color-ink: #e9edf6;
   --color-ink-dim: #9aa4ba;
-  --color-ink-faint: #5d6880;
+  /* Faintest readable text — keep ≥4.5:1 against --color-night (WCAG AA). */
+  --color-ink-faint: #7d89a4;
 
   --color-night: #070b15;
   --color-raise: #111827;

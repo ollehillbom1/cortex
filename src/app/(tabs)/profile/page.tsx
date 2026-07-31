@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { Profile } from "@/lib/domain/types";
 import { levelProgress } from "@/lib/progression/xp";
@@ -13,8 +13,15 @@ import {
   ImportError,
   parseExportBundle,
 } from "@/lib/storage/exportImport";
+import { META_LAST_EXPORT_AT } from "@/lib/storage/backupReminder";
+import {
+  persistentStorageStatus,
+  requestPersistentStorage,
+  type PersistenceState,
+} from "@/lib/storage/persistence";
 import { useProfiles } from "@/components/app/ProfileProvider";
 import { Button } from "@/components/ui/Button";
+import { Dialog } from "@/components/ui/Dialog";
 
 export default function ProfilePage() {
   const router = useRouter();
@@ -33,7 +40,26 @@ export default function ProfilePage() {
   const [newName, setNewName] = useState("");
   const [newAvatar, setNewAvatar] = useState(AVATAR_CHOICES[1]);
   const [confirming, setConfirming] = useState<"reset" | "delete" | null>(null);
+  const [lastExportAt, setLastExportAt] = useState<string | null>(null);
+  const [persistence, setPersistence] = useState<PersistenceState>("unsupported");
   const fileInput = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const [exportAt, status] = await Promise.all([
+        getStorage().getMeta(META_LAST_EXPORT_AT),
+        persistentStorageStatus(),
+      ]);
+      if (!cancelled) {
+        setLastExportAt(exportAt ?? null);
+        setPersistence(status);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   if (!ready || !profile) return null;
 
@@ -53,6 +79,9 @@ export default function ProfilePage() {
     a.download = `cortex-export-${new Date().toISOString().slice(0, 10)}.json`;
     a.click();
     URL.revokeObjectURL(url);
+    const stamp = new Date().toISOString();
+    await getStorage().setMeta(META_LAST_EXPORT_AT, stamp);
+    setLastExportAt(stamp);
     setMessage("Export downloaded. Keep it somewhere safe.");
   };
 
@@ -286,6 +315,36 @@ export default function ProfilePage() {
           Everything is stored locally in this browser — nothing is sent anywhere. Export a backup
           before clearing browser data or moving devices.
         </p>
+        <p className="mt-2 text-xs text-[var(--color-ink-faint)]">
+          Last export:{" "}
+          {lastExportAt
+            ? new Date(lastExportAt).toLocaleDateString(undefined, {
+                year: "numeric",
+                month: "short",
+                day: "numeric",
+              })
+            : "never"}
+          {" · "}
+          {persistence === "granted" && "Storage is protected against automatic clean-up."}
+          {persistence === "denied" && (
+            <>
+              Storage may be cleared under pressure.{" "}
+              <button
+                type="button"
+                className="underline"
+                onClick={() =>
+                  void requestPersistentStorage().then((s) => {
+                    setPersistence(s);
+                    if (s === "granted") setMessage("Persistent storage granted.");
+                  })
+                }
+              >
+                Request protection
+              </button>
+            </>
+          )}
+          {persistence === "unsupported" && "Persistent-storage API not available here."}
+        </p>
         <div className="mt-3 grid grid-cols-2 gap-2.5">
           <Button variant="ghost" onClick={() => void doExport()}>
             Export JSON
@@ -335,35 +394,31 @@ export default function ProfilePage() {
 
       {/* Confirm dialogs */}
       {confirming && (
-        <div
-          role="dialog"
-          aria-modal="true"
-          aria-label={confirming === "reset" ? "Reset progression?" : "Delete profile?"}
-          className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 p-4 backdrop-blur-sm"
+        <Dialog
+          label={confirming === "reset" ? "Reset progression?" : "Delete profile?"}
+          onClose={() => setConfirming(null)}
         >
-          <div className="card w-full max-w-md p-5 pb-safe">
-            <p className="text-lg font-bold">
-              {confirming === "reset" ? "Reset progression?" : `Delete ${profile.name}?`}
-            </p>
-            <p className="mt-1 text-sm text-[var(--color-ink-dim)]">
-              {confirming === "reset"
-                ? "XP, levels, streak, records, achievements and session history will be permanently removed. The profile itself is kept. Consider exporting first."
-                : "This permanently removes the profile and all of its training history from this device. Consider exporting first."}
-            </p>
-            <div className="mt-4 flex gap-3">
-              <Button variant="ghost" onClick={() => setConfirming(null)} className="flex-1">
-                Cancel
-              </Button>
-              <Button
-                variant="danger"
-                onClick={() => void (confirming === "reset" ? doReset() : doDelete())}
-                className="flex-1"
-              >
-                {confirming === "reset" ? "Reset" : "Delete"}
-              </Button>
-            </div>
+          <p className="text-lg font-bold">
+            {confirming === "reset" ? "Reset progression?" : `Delete ${profile.name}?`}
+          </p>
+          <p className="mt-1 text-sm text-[var(--color-ink-dim)]">
+            {confirming === "reset"
+              ? "XP, levels, streak, records, achievements and session history will be permanently removed. The profile itself is kept. Consider exporting first."
+              : "This permanently removes the profile and all of its training history from this device. Consider exporting first."}
+          </p>
+          <div className="mt-4 flex gap-3">
+            <Button variant="ghost" onClick={() => setConfirming(null)} className="flex-1">
+              Cancel
+            </Button>
+            <Button
+              variant="danger"
+              onClick={() => void (confirming === "reset" ? doReset() : doDelete())}
+              className="flex-1"
+            >
+              {confirming === "reset" ? "Reset" : "Delete"}
+            </Button>
           </div>
-        </div>
+        </Dialog>
       )}
     </div>
   );

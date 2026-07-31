@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 /**
  * Registers the service worker and surfaces a small "update ready" prompt
@@ -8,6 +8,9 @@ import { useEffect, useState } from "react";
  */
 export function ServiceWorkerManager() {
   const [waiting, setWaiting] = useState<ServiceWorker | null>(null);
+  // Only reload on controllerchange when the user asked for the update —
+  // the first activation also claims clients and must NOT reload the page.
+  const reloadRequested = useRef(false);
 
   useEffect(() => {
     if (process.env.NODE_ENV !== "production") return;
@@ -38,7 +41,9 @@ export function ServiceWorkerManager() {
         // Offline support is progressive enhancement; the app still works.
       });
 
-    const onControllerChange = () => window.location.reload();
+    const onControllerChange = () => {
+      if (reloadRequested.current) window.location.reload();
+    };
     navigator.serviceWorker.addEventListener("controllerchange", onControllerChange);
 
     return () => {
@@ -58,7 +63,10 @@ export function ServiceWorkerManager() {
       <button
         type="button"
         className="font-semibold text-[var(--color-accent-2)]"
-        onClick={() => waiting.postMessage({ type: "SKIP_WAITING" })}
+        onClick={() => {
+          reloadRequested.current = true;
+          waiting.postMessage({ type: "SKIP_WAITING" });
+        }}
       >
         Reload
       </button>

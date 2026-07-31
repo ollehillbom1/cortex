@@ -6,7 +6,7 @@
 npm run test          # or npm run test:watch
 ```
 
-64 tests cover the pure core — every module in `src/lib` that contains logic:
+70 tests cover the pure core — every module in `src/lib` that contains logic:
 
 | Area                       | File                                  | Highlights                                                                                                                                                                      |
 | -------------------------- | ------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -16,6 +16,7 @@ npm run test          # or npm run test:watch
 | Sessions                   | `lib/session/session.test.ts`         | planner determinism, modality coverage, time budget, staleness bias; applySession XP/streak/records (incl. lower-is-better)                                                     |
 | Storage                    | `lib/storage/storage.test.ts`         | IndexedDB adapter CRUD (fake-indexeddb), newest-first session listing, cascade delete, v1→v2 migrations, export/import round-trip, tamper resistance, invalid payload rejection |
 | Statistics                 | `lib/stats/aggregate.test.ts`         | day bucketing, modality balance, day-key arithmetic                                                                                                                             |
+| Backup reminder            | `lib/storage/backupReminder.test.ts`  | quiet-before-progress, staleness threshold, dismissal snooze, malformed timestamps                                                                                              |
 
 All gameplay randomness goes through an injected mulberry32 RNG, so tests use
 fixed seeds and are fully deterministic.
@@ -39,6 +40,10 @@ The suite runs on an **iPhone 13 viewport** (the primary target) against
 6. Number Span presentation + keypad input.
 7. PWA: manifest/service-worker headers, and **offline startup** after first
    visit (context goes offline, app reloads from SW cache with data intact).
+8. **Accessibility audit** (`e2e/a11y.spec.ts`): axe-core scans of onboarding,
+   all four tabs, exercise instructions and the quit dialog — the suite fails
+   on any serious/critical violation — plus focus-trap and Escape behaviour
+   for modals.
 
 In sandboxed environments without Playwright's downloaded browsers, point the
 suite at a system Chromium:

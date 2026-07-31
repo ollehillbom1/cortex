@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { AVATAR_CHOICES, createProfile, newId } from "@/lib/storage/profileFactory";
+import { requestPersistentStorage } from "@/lib/storage/persistence";
 import { useProfiles } from "@/components/app/ProfileProvider";
 import { Button } from "@/components/ui/Button";
 import { BoltIcon, CheckIcon, StatsIcon, TrainIcon } from "@/components/ui/icons";
@@ -54,6 +55,9 @@ export default function WelcomePage() {
     });
     profile.onboarded = true;
     await addProfile(profile);
+    // Ask the browser not to evict our IndexedDB under storage pressure.
+    // Best-effort: outcome is surfaced later under Profile → Your data.
+    void requestPersistentStorage();
     router.replace("/");
   };
 
@@ -63,6 +67,7 @@ export default function WelcomePage() {
     <div className="mx-auto flex min-h-dvh w-full max-w-md flex-col px-6 pb-safe pt-safe">
       <div className="flex flex-1 flex-col justify-center gap-8 py-10">
         <div
+          role="group"
           className="flex justify-center gap-1.5"
           aria-label={`Step ${step + 1} of ${STEPS.length + 1}`}
         >

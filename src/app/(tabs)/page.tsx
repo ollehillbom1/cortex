@@ -9,6 +9,11 @@ import { planSession } from "@/lib/session/planner";
 import { levelProgress } from "@/lib/progression/xp";
 import { dayKey, displayedStreak, streakAtRisk } from "@/lib/progression/streak";
 import { strengthsAndFocus } from "@/lib/stats/aggregate";
+import {
+  META_BACKUP_REMINDER_DISMISSED_AT,
+  META_LAST_EXPORT_AT,
+  shouldRemindBackup,
+} from "@/lib/storage/backupReminder";
 import { useProfiles } from "@/components/app/ProfileProvider";
 import { Button } from "@/components/ui/Button";
 import { ProgressBar } from "@/components/ui/ProgressBar";
@@ -18,6 +23,7 @@ export default function HomePage() {
   const router = useRouter();
   const { ready, profile } = useProfiles();
   const [sessions, setSessions] = useState<SessionRecord[] | null>(null);
+  const [backupHint, setBackupHint] = useState(false);
 
   useEffect(() => {
     if (ready && !profile) router.replace("/welcome");
@@ -26,15 +32,35 @@ export default function HomePage() {
   useEffect(() => {
     if (!profile) return;
     let cancelled = false;
-    getStorage()
-      .listSessions(profile.id, 30)
-      .then((s) => {
-        if (!cancelled) setSessions(s);
-      });
+    (async () => {
+      const storage = getStorage();
+      const list = await storage.listSessions(profile.id, 30);
+      if (cancelled) return;
+      setSessions(list);
+      const [lastExportAt, dismissedAt] = await Promise.all([
+        storage.getMeta(META_LAST_EXPORT_AT),
+        storage.getMeta(META_BACKUP_REMINDER_DISMISSED_AT),
+      ]);
+      if (!cancelled) {
+        setBackupHint(
+          shouldRemindBackup({
+            lastExportAt: lastExportAt ?? null,
+            dismissedAt: dismissedAt ?? null,
+            sessionCount: list.length,
+            now: new Date(),
+          }),
+        );
+      }
+    })();
     return () => {
       cancelled = true;
     };
   }, [profile]);
+
+  const dismissBackupHint = async () => {
+    setBackupHint(false);
+    await getStorage().setMeta(META_BACKUP_REMINDER_DISMISSED_AT, new Date().toISOString());
+  };
 
   const today = dayKey(new Date());
 
@@ -102,6 +128,36 @@ export default function HomePage() {
           </Link>
         </div>
       </header>
+
+      {/* Backup reminder (calm, dismissible, snoozes for 14 days) */}
+      {backupHint && (
+        <section
+          className="card flex items-start gap-3 border-[var(--color-warn)]/25 p-4"
+          aria-label="Backup reminder"
+        >
+          <span aria-hidden className="text-lg">
+            💾
+          </span>
+          <div className="flex-1 text-sm">
+            <p className="font-semibold">Back up your progress?</p>
+            <p className="mt-0.5 text-[var(--color-ink-dim)]">
+              Your training lives only in this browser. A quick JSON export keeps it safe.
+            </p>
+            <div className="mt-2 flex gap-4">
+              <Link href="/profile" className="font-semibold text-[var(--color-accent-2)]">
+                Export now
+              </Link>
+              <button
+                type="button"
+                onClick={() => void dismissBackupHint()}
+                className="text-[var(--color-ink-faint)] underline"
+              >
+                Remind me later
+              </button>
+            </div>
+          </div>
+        </section>
+      )}
 
       {/* Level */}
       <section className="card p-4" aria-label="Level progress">

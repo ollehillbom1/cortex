@@ -40,8 +40,12 @@ band with smooth, capped steps — see [docs/adaptive-difficulty.md](docs/adapti
 - **Real PWA**: installable (standalone display), offline after first load,
   update prompt, iPhone home-screen guidance in the app.
 - **Accessibility**: keyboard play for core exercises, visible focus, ARIA labels
-  and live regions, large-text and reduce-motion settings, ≥44 px touch targets,
-  no colour-only outcomes.
+  and live regions, focus-trapped dialogs, large-text and reduce-motion settings,
+  ≥44 px touch targets, no colour-only outcomes — enforced by an axe-core audit
+  in the e2e suite.
+- **Data safety**: gentle backup reminders when progress is unexported, and
+  persistent-storage protection (`navigator.storage.persist()`) requested on
+  profile creation with status shown in the app.
 
 ## Architecture
 
