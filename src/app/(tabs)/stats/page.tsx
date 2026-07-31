@@ -14,9 +14,11 @@ import { dayKey } from "@/lib/progression/streak";
 import {
   accuracyTrend,
   activityByDay,
+  DAY_PART_LABELS,
   exerciseLevels,
   modalityBalance,
   responseTimeTrend,
+  timeOfDayPerformance,
 } from "@/lib/stats/aggregate";
 import { ACHIEVEMENTS } from "@/lib/progression/achievements";
 import { useProfiles } from "@/components/app/ProfileProvider";
@@ -52,8 +54,12 @@ export default function StatsPage() {
   const days = useMemo(() => activityByDay(sessions, today, 28), [sessions, today]);
   const balance = useMemo(() => modalityBalance(sessions), [sessions]);
   const trend = useMemo(() => accuracyTrend(sessions, selected).slice(-20), [sessions, selected]);
-  const reaction = useMemo(
-    () => responseTimeTrend(sessions, "reaction-time").slice(-20),
+  const latency = useMemo(
+    () => responseTimeTrend(sessions, selected).slice(-20),
+    [sessions, selected],
+  );
+  const dayParts = useMemo(
+    () => timeOfDayPerformance(sessions).filter((p) => p.sessions >= 3),
     [sessions],
   );
 
@@ -128,18 +134,46 @@ export default function StatsPage() {
         />
       </section>
 
-      {/* Reaction time trend */}
-      {reaction.length > 0 && (
-        <section className="card p-5" aria-label="Reaction time trend">
+      {/* Response time trend for the selected exercise */}
+      {latency.length > 1 && (
+        <section className="card p-5" aria-label="Response time trend">
           <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-[var(--color-ink-dim)]">
-            Reaction time (avg per session)
+            {EXERCISES[selected].name} · response time
           </h2>
           <Sparkline
-            values={reaction.map((t) => t.value)}
-            label="Average reaction time"
+            values={latency.map((t) => t.value)}
+            label={`${EXERCISES[selected].name} average response time`}
             formatValue={(v) => `${v.toFixed(0)} ms`}
             invert
           />
+          <p className="mt-2 text-xs text-[var(--color-ink-faint)]">
+            {selected === "reaction-time"
+              ? "Average reaction per session — lower is faster."
+              : "Average answer time per session — context for the accuracy trend, not a score."}
+          </p>
+        </section>
+      )}
+
+      {/* Time of day */}
+      {dayParts.length >= 2 && (
+        <section className="card p-5" aria-label="Accuracy by time of day">
+          <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-[var(--color-ink-dim)]">
+            Time of day
+          </h2>
+          <ul className="space-y-2">
+            {dayParts.map((p) => (
+              <li key={p.part} className="flex items-center justify-between text-sm">
+                <span>{DAY_PART_LABELS[p.part]}</span>
+                <span className="tabular-nums text-[var(--color-ink-dim)]">
+                  {Math.round(p.accuracy * 100)}% · {p.sessions} session
+                  {p.sessions !== 1 ? "s" : ""}
+                </span>
+              </li>
+            ))}
+          </ul>
+          <p className="mt-2 text-xs text-[var(--color-ink-faint)]">
+            When your sessions score best — an in-app observation, nothing more.
+          </p>
         </section>
       )}
 

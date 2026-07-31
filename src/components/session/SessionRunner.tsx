@@ -155,7 +155,12 @@ export function SessionRunner() {
         ? (Date.now() - new Date(startedAt.current).getTime()) / 60_000
         : 0;
       const fatigue = Math.min(1, elapsedMin / 15);
-      const nextSkill = updateSkill(skill, { accuracy: result.accuracy, fatigue });
+      const nextSkill = updateSkill(skill, {
+        accuracy: result.accuracy,
+        fatigue,
+        // Reaction accuracy is already speed-derived; don't double-count.
+        inputMs: id === "reaction-time" ? undefined : result.responseMs,
+      });
       const xp = xpForRound({ accuracy: result.accuracy, level, perfect: result.perfect });
       blockRounds.current.push({ result, level, xp });
       setSkills((s) => ({ ...s, [id]: nextSkill }));

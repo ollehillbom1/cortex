@@ -14,6 +14,7 @@ import {
   META_LAST_EXPORT_AT,
   shouldRemindBackup,
 } from "@/lib/storage/backupReminder";
+import { deriveInsights, META_INSIGHTS_DISMISSED_DAY, type Insight } from "@/lib/insights/engine";
 import { useProfiles } from "@/components/app/ProfileProvider";
 import { Button } from "@/components/ui/Button";
 import { ProgressBar } from "@/components/ui/ProgressBar";
@@ -24,6 +25,7 @@ export default function HomePage() {
   const { ready, profile } = useProfiles();
   const [sessions, setSessions] = useState<SessionRecord[] | null>(null);
   const [backupHint, setBackupHint] = useState(false);
+  const [insight, setInsight] = useState<Insight | null>(null);
 
   useEffect(() => {
     if (ready && !profile) router.replace("/welcome");
@@ -37,9 +39,10 @@ export default function HomePage() {
       const list = await storage.listSessions(profile.id, 30);
       if (cancelled) return;
       setSessions(list);
-      const [lastExportAt, dismissedAt] = await Promise.all([
+      const [lastExportAt, dismissedAt, insightsDismissedDay] = await Promise.all([
         storage.getMeta(META_LAST_EXPORT_AT),
         storage.getMeta(META_BACKUP_REMINDER_DISMISSED_AT),
+        storage.getMeta(META_INSIGHTS_DISMISSED_DAY),
       ]);
       if (!cancelled) {
         setBackupHint(
@@ -50,6 +53,11 @@ export default function HomePage() {
             now: new Date(),
           }),
         );
+        const todayKey = dayKey(new Date());
+        if (insightsDismissedDay !== todayKey) {
+          const insights = deriveInsights({ profile, sessions: list, today: todayKey });
+          setInsight(insights[0] ?? null);
+        }
       }
     })();
     return () => {
@@ -60,6 +68,11 @@ export default function HomePage() {
   const dismissBackupHint = async () => {
     setBackupHint(false);
     await getStorage().setMeta(META_BACKUP_REMINDER_DISMISSED_AT, new Date().toISOString());
+  };
+
+  const dismissInsight = async () => {
+    setInsight(null);
+    await getStorage().setMeta(META_INSIGHTS_DISMISSED_DAY, dayKey(new Date()));
   };
 
   const today = dayKey(new Date());
@@ -156,6 +169,24 @@ export default function HomePage() {
               </button>
             </div>
           </div>
+        </section>
+      )}
+
+      {/* Insight of the day (rule-based, from the user's own data) */}
+      {insight && (
+        <section className="card flex items-start gap-3 p-4" aria-label="Training insight">
+          <span aria-hidden className="text-lg">
+            💡
+          </span>
+          <p className="flex-1 text-sm leading-snug text-[var(--color-ink-dim)]">{insight.text}</p>
+          <button
+            type="button"
+            onClick={() => void dismissInsight()}
+            aria-label="Dismiss insight for today"
+            className="touch-target -m-2 flex items-center justify-center p-2 text-[var(--color-ink-faint)] hover:text-[var(--color-ink)]"
+          >
+            ✕
+          </button>
         </section>
       )}
 

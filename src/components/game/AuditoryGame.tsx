@@ -44,6 +44,7 @@ export function AuditoryGame({ level, roundIndex, seed, audio, onRoundComplete }
   const [presentIndex, setPresentIndex] = useState(-1);
   const done = useRef(false);
   const cancelled = useRef(false);
+  const inputStart = useRef<number | null>(null);
 
   useEffect(() => {
     return () => {
@@ -51,6 +52,10 @@ export function AuditoryGame({ level, roundIndex, seed, audio, onRoundComplete }
       audio.cancelSpeech();
     };
   }, [audio]);
+
+  useEffect(() => {
+    if (phase === "input") inputStart.current = performance.now();
+  }, [phase]);
 
   const start = async () => {
     // Muted sound makes an auditory exercise unplayable — say so instead of
@@ -91,6 +96,10 @@ export function AuditoryGame({ level, roundIndex, seed, audio, onRoundComplete }
       onRoundComplete({
         accuracy: score.accuracy,
         perfect: score.perfect,
+        responseMs:
+          inputStart.current !== null
+            ? Math.round(performance.now() - inputStart.current)
+            : undefined,
         detail: speechMode
           ? `${items.length} spoken digits · ${params.direction}`
           : `${items.length}-note melody`,

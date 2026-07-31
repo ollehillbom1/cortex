@@ -19,6 +19,11 @@ export function NumberSpanGame({ level, roundIndex, seed, onRoundComplete }: Gam
   const [shownIndex, setShownIndex] = useState(-1);
   const [entered, setEntered] = useState<number[]>([]);
   const done = useRef(false);
+  const inputStart = useRef<number | null>(null);
+
+  useEffect(() => {
+    if (phase === "input") inputStart.current = performance.now();
+  }, [phase]);
 
   // Present digits one at a time, then switch to input.
   useEffect(() => {
@@ -48,6 +53,10 @@ export function NumberSpanGame({ level, roundIndex, seed, onRoundComplete }: Gam
       onRoundComplete({
         accuracy: score.accuracy,
         perfect: score.perfect,
+        responseMs:
+          inputStart.current !== null
+            ? Math.round(performance.now() - inputStart.current)
+            : undefined,
         detail: `Span ${params.span} · ${params.direction === "reverse" ? "reverse" : "forward"}`,
         extras: score.perfect ? { maxSpan: params.span } : {},
       });

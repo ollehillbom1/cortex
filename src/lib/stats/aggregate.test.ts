@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { activityByDay, modalityBalance, shiftDay } from "./aggregate";
+import { activityByDay, modalityBalance, shiftDay, timeOfDayPerformance } from "./aggregate";
 import type { SessionRecord } from "@/lib/domain/types";
 
 function session(id: string, startedAt: string, over: Partial<SessionRecord> = {}): SessionRecord {
@@ -65,5 +65,35 @@ describe("stats aggregation", () => {
   it("shifts day keys across month boundaries", () => {
     expect(shiftDay("2026-08-01", -1)).toBe("2026-07-31");
     expect(shiftDay("2026-07-31", 1)).toBe("2026-08-01");
+  });
+
+  it("buckets accuracy by local time of day", () => {
+    const mk = (id: string, hour: number, accuracy: number) =>
+      session(id, new Date(2026, 6, 20, hour, 0).toISOString(), {
+        exercises: [
+          {
+            exerciseId: "number-span",
+            rounds: 4,
+            accuracy,
+            levelBefore: 1,
+            levelAfter: 1,
+            xp: 10,
+          },
+        ],
+      });
+    const parts = timeOfDayPerformance([
+      mk("a", 8, 0.9),
+      mk("b", 9, 0.7),
+      mk("c", 20, 0.6),
+      mk("d", 21, 0),
+      // A session without exercises is ignored entirely.
+      session("noex", new Date(2026, 6, 20, 21, 0).toISOString()),
+    ]);
+    const morning = parts.find((p) => p.part === "morning");
+    const evening = parts.find((p) => p.part === "evening");
+    expect(morning).toMatchObject({ sessions: 2 });
+    expect(morning?.accuracy).toBeCloseTo(0.8, 5);
+    expect(evening?.sessions).toBe(2);
+    expect(parts.find((p) => p.part === "night")).toBeUndefined();
   });
 });

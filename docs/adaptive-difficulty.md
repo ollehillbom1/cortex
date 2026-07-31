@@ -43,9 +43,17 @@ Modifiers, applied in order:
 2. **Fatigue**: the runner passes `fatigue ∈ [0,1]` (minutes into session / 15).
    Downward steps are discounted by up to 50 % — late-session misses are more
    likely tiredness than a wrong skill estimate.
-3. **Safety valve**: from the 3rd consecutive sub-band round, an extra −0.25
+3. **Latency strain** ("correct but laboured"): each skill keeps a ring buffer
+   of the last 10 answer times (`recentInputMs`, input-phase start →
+   submission). Once ≥3 samples exist, an _upward_ step is halved when the
+   round took more than 1.35× the user's own rolling median. Latency
+   modulates, never dominates: it cannot turn a success into a step down, and
+   it is skipped for reaction-style exercises whose accuracy is already
+   speed-derived. The baseline is per-user per-exercise (a rolling median), so
+   naturally deliberate users are not penalised.
+4. **Safety valve**: from the 3rd consecutive sub-band round, an extra −0.25
    prevents a slow, demoralising grind at a too-high level.
-4. **Clamp**: net Δ ∈ [−1, +1]; level ∈ [1, 40].
+5. **Clamp**: net Δ ∈ [−1, +1]; level ∈ [1, 40].
 
 Reaction-style exercises map speed onto the same 0..1 scale
 (`scoreReaction`: ≤220 ms ≈ 1.0 → ≥600 ms ≈ 0.3, −0.1 per false start) so one
@@ -61,8 +69,8 @@ asserts the estimate settles within ±3 levels.
 
 ## Limitations (known and accepted)
 
-- Accuracy is a coarse signal; response-time trends within memory exercises are
-  recorded but not yet used by the engine.
+- Answer latency only dampens up-steps; error _types_ (e.g. transpositions vs
+  omissions in span tasks) are not yet analysed.
 - `fatigue` is a linear proxy for time-in-session, not a measured state.
 - Levels are per-exercise; there is no cross-exercise transfer of skill
   estimates.

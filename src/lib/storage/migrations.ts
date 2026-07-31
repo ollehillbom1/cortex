@@ -13,7 +13,7 @@ import { initialStreak } from "@/lib/progression/streak";
  * db.ts via the idb `upgrade` callback.
  */
 
-export const CURRENT_DATA_VERSION = 2;
+export const CURRENT_DATA_VERSION = 3;
 
 export type StoredProfile = Profile & { dataVersion?: number };
 
@@ -30,6 +30,15 @@ const MIGRATIONS: Migration[] = [
       streak: { freezes: 0, ...streak },
       preferences: { reduceMotion: false, ...preferences },
     };
+  },
+  // v2 -> v3: skills gained a recentInputMs ring buffer (answer latency).
+  (p) => {
+    const skills = (p.skills ?? {}) as Record<string, Record<string, unknown>>;
+    const upgraded: Record<string, Record<string, unknown>> = {};
+    for (const [id, skill] of Object.entries(skills)) {
+      upgraded[id] = { recentInputMs: [], ...skill };
+    }
+    return { ...p, skills: upgraded };
   },
 ];
 

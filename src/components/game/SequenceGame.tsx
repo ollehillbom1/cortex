@@ -19,6 +19,11 @@ export function SequenceGame({ level, seed, audio, soundOn, onRoundComplete }: G
   const [tapped, setTapped] = useState<number[]>([]);
   const [flashTile, setFlashTile] = useState<number | null>(null);
   const done = useRef(false);
+  const inputStart = useRef<number | null>(null);
+
+  useEffect(() => {
+    if (phase === "repeat") inputStart.current = performance.now();
+  }, [phase]);
 
   // Playback.
   useEffect(() => {
@@ -51,6 +56,10 @@ export function SequenceGame({ level, seed, audio, soundOn, onRoundComplete }: G
       onRoundComplete({
         accuracy: score.accuracy,
         perfect: score.perfect,
+        responseMs:
+          inputStart.current !== null
+            ? Math.round(performance.now() - inputStart.current)
+            : undefined,
         detail: `${score.correctPrefix} of ${sequence.length} steps`,
         extras: score.perfect ? { maxSequence: sequence.length } : {},
       });
