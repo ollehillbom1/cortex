@@ -136,7 +136,10 @@ function timeOfDayRule({ sessions }: InsightInput, t: Translator): Insight | nul
 }
 
 function suggestExerciseFor(modality: Modality): string | null {
-  const match = Object.values(EXERCISES).find((def) => def.modalities.includes(modality));
+  const defs = Object.values(EXERCISES);
+  // Prefer an exercise whose primary focus is this modality.
+  const primary = defs.find((def) => def.modalities[0] === modality);
+  const match = primary ?? defs.find((def) => def.modalities.includes(modality));
   return match ? match.name : null;
 }
 

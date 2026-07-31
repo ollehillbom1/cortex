@@ -30,7 +30,10 @@ import { NumberSpanGame } from "@/components/game/NumberSpanGame";
 import { SequenceGame } from "@/components/game/SequenceGame";
 import { PatternGame } from "@/components/game/PatternGame";
 import { NBackGame } from "@/components/game/NBackGame";
+import { DualNBackGame } from "@/components/game/DualNBackGame";
 import { AuditoryGame } from "@/components/game/AuditoryGame";
+import { TonePatternGame } from "@/components/game/TonePatternGame";
+import { RhythmGame } from "@/components/game/RhythmGame";
 import { ReactionGame } from "@/components/game/ReactionGame";
 import { SessionSummary } from "./SessionSummary";
 
@@ -39,7 +42,10 @@ const GAMES: Record<ExerciseId, React.ComponentType<GameProps>> = {
   "sequence-memory": SequenceGame,
   "visual-pattern": PatternGame,
   "n-back": NBackGame,
+  "dual-n-back": DualNBackGame,
   "auditory-digits": AuditoryGame,
+  "tone-pattern": TonePatternGame,
+  "rhythm-recall": RhythmGame,
   "reaction-time": ReactionGame,
 };
 

@@ -7,6 +7,7 @@ import {
   type SessionRecord,
 } from "@/lib/domain/types";
 import { recentAccuracy } from "@/lib/adaptive/engine";
+import { DUAL_NBACK_GATE_LEVEL } from "@/lib/exercises/dualNBack";
 import { createRng, shuffle, type Rng } from "@/lib/engine/rng";
 
 /**
@@ -99,7 +100,14 @@ function rankExercises(input: PlanInput, rng: Rng): ExerciseId[] {
     }
   });
 
-  const scored = shuffle(rng, ALL_EXERCISE_IDS).map((id) => {
+  // Dual n-back is only recommended once single n-back has reached 2-back;
+  // it stays playable from the library at any time.
+  const candidates = ALL_EXERCISE_IDS.filter(
+    (id) =>
+      id !== "dual-n-back" || (input.profile.skills["n-back"]?.level ?? 1) >= DUAL_NBACK_GATE_LEVEL,
+  );
+
+  const scored = shuffle(rng, candidates).map((id) => {
     const skill = input.profile.skills[id];
     const acc = skill ? recentAccuracy(skill) : null;
     // Never trained -> strong priority; weak accuracy -> priority.
