@@ -105,7 +105,7 @@ Quality gates:
 
 ```bash
 npm run verify       # format check + lint + typecheck + unit tests + build
-npm run test         # vitest unit tests (64 tests, pure logic)
+npm run test         # vitest unit tests (pure logic)
 npm run e2e          # Playwright e2e (production build; run `npm run build` first)
 ```
 
