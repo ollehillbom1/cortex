@@ -57,6 +57,36 @@ export const INSTRUCTIONS: Record<ExerciseId, ExerciseInstructions> = {
     accessibility:
       "This exercise needs sound. Check your volume and silent-mode switch before starting — you can adjust volume in Profile.",
   },
+  "dual-n-back": {
+    how: [
+      "Two streams run at once: a square appears in one of nine positions while a letter is spoken aloud.",
+      "Tap Position (or press A) when the position matches N steps back. Tap Sound (or press L) when the sound matches N steps back.",
+      "Both, one, or neither can match on any step. Start calm — dual n-back is hard for everyone.",
+    ],
+    scoring:
+      "Each stream is scored separately (matches and false alarms); your result is the average of the two.",
+    accessibility:
+      "This exercise needs sound for the spoken letters. Keyboard: A for position, L for sound.",
+  },
+  "tone-pattern": {
+    how: [
+      "A short melody plays on the numbered sound pads.",
+      "When it ends, replay it: tap the pads in the same order, by ear.",
+      "More pads and longer melodies unlock as you improve.",
+    ],
+    scoring: "Each note in the right position counts. The whole melody is a perfect round.",
+    accessibility: "This exercise needs sound. Check your volume before starting.",
+  },
+  "rhythm-recall": {
+    how: [
+      "Listen to a short rhythm — the pad pulses with every beat.",
+      "When it ends, tap the same rhythm back on the pad.",
+      "Your overall speed can differ a little; it is the pattern between taps that counts.",
+    ],
+    scoring:
+      "Each gap between taps that lands close enough to the original counts. Missing or extra taps subtract.",
+    accessibility: "This exercise needs sound. Check your volume before starting.",
+  },
   "reaction-time": {
     how: [
       "Hold steady while the panel is dim — the wait is random on purpose.",

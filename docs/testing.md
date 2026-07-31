@@ -6,7 +6,7 @@
 npm run test          # or npm run test:watch
 ```
 
-90 tests cover the pure core — every module in `src/lib` that contains logic:
+110 tests cover the pure core — every module in `src/lib` that contains logic:
 
 | Area                       | File                                  | Highlights                                                                                                                                                                      |
 | -------------------------- | ------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |

@@ -18,6 +18,12 @@ export interface AudioCapabilities {
 /** Frequencies for tone-sequence exercises (C5 E5 G5 B5 — clearly distinct). */
 export const TONE_FREQUENCIES = [523.25, 659.25, 783.99, 987.77];
 
+/**
+ * Pentatonic-ish scale for Tone Pattern (C5 D5 E5 G5 A5 C6): up to six pads
+ * that stay pleasant in any order and remain easy to tell apart.
+ */
+export const TONE_SCALE = [523.25, 587.33, 659.25, 783.99, 880.0, 1046.5];
+
 export class AudioEngine {
   private ctx: AudioContext | null = null;
   private gain: GainNode | null = null;
@@ -88,13 +94,37 @@ export class AudioEngine {
     return delay(durationMs);
   }
 
-  /** Speak a digit. Resolves when speech ends (with a safety timeout). */
-  speakDigit(digit: number, lang = "en-US", rate = 0.95): Promise<void> {
+  /**
+   * Schedule a tone on the Web Audio clock, `offsetMs` from now. Unlike
+   * setTimeout-driven playback this keeps rhythm jitter in the sub-ms range.
+   */
+  scheduleTone(offsetMs: number, frequency: number, durationMs = 140): void {
+    if (!this.ctx || !this.gain || this.effectiveVolume() === 0) return;
+    const ctx = this.ctx;
+    const osc = ctx.createOscillator();
+    const env = ctx.createGain();
+    osc.type = "sine";
+    osc.frequency.value = frequency;
+    const at = ctx.currentTime + offsetMs / 1000;
+    const dur = durationMs / 1000;
+    const vol = 0.3 * this.effectiveVolume();
+    env.gain.setValueAtTime(0, at);
+    env.gain.linearRampToValueAtTime(vol, at + 0.008);
+    env.gain.setValueAtTime(vol, at + dur - 0.03);
+    env.gain.linearRampToValueAtTime(0.0001, at + dur);
+    osc.connect(env);
+    env.connect(this.gain);
+    osc.start(at);
+    osc.stop(at + dur);
+  }
+
+  /** Speak a short text (letter, digit). Resolves when speech ends. */
+  speakText(text: string, lang = "en-US", rate = 0.95): Promise<void> {
     if (!AudioEngine.speechSupported() || this.effectiveVolume() === 0) {
       return Promise.resolve();
     }
     return new Promise((resolve) => {
-      const utterance = new SpeechSynthesisUtterance(String(digit));
+      const utterance = new SpeechSynthesisUtterance(text);
       utterance.rate = rate;
       utterance.volume = this.effectiveVolume();
       utterance.lang = lang;
@@ -109,6 +139,11 @@ export class AudioEngine {
       };
       window.speechSynthesis.speak(utterance);
     });
+  }
+
+  /** Speak a digit. Resolves when speech ends (with a safety timeout). */
+  speakDigit(digit: number, lang = "en-US", rate = 0.95): Promise<void> {
+    return this.speakText(String(digit), lang, rate);
   }
 
   cancelSpeech(): void {

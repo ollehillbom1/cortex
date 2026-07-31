@@ -2,7 +2,7 @@
 
 **Cortex is a premium, self-hosted cognitive training PWA.** Short daily sessions —
 5 to 20 minutes — train working memory, visual and auditory memory, attention and
-speed through six adaptive exercises. Everything runs in your browser, installs to
+speed through nine adaptive exercises. Everything runs in your browser, installs to
 your home screen, works offline, and stores data only on your device.
 
 Cortex measures **in-app performance** (accuracy, span, reaction time) and shows how
@@ -15,14 +15,17 @@ it develops over time. It does not measure IQ and makes no medical claims — se
 
 ## Exercises
 
-| Exercise            | Trains                     | Mechanics                                                                                                                                                 |
-| ------------------- | -------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Number Span**     | Working memory             | Digits shown one at a time; recall forwards, and in reverse from level 4. Span and speed adapt.                                                           |
-| **Sequence Memory** | Working + visual memory    | Tiles light up in order; repeat the order. Grid grows 3×3 → 4×4.                                                                                          |
-| **Pattern Recall**  | Visual memory              | A tile pattern flashes briefly; rebuild it. Grid 3×3 → 5×5, timing adapts.                                                                                |
-| **N-Back**          | Working memory + attention | Position n-back (1/2/3-back) with forced match rates, hit/miss/false-alarm scoring and guided onboarding.                                                 |
-| **Sound Span**      | Auditory memory            | Digits spoken aloud (Web Speech), or tone melodies on four pads when speech is unavailable. Requires explicit tap-to-play; never silently becomes visual. |
-| **Reaction**        | Speed + attention          | Random delay → GO. False-start detection, millisecond timing via `performance.now()`, averages and personal bests.                                        |
+| Exercise            | Trains                                | Mechanics                                                                                                                                                 |
+| ------------------- | ------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Number Span**     | Working memory                        | Digits shown one at a time; recall forwards, and in reverse from level 4. Span and speed adapt.                                                           |
+| **Sequence Memory** | Working + visual memory               | Tiles light up in order; repeat the order. Grid grows 3×3 → 4×4.                                                                                          |
+| **Pattern Recall**  | Visual memory                         | A tile pattern flashes briefly; rebuild it. Grid 3×3 → 5×5, timing adapts.                                                                                |
+| **N-Back**          | Working memory + attention            | Position n-back (1/2/3-back) with forced match rates, hit/miss/false-alarm scoring and guided onboarding.                                                 |
+| **Dual N-Back**     | Working memory + attention + auditory | Position stream + spoken-letter stream matched independently (A/L keys or two buttons). Recommended by the planner once single n-back reaches 2-back.     |
+| **Sound Span**      | Auditory memory                       | Digits spoken aloud (Web Speech), or tone melodies on four pads when speech is unavailable. Requires explicit tap-to-play; never silently becomes visual. |
+| **Tone Pattern**    | Auditory memory                       | Replay a melody by ear on 4–6 sound pads (pentatonic scale); pads and length grow with level.                                                             |
+| **Rhythm Recall**   | Auditory memory + attention           | Tap back a rhythm; scoring compares inter-onset intervals with tempo normalisation, scheduled on the Web Audio clock.                                     |
+| **Reaction**        | Speed + attention                     | Random delay → GO. False-start detection, millisecond timing via `performance.now()`, averages and personal bests.                                        |
 
 A central **adaptive difficulty engine** keeps every exercise near a 70–85 % success
 band with smooth, capped steps — see [docs/adaptive-difficulty.md](docs/adaptive-difficulty.md).
@@ -102,7 +105,7 @@ Quality gates:
 
 ```bash
 npm run verify       # format check + lint + typecheck + unit tests + build
-npm run test         # vitest unit tests (64 tests, pure logic)
+npm run test         # vitest unit tests (pure logic)
 npm run e2e          # Playwright e2e (production build; run `npm run build` first)
 ```
 

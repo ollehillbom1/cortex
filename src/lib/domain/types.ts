@@ -10,7 +10,10 @@ export type ExerciseId =
   | "sequence-memory"
   | "visual-pattern"
   | "n-back"
+  | "dual-n-back"
   | "auditory-digits"
+  | "tone-pattern"
+  | "rhythm-recall"
   | "reaction-time";
 
 export type Modality =
@@ -162,12 +165,36 @@ export const EXERCISES: Record<ExerciseId, ExerciseDefinition> = {
     secondsPerRound: 55,
     defaultRounds: 1,
   },
+  "dual-n-back": {
+    id: "dual-n-back",
+    name: "Dual N-Back",
+    tagline: "Track positions and sounds at the same time",
+    modalities: ["working-memory", "attention", "auditory-memory"],
+    secondsPerRound: 65,
+    defaultRounds: 1,
+  },
   "auditory-digits": {
     id: "auditory-digits",
     name: "Sound Span",
     tagline: "Recall spoken digits you cannot see",
     modalities: ["auditory-memory", "working-memory"],
     secondsPerRound: 24,
+    defaultRounds: 4,
+  },
+  "tone-pattern": {
+    id: "tone-pattern",
+    name: "Tone Pattern",
+    tagline: "Replay a melody by ear",
+    modalities: ["auditory-memory", "working-memory"],
+    secondsPerRound: 18,
+    defaultRounds: 4,
+  },
+  "rhythm-recall": {
+    id: "rhythm-recall",
+    name: "Rhythm Recall",
+    tagline: "Tap back the rhythm you heard",
+    modalities: ["auditory-memory", "attention"],
+    secondsPerRound: 16,
     defaultRounds: 4,
   },
   "reaction-time": {

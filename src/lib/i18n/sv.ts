@@ -464,6 +464,62 @@ export const SV: Record<string, string> = {
   "Repeat PIN": "Upprepa PIN",
   "The PINs do not match.": "PIN-koderna stämmer inte överens.",
 
+  // New exercises: tone pattern, rhythm, dual n-back
+  "Tone Pattern": "Tonmönster",
+  "Replay a melody by ear": "Spela upp en melodi på gehör",
+  "Rhythm Recall": "Rytmminne",
+  "Tap back the rhythm you heard": "Knacka tillbaka rytmen du hörde",
+  "Dual N-Back": "Dubbel N-back",
+  "Track positions and sounds at the same time": "Håll koll på positioner och ljud samtidigt",
+  "{n} of {total} notes": "{n} av {total} toner",
+  "{n} of {total} intervals in time": "{n} av {total} intervall i takt",
+  "Listen to the rhythm…": "Lyssna på rytmen …",
+  "Now tap it back — {n}/{total}": "Knacka tillbaka den — {n}/{total}",
+  "A rhythm with {n} beats will play.": "En rytm med {n} slag kommer att spelas.",
+  "Tap the rhythm here": "Knacka rytmen här",
+  "Tap here": "Knacka här",
+  "Tone Pattern only works by ear. Enable sound and check your volume, then try again — or skip this exercise.":
+    "Tonmönster fungerar bara på gehör. Slå på ljudet och kontrollera volymen, försök sedan igen — eller hoppa över övningen.",
+  "Rhythm Recall only works by ear. Enable sound and check your volume, then try again — or skip this exercise.":
+    "Rytmminne fungerar bara på gehör. Slå på ljudet och kontrollera volymen, försök sedan igen — eller hoppa över övningen.",
+  "Dual N-Back needs sound for its second stream. Enable sound and check your volume, then try again — or skip this exercise.":
+    "Dubbel N-back kräver ljud för sin andra ström. Slå på ljudet och kontrollera volymen, försök sedan igen — eller hoppa över övningen.",
+  "Sound on? The letters are spoken aloud.": "Ljud på? Bokstäverna läses upp.",
+  "Start the stream": "Starta strömmen",
+  "Position match: left button or the A key. Sound match: right button or the L key.":
+    "Positionsträff: vänstra knappen eller A-tangenten. Ljudträff: högra knappen eller L-tangenten.",
+  "Dual {n}-back": "Dubbel {n}-back",
+  Position: "Position",
+  "Position {p}% · Sound {s}%": "Position {p} % · Ljud {s} %",
+  "Two streams run at once: a square appears in one of nine positions while a letter is spoken aloud.":
+    "Två strömmar går samtidigt: en kvadrat visas i en av nio positioner medan en bokstav läses upp.",
+  "Tap Position (or press A) when the position matches N steps back. Tap Sound (or press L) when the sound matches N steps back.":
+    "Tryck Position (eller A) när positionen matchar N steg tillbaka. Tryck Ljud (eller L) när ljudet matchar N steg tillbaka.",
+  "Both, one, or neither can match on any step. Start calm — dual n-back is hard for everyone.":
+    "Båda, en eller ingen kan matcha i varje steg. Ta det lugnt — dubbel n-back är svårt för alla.",
+  "Each stream is scored separately (matches and false alarms); your result is the average of the two.":
+    "Varje ström poängsätts separat (träffar och falsklarm); ditt resultat är snittet av de två.",
+  "This exercise needs sound for the spoken letters. Keyboard: A for position, L for sound.":
+    "Övningen kräver ljud för de upplästa bokstäverna. Tangentbord: A för position, L för ljud.",
+  "A short melody plays on the numbered sound pads.":
+    "En kort melodi spelas på de numrerade ljudplattorna.",
+  "When it ends, replay it: tap the pads in the same order, by ear.":
+    "När den är slut spelar du upp den igen: tryck på plattorna i samma ordning, på gehör.",
+  "More pads and longer melodies unlock as you improve.":
+    "Fler plattor och längre melodier låses upp när du blir bättre.",
+  "Each note in the right position counts. The whole melody is a perfect round.":
+    "Varje ton på rätt plats räknas. Hela melodin är en perfekt runda.",
+  "This exercise needs sound. Check your volume before starting.":
+    "Övningen kräver ljud. Kontrollera volymen innan du börjar.",
+  "Listen to a short rhythm — the pad pulses with every beat.":
+    "Lyssna på en kort rytm — plattan pulserar vid varje slag.",
+  "When it ends, tap the same rhythm back on the pad.":
+    "När den är slut knackar du tillbaka samma rytm på plattan.",
+  "Your overall speed can differ a little; it is the pattern between taps that counts.":
+    "Din totala hastighet får skilja lite; det är mönstret mellan slagen som räknas.",
+  "Each gap between taps that lands close enough to the original counts. Missing or extra taps subtract.":
+    "Varje mellanrum mellan slag som hamnar nära originalet räknas. Missade eller extra slag drar av.",
+
   // App shell
   "A new version of Cortex is ready.": "En ny version av Cortex är redo.",
   Reload: "Ladda om",
