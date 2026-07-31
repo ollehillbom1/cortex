@@ -1,11 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { createRng } from "@/lib/engine/rng";
-import {
-  expectedAnswer,
-  generateDigits,
-  numberSpanParams,
-  scoreSpanResponse,
-} from "./numberSpan";
+import { expectedAnswer, generateDigits, numberSpanParams, scoreSpanResponse } from "./numberSpan";
 import { generateSequence, scoreSequenceResponse, sequenceParams } from "./sequenceMemory";
 import { generatePattern, patternParams, scorePatternResponse } from "./visualPattern";
 import { generateNBackStream, nBackParams, scoreNBack } from "./nback";

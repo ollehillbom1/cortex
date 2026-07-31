@@ -14,11 +14,7 @@ export type ExerciseId =
   | "reaction-time";
 
 export type Modality =
-  | "working-memory"
-  | "visual-memory"
-  | "auditory-memory"
-  | "attention"
-  | "speed";
+  "working-memory" | "visual-memory" | "auditory-memory" | "attention" | "speed";
 
 /** Adaptive skill estimate for one exercise. Levels are continuous floats >= 1. */
 export interface SkillState {

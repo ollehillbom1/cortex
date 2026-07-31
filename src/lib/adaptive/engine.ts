@@ -62,7 +62,11 @@ export function effectiveLevel(state: SkillState): number {
  * - 3+ consecutive failures: extra -0.25 safety valve
  * The net change per round is clamped to [-1, +1].
  */
-export function updateSkill(state: SkillState, outcome: RoundOutcome, now = new Date()): SkillState {
+export function updateSkill(
+  state: SkillState,
+  outcome: RoundOutcome,
+  now = new Date(),
+): SkillState {
   const { accuracy } = outcome;
   const fatigue = clamp(outcome.fatigue ?? 0, 0, 1);
 

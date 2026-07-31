@@ -64,7 +64,7 @@ describe("streak", () => {
   });
 
   it("consumes a freeze to survive a single missed day", () => {
-    let s = { ...initialStreak(), current: 9, best: 9, lastActiveDay: "2026-07-20", freezes: 1 };
+    const s = { ...initialStreak(), current: 9, best: 9, lastActiveDay: "2026-07-20", freezes: 1 };
     const update = recordActiveDay(s, "2026-07-22"); // missed the 21st
     expect(update.freezeUsed).toBe(true);
     expect(update.reset).toBe(false);

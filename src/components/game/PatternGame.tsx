@@ -1,0 +1,90 @@
+"use client";
+
+import { useEffect, useRef, useState } from "react";
+import { createRng } from "@/lib/engine/rng";
+import {
+  generatePattern,
+  patternParams,
+  scorePatternResponse,
+} from "@/lib/exercises/visualPattern";
+import { Button } from "@/components/ui/Button";
+import { PhaseHint, TileGrid, type GameProps } from "./shared";
+
+type Phase = "show" | "recall";
+
+export function PatternGame({ level, seed, onRoundComplete }: GameProps) {
+  const params = patternParams(level);
+  const [pattern] = useState(() => generatePattern(createRng(seed), params));
+  const [phase, setPhase] = useState<Phase>("show");
+  const [selected, setSelected] = useState<Set<number>>(new Set());
+  const done = useRef(false);
+
+  useEffect(() => {
+    const t = setTimeout(() => setPhase("recall"), 500 + params.showMs);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const toggle = (cell: number) => {
+    if (phase !== "recall") return;
+    setSelected((cur) => {
+      const next = new Set(cur);
+      if (next.has(cell)) next.delete(cell);
+      else next.add(cell);
+      return next;
+    });
+  };
+
+  const submit = () => {
+    if (done.current) return;
+    done.current = true;
+    const score = scorePatternResponse(pattern, [...selected]);
+    onRoundComplete({
+      accuracy: score.accuracy,
+      perfect: score.perfect,
+      detail: `${score.hits} of ${pattern.length} tiles${score.extras ? `, ${score.extras} wrong` : ""}`,
+    });
+  };
+
+  const patternSet = new Set(pattern);
+
+  return (
+    <div className="flex flex-col gap-6">
+      <PhaseHint>
+        {phase === "show"
+          ? `Memorise the ${pattern.length} lit tiles…`
+          : `Rebuild the pattern — ${selected.size}/${pattern.length} selected`}
+      </PhaseHint>
+      <TileGrid
+        size={params.gridSize}
+        label={`${params.gridSize} by ${params.gridSize} pattern grid`}
+        renderTile={(i) => {
+          const showLit = phase === "show" && patternSet.has(i);
+          const picked = phase === "recall" && selected.has(i);
+          return (
+            <button
+              key={i}
+              type="button"
+              aria-label={`Tile ${i + 1}`}
+              aria-pressed={phase === "recall" ? selected.has(i) : undefined}
+              disabled={phase !== "recall"}
+              onClick={() => toggle(i)}
+              className={`touch-target aspect-square rounded-2xl border transition-all duration-150 ${
+                showLit
+                  ? "border-[var(--color-accent-2)] bg-gradient-to-br from-[var(--color-accent)] to-[var(--color-accent-2)]"
+                  : picked
+                    ? "border-[var(--color-accent-2)] bg-[var(--color-accent)]/40"
+                    : "border-white/10 bg-white/6 active:bg-white/15"
+              }`}
+            />
+          );
+        }}
+      />
+      {phase === "recall" && (
+        <Button onClick={submit} disabled={selected.size === 0} className="mx-auto w-full max-w-xs">
+          Confirm pattern
+        </Button>
+      )}
+    </div>
+  );
+}

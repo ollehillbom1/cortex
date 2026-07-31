@@ -26,9 +26,7 @@ export function generateDelay(rng: Rng, params: ReactionParams): number {
 }
 
 export type ReactionRound =
-  | { kind: "ok"; ms: number }
-  | { kind: "false-start" }
-  | { kind: "timeout" };
+  { kind: "ok"; ms: number } | { kind: "false-start" } | { kind: "timeout" };
 
 export interface ReactionScore {
   validRounds: number;

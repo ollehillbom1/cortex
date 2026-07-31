@@ -23,7 +23,9 @@ export function patternParams(level: number): PatternParams {
 export function generatePattern(rng: Rng, params: PatternParams): number[] {
   const cells = params.gridSize * params.gridSize;
   const all = Array.from({ length: cells }, (_, i) => i);
-  return shuffle(rng, all).slice(0, params.activeCells).sort((a, b) => a - b);
+  return shuffle(rng, all)
+    .slice(0, params.activeCells)
+    .sort((a, b) => a - b);
 }
 
 export interface PatternScore {
@@ -48,7 +50,6 @@ export function scorePatternResponse(expected: number[], selected: number[]): Pa
     else extras++;
   }
   const misses = expected.length - hits;
-  const accuracy =
-    expected.length === 0 ? 0 : Math.max(0, (hits - extras) / expected.length);
+  const accuracy = expected.length === 0 ? 0 : Math.max(0, (hits - extras) / expected.length);
   return { accuracy, perfect: hits === expected.length && extras === 0, hits, misses, extras };
 }

@@ -22,7 +22,11 @@ export interface DayActivity {
 }
 
 /** Activity per local day for the trailing `days` days, oldest first. */
-export function activityByDay(sessions: SessionRecord[], today: string, days: number): DayActivity[] {
+export function activityByDay(
+  sessions: SessionRecord[],
+  today: string,
+  days: number,
+): DayActivity[] {
   const map = new Map<string, DayActivity>();
   for (const s of sessions) {
     const day = dayKey(new Date(s.startedAt));
@@ -50,12 +54,11 @@ export interface TrendPoint {
 
 /** Accuracy per session for one exercise, oldest first. */
 export function accuracyTrend(sessions: SessionRecord[], exerciseId: ExerciseId): TrendPoint[] {
-  return sortedAsc(sessions)
-    .flatMap((s) =>
-      s.exercises
-        .filter((e) => e.exerciseId === exerciseId)
-        .map((e) => ({ at: s.startedAt, value: e.accuracy })),
-    );
+  return sortedAsc(sessions).flatMap((s) =>
+    s.exercises
+      .filter((e) => e.exerciseId === exerciseId)
+      .map((e) => ({ at: s.startedAt, value: e.accuracy })),
+  );
 }
 
 /** Average response time per session for reaction-style exercises. */
