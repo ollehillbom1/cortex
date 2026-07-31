@@ -89,6 +89,27 @@ describe("migrations", () => {
     expect(migrated.preferences.audioEnabled).toBe(true);
   });
 
+  it("migrates v2 skills to gain the latency ring buffer (v3)", () => {
+    const v2 = {
+      ...createProfile({ id: "p", name: "P" }),
+      dataVersion: 2,
+      skills: {
+        "number-span": {
+          level: 6.2,
+          streak: 2,
+          recent: [0.8, 0.9],
+          attempts: 12,
+          updatedAt: "2026-07-01T00:00:00Z",
+        },
+      },
+    };
+    const migrated = migrateProfile(v2 as unknown as Record<string, unknown>);
+    expect(migrated.dataVersion).toBe(CURRENT_DATA_VERSION);
+    expect(migrated.skills["number-span"]?.recentInputMs).toEqual([]);
+    expect(migrated.skills["number-span"]?.level).toBe(6.2);
+    expect(migrated.skills["number-span"]?.recent).toEqual([0.8, 0.9]);
+  });
+
   it("leaves current-version profiles untouched", () => {
     const p = { ...createProfile({ id: "p", name: "P" }), dataVersion: CURRENT_DATA_VERSION };
     expect(migrateProfile(p as unknown as Record<string, unknown>)).toEqual(p);

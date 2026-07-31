@@ -29,13 +29,25 @@ export interface RoundOutcome {
    * fatigue than a wrong skill estimate.
    */
   fatigue?: number;
+  /**
+   * Time the user needed to produce the answer, in ms (input-phase start to
+   * submission). Not used for reaction-style exercises, whose accuracy is
+   * already speed-derived.
+   */
+  inputMs?: number;
 }
+
+/** "Correct but laboured": latency this far above baseline halves up-steps. */
+export const LATENCY_STRAIN_RATIO = 1.35;
+/** Baseline needs at least this many samples before latency modulates. */
+export const LATENCY_MIN_SAMPLES = 3;
 
 export function initialSkill(now = new Date()): SkillState {
   return {
     level: 1,
     streak: 0,
     recent: [],
+    recentInputMs: [],
     attempts: 0,
     updatedAt: now.toISOString(),
   };
@@ -59,6 +71,9 @@ export function effectiveLevel(state: SkillState): number {
  * Modifiers:
  * - first 3 attempts: x1.8 to find the right level quickly
  * - fatigue discounts downward steps by up to 50%
+ * - "correct but laboured": with >= LATENCY_MIN_SAMPLES of latency history,
+ *   an upward step is halved when this round took > LATENCY_STRAIN_RATIO x
+ *   the user's own median answer time — latency modulates, never dominates
  * - 3+ consecutive failures: extra -0.25 safety valve
  * The net change per round is clamped to [-1, +1].
  */
@@ -80,6 +95,16 @@ export function updateSkill(
   if (state.attempts < 3) delta *= 1.8;
   if (delta < 0) delta *= 1 - 0.5 * fatigue;
 
+  const baseline = medianInputMs(state);
+  if (
+    delta > 0 &&
+    outcome.inputMs !== undefined &&
+    baseline !== null &&
+    outcome.inputMs > baseline * LATENCY_STRAIN_RATIO
+  ) {
+    delta *= 0.5;
+  }
+
   const success = accuracy >= TARGET_LOW;
   const streak = success ? Math.max(1, state.streak + 1) : Math.min(-1, state.streak - 1);
   if (streak <= -3) delta -= 0.25;
@@ -88,14 +113,28 @@ export function updateSkill(
 
   const level = clamp(state.level + delta, MIN_LEVEL, MAX_LEVEL);
   const recent = [...state.recent, accuracy].slice(-10);
+  const recentInputMs =
+    outcome.inputMs !== undefined
+      ? [...(state.recentInputMs ?? []), outcome.inputMs].slice(-10)
+      : (state.recentInputMs ?? []);
 
   return {
     level,
     streak,
     recent,
+    recentInputMs,
     attempts: state.attempts + 1,
     updatedAt: now.toISOString(),
   };
+}
+
+/** Rolling median answer time, or null before LATENCY_MIN_SAMPLES exist. */
+export function medianInputMs(state: SkillState): number | null {
+  const samples = state.recentInputMs ?? [];
+  if (samples.length < LATENCY_MIN_SAMPLES) return null;
+  const sorted = [...samples].sort((a, b) => a - b);
+  const mid = Math.floor(sorted.length / 2);
+  return sorted.length % 2 === 1 ? sorted[mid] : (sorted[mid - 1] + sorted[mid]) / 2;
 }
 
 /** Mean of recent round accuracies, or null with no history. */

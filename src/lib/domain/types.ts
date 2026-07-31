@@ -24,6 +24,8 @@ export interface SkillState {
   streak: number;
   /** Ring buffer of recent round accuracies (0..1), newest last, max 10. */
   recent: number[];
+  /** Ring buffer of recent answer times in ms, newest last, max 10. */
+  recentInputMs: number[];
   /** Total rounds ever played. */
   attempts: number;
   /** ISO timestamp of the last update. */

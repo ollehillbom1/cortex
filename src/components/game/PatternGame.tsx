@@ -18,12 +18,17 @@ export function PatternGame({ level, seed, onRoundComplete }: GameProps) {
   const [phase, setPhase] = useState<Phase>("show");
   const [selected, setSelected] = useState<Set<number>>(new Set());
   const done = useRef(false);
+  const inputStart = useRef<number | null>(null);
 
   useEffect(() => {
     const t = setTimeout(() => setPhase("recall"), 500 + params.showMs);
     return () => clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  useEffect(() => {
+    if (phase === "recall") inputStart.current = performance.now();
+  }, [phase]);
 
   const toggle = (cell: number) => {
     if (phase !== "recall") return;
@@ -42,6 +47,10 @@ export function PatternGame({ level, seed, onRoundComplete }: GameProps) {
     onRoundComplete({
       accuracy: score.accuracy,
       perfect: score.perfect,
+      responseMs:
+        inputStart.current !== null
+          ? Math.round(performance.now() - inputStart.current)
+          : undefined,
       detail: `${score.hits} of ${pattern.length} tiles${score.extras ? `, ${score.extras} wrong` : ""}`,
     });
   };

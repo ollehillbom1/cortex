@@ -2,7 +2,9 @@ import { describe, expect, it } from "vitest";
 import {
   effectiveLevel,
   initialSkill,
+  LATENCY_MIN_SAMPLES,
   MAX_LEVEL,
+  medianInputMs,
   MIN_LEVEL,
   recentAccuracy,
   updateSkill,
@@ -77,6 +79,57 @@ describe("adaptive engine", () => {
     for (let i = 0; i < 15; i++) s = updateSkill(s, { accuracy: 0.8 }, NOW);
     expect(s.recent).toHaveLength(10);
     expect(recentAccuracy(s)).toBeCloseTo(0.8, 5);
+  });
+
+  it("halves upward steps when a correct answer took far longer than baseline", () => {
+    const base = {
+      ...initialSkill(NOW),
+      attempts: 10,
+      level: 8,
+      recentInputMs: [2000, 2000, 2000],
+    };
+    const fast = updateSkill(base, { accuracy: 0.9, inputMs: 2000 }, NOW);
+    const slow = updateSkill(base, { accuracy: 0.9, inputMs: 3500 }, NOW);
+    expect(fast.level - base.level).toBeCloseTo(0.4, 5);
+    expect(slow.level - base.level).toBeCloseTo(0.2, 5);
+    expect(fast.level).toBeGreaterThan(slow.level);
+  });
+
+  it("latency never modulates downward steps and never dominates", () => {
+    const base = {
+      ...initialSkill(NOW),
+      attempts: 10,
+      level: 8,
+      recentInputMs: [2000, 2000, 2000],
+    };
+    const slowFail = updateSkill(base, { accuracy: 0.4, inputMs: 5000 }, NOW);
+    const plainFail = updateSkill(base, { accuracy: 0.4 }, NOW);
+    expect(slowFail.level).toBeCloseTo(plainFail.level, 5);
+    // A slow success still moves up, never down.
+    const slowSuccess = updateSkill(base, { accuracy: 0.9, inputMs: 9000 }, NOW);
+    expect(slowSuccess.level).toBeGreaterThan(base.level);
+  });
+
+  it("needs a latency baseline before modulating", () => {
+    const base = {
+      ...initialSkill(NOW),
+      attempts: 10,
+      level: 8,
+      recentInputMs: [2000, 2000].slice(0, LATENCY_MIN_SAMPLES - 1),
+    };
+    expect(medianInputMs(base)).toBeNull();
+    const slow = updateSkill(base, { accuracy: 0.9, inputMs: 9000 }, NOW);
+    expect(slow.level - base.level).toBeCloseTo(0.4, 5);
+  });
+
+  it("keeps a bounded latency window and computes the median", () => {
+    let s = { ...initialSkill(NOW), attempts: 10 };
+    for (const ms of [1000, 2000, 3000, 4000, 5000, 6000, 7000, 8000, 9000, 10000, 11000]) {
+      s = updateSkill(s, { accuracy: 0.75, inputMs: ms }, NOW);
+    }
+    expect(s.recentInputMs).toHaveLength(10);
+    expect(s.recentInputMs[0]).toBe(2000);
+    expect(medianInputMs({ ...s, recentInputMs: [3000, 1000, 2000] })).toBe(2000);
   });
 
   it("is deterministic", () => {

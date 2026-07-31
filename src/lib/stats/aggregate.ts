@@ -131,6 +131,53 @@ export function strengthsAndFocus(profile: Profile): {
   };
 }
 
+export type DayPart = "morning" | "afternoon" | "evening" | "night";
+
+export const DAY_PART_LABELS: Record<DayPart, string> = {
+  morning: "Morning",
+  afternoon: "Afternoon",
+  evening: "Evening",
+  night: "Night",
+};
+
+export function dayPartOf(hour: number): DayPart {
+  if (hour >= 5 && hour < 12) return "morning";
+  if (hour >= 12 && hour < 18) return "afternoon";
+  if (hour >= 18 && hour < 23) return "evening";
+  return "night";
+}
+
+export interface DayPartPerformance {
+  part: DayPart;
+  sessions: number;
+  /** Mean of session-level mean accuracies, 0..1. */
+  accuracy: number;
+}
+
+/**
+ * In-app accuracy by local time of day. Only descriptive — an observation
+ * about training results, never a claim about cognition.
+ */
+export function timeOfDayPerformance(sessions: SessionRecord[]): DayPartPerformance[] {
+  const buckets = new Map<DayPart, { total: number; count: number }>();
+  for (const s of sessions) {
+    if (s.exercises.length === 0) continue;
+    const acc = s.exercises.reduce((a, e) => a + e.accuracy, 0) / s.exercises.length;
+    const part = dayPartOf(new Date(s.startedAt).getHours());
+    const bucket = buckets.get(part) ?? { total: 0, count: 0 };
+    bucket.total += acc;
+    bucket.count += 1;
+    buckets.set(part, bucket);
+  }
+  const order: DayPart[] = ["morning", "afternoon", "evening", "night"];
+  return order
+    .filter((p) => buckets.has(p))
+    .map((p) => {
+      const b = buckets.get(p)!;
+      return { part: p, sessions: b.count, accuracy: b.total / b.count };
+    });
+}
+
 function sortedAsc(sessions: SessionRecord[]): SessionRecord[] {
   return [...sessions].sort((a, b) => a.startedAt.localeCompare(b.startedAt));
 }
