@@ -33,14 +33,6 @@ jobs:
         run: npm run build
         env:
           NEXT_TELEMETRY_DISABLED: "1"
-      - name: Upload build for e2e
-        uses: actions/upload-artifact@v4
-        with:
-          name: next-build
-          path: |
-            .next
-            !.next/cache
-          retention-days: 1
 
   e2e:
     name: End-to-end tests (mobile viewport)
@@ -53,10 +45,10 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
-      - uses: actions/download-artifact@v4
-        with:
-          name: next-build
-          path: .
+      - name: Production build
+        run: npm run build
+        env:
+          NEXT_TELEMETRY_DISABLED: "1"
       - name: Install Playwright chromium
         run: npx playwright install --with-deps chromium
       - name: Run e2e tests
