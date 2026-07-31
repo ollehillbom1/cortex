@@ -520,6 +520,34 @@ export const SV: Record<string, string> = {
   "Each gap between taps that lands close enough to the original counts. Missing or extra taps subtract.":
     "Varje mellanrum mellan slag som hamnar nära originalet räknas. Missade eller extra slag drar av.",
 
+  // Sync
+  "Sync between devices": "Synka mellan enheter",
+  "Optional: sync profiles and history between devices via your own server. Data is end-to-end encrypted with a passphrase — the server only ever stores ciphertext.":
+    "Valfritt: synka profiler och historik mellan enheter via din egen server. Datan är totalsträckskrypterad med en lösenfras — servern lagrar bara chiffertext.",
+  "Enable sync": "Aktivera synk",
+  "Disable sync": "Stäng av synk",
+  "Sync now": "Synka nu",
+  "Syncing…": "Synkar …",
+  "Last sync:": "Senaste synk:",
+  "last attempt failed:": "senaste försöket misslyckades:",
+  "Synced.": "Synkat.",
+  "Sync failed — see the status below.": "Synken misslyckades — se status nedan.",
+  "Sync is on. This device now shares data with everyone using the same passphrase.":
+    "Synken är på. Den här enheten delar nu data med alla som använder samma lösenfras.",
+  "Sync is off. Local data stays on this device.":
+    "Synken är av. Lokal data stannar på den här enheten.",
+  "Choose a strong passphrase (at least {n} characters). It is the only key to your data: anyone who knows it can read and change the synced data, and it cannot be recovered if lost.":
+    "Välj en stark lösenfras (minst {n} tecken). Den är enda nyckeln till din data: den som kan frasen kan läsa och ändra synkad data, och den går inte att återställa om den tappas bort.",
+  "Sync passphrase": "Synk-lösenfras",
+  "Already use Cortex? Restore from sync": "Använder du redan Cortex? Återställ från synk",
+  "Restore from sync": "Återställ från synk",
+  Restore: "Återställ",
+  "Enter the sync passphrase you use on your other device. Profiles and history are fetched from your server and this device joins the sync group.":
+    "Ange synk-lösenfrasen du använder på din andra enhet. Profiler och historik hämtas från din server och den här enheten går med i synk-gruppen.",
+  "No data found for that passphrase. Check the spelling, or create a new profile.":
+    "Ingen data hittades för den lösenfrasen. Kontrollera stavningen, eller skapa en ny profil.",
+  "Sync failed: {error}": "Synken misslyckades: {error}",
+
   // App shell
   "A new version of Cortex is ready.": "En ny version av Cortex är redo.",
   Reload: "Ladda om",

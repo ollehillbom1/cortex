@@ -1,7 +1,9 @@
 # Deployment
 
-Cortex ships as a single stateless container (all user data lives in each
-browser's IndexedDB). It runs identically on x86_64 and ARM64.
+Cortex ships as a single container. User data lives in each browser's
+IndexedDB; the only server-side state is the optional device-sync store —
+end-to-end-encrypted blobs under `/app/data` (a named volume in the compose
+file). It runs identically on x86_64 and ARM64.
 
 ## Quick start (any Docker host)
 
@@ -24,7 +26,8 @@ watch). Resource notes:
 
 - Idle memory use is well under the 512 MB compose limit.
 - No GPU, CUDA or external services are required.
-- SD-card wear is negligible: the app writes no server-side data.
+- SD-card wear is negligible: the server only writes when a household with
+  sync enabled finishes a session (one small file rewrite per sync).
 
 ## HTTPS and reverse proxy (required for PWA)
 
@@ -61,8 +64,9 @@ gives every node a valid HTTPS name with zero exposure to the internet.
 
 ## Environment variables
 
-See `.env.example`. Only `PORT` and `HOSTNAME` exist — there are no secrets,
-API keys or feature flags.
+See `.env.example`. Only `PORT`, `HOSTNAME` and `SYNC_DATA_DIR` exist — there
+are no secrets, API keys or feature flags. `SYNC_DATA_DIR` (default `./data`,
+`/app/data` in the image) is where the sync endpoint stores encrypted blobs.
 
 ## Updating
 
@@ -74,11 +78,26 @@ docker compose up -d --build
 Clients pick the new version up on next load; if a tab is open, the in-app
 "new version ready" prompt appears once the new service worker has installed.
 
-## Backups
+## Sync and backups
 
-Server-side there is nothing to back up. User data is per-browser: each user
-should occasionally use **Profile → Your data → Export JSON** and keep the
-file. (A server-assisted backup/sync feature is on the roadmap.)
+Device sync is opt-in per household: **Profile → Sync between devices →
+Enable sync**, choose a passphrase, and enter the same passphrase on the
+other device(s) — or on a brand-new device via **Restore from sync** on the
+welcome screen. All payloads are encrypted in the browser before upload; the
+server (you) only ever stores ciphertext. See `docs/adr/0007-sync-backend.md`
+for the design and PRIVACY.md for the guarantees.
+
+Backing up the server therefore means backing up one directory:
+
+```bash
+docker run --rm -v cortex_cortex-sync:/data -v "$PWD":/backup alpine \
+  tar czf /backup/cortex-sync-backup.tar.gz -C /data .
+```
+
+For households with sync enabled that covers everything; the encrypted blobs
+are only readable with the household passphrase. Users who never enable sync
+should still occasionally use **Profile → Your data → Export JSON** and keep
+the file.
 
 ## Running without Docker
 

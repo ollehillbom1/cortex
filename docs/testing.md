@@ -44,6 +44,11 @@ The suite runs on an **iPhone 13 viewport** (the primary target) against
    all four tabs, exercise instructions and the quit dialog — the suite fails
    on any serious/critical violation — plus focus-trap and Escape behaviour
    for modals.
+9. **Device sync** (`e2e/sync.spec.ts`): two browser contexts act as two
+   devices — enable sync on A, restore on B via the welcome screen, add a
+   profile on B and see it merge back on A; plus the wrong-passphrase path
+   (nothing restored, sync stays off). Sync records go to `.sync-test-data/`
+   (gitignored) via the web server's `SYNC_DATA_DIR`.
 
 In sandboxed environments without Playwright's downloaded browsers, point the
 suite at a system Chromium:

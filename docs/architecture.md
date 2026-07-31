@@ -73,7 +73,12 @@ adapter. Quitting mid-session saves completed blocks only.
 The sole implementation wraps IndexedDB via `idb`. Profiles carry a
 `dataVersion`; `migrations.ts` upgrades old records on read and persists the
 result. Export/import round-trips the whole database as validated JSON.
-A future sync backend implements or wraps this same interface (see ADR 0002).
+The optional sync engine (`lib/sync/*`) sits on top of this same interface:
+it reads the full local state through the adapter, merges it with the
+decrypted remote copy (sessions union, profiles last-write-wins, deletion
+tombstones) and writes the result back — see ADR 0007. Server-side, one Next.js
+route handler stores a single end-to-end-encrypted record per sync group in
+flat files with optimistic-concurrency revisions.
 
 ### Adaptive difficulty (`lib/adaptive/engine.ts`)
 

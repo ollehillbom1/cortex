@@ -32,5 +32,7 @@ export default defineConfig({
     url: "http://127.0.0.1:3100",
     reuseExistingServer: !process.env.CI,
     timeout: 60_000,
+    // Keep sync-server records out of the repo's default ./data location.
+    env: { SYNC_DATA_DIR: ".sync-test-data" },
   },
 });

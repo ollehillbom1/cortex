@@ -15,7 +15,26 @@ All data is stored **only in your browser**, in IndexedDB (database name `cortex
 - **App metadata**: the active profile id.
 
 Data never leaves the device unless you explicitly use **Export JSON**, which
-downloads a file to your device for you to keep.
+downloads a file to your device for you to keep, or enable **device sync**
+(see below).
+
+## Optional device sync
+
+Sync is **off by default**. When you enable it (Profile → Sync between
+devices), Cortex keeps devices that share a passphrase in sync **through your
+own self-hosted server** — no third party is involved.
+
+- Everything is **end-to-end encrypted in the browser** (AES-GCM-256, key
+  derived from the passphrase with PBKDF2). The server stores only ciphertext
+  plus a revision counter; it cannot read names, sessions or anything else.
+- The passphrase never leaves the device. What the server sees is a _group id_
+  derived from it by one-way hashing.
+- The passphrase is the only key. Anyone who knows it can read **and modify**
+  the group's synced data, and lost passphrases cannot be recovered — the
+  server operator cannot decrypt anything.
+- Disabling sync forgets the credentials on that device and stops all network
+  calls; local data stays. Server-side blobs remain until the operator deletes
+  the corresponding file under the data directory.
 
 ## What is NOT collected
 
@@ -49,6 +68,7 @@ forget a PIN, export/delete paths remain available from any profile.
 - **Reset progression**: clears XP, levels, streak, records, achievements and
   session history for one profile; keeps the profile and preferences.
 - **Delete profile**: permanently removes the profile and all of its sessions.
+  With sync enabled, the deletion propagates to the other devices in the group.
 - Clearing browser site data removes everything — export first.
 
 ## Interpretation of results

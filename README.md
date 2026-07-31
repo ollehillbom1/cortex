@@ -53,6 +53,10 @@ band with smooth, capped steps — see [docs/adaptive-difficulty.md](docs/adapti
 - **Two languages**: English and Swedish (per-profile setting, follows the
   browser by default; spoken digits switch voice language too). Adding a locale
   is one dictionary file in `src/lib/i18n/`.
+- **Optional device sync** through your own server: end-to-end encrypted with a
+  household passphrase (AES-GCM-256; the server only stores ciphertext), with
+  a "Restore from sync" path for new devices. Off by default, fully offline
+  capable either way — see [docs/adr/0007-sync-backend.md](docs/adr/0007-sync-backend.md).
 
 ## Architecture
 
@@ -72,6 +76,7 @@ flowchart TB
     end
     subgraph Infra["Infrastructure"]
         Storage["StorageAdapter → IndexedDB (idb)\nmigrations · export/import"]
+        Sync["Sync engine (optional)\nE2E-encrypted ↔ /api/sync"]
         Audio["Audio engine\nWeb Audio + SpeechSynthesis"]
         SW["Service worker\noffline shell + assets"]
     end
@@ -83,13 +88,15 @@ flowchart TB
     Pages --> Stats
     Runner --> Storage
     Pages --> Storage
+    Storage <--> Sync
     Games --> Audio
     UI -.installed & cached by.-> SW
 ```
 
 Exercise rules and scoring are pure functions with injected seeded RNG — no React,
 no I/O — so gameplay is deterministic and testable. The UI orchestrates phases and
-timing; `StorageAdapter` isolates persistence so a sync backend can be added later.
+timing; `StorageAdapter` isolates persistence, which is also what the optional
+sync engine plugs into.
 Details: [docs/architecture.md](docs/architecture.md) · decisions: [docs/adr](docs/adr).
 
 ## Getting started
@@ -122,8 +129,9 @@ docker build -t cortex .
 docker run -d -p 3000:3000 --restart unless-stopped cortex
 ```
 
-The container is stateless (all training data is in each browser's IndexedDB), so
-no volumes are needed. Works on x86_64 and ARM64 — a Raspberry Pi 5 runs it
+Training data is in each browser's IndexedDB; the compose file adds one small
+volume (`/app/data`) that only holds end-to-end-encrypted blobs for households
+that enable device sync. Works on x86_64 and ARM64 — a Raspberry Pi 5 runs it
 comfortably within the 512 MB compose memory limit.
 
 ### Raspberry Pi 5 (ARM64)
@@ -142,6 +150,8 @@ backups.
 
 - All data stays in the browser (IndexedDB). No accounts, no telemetry, no
   third-party requests — fonts are system fonts, charts are local SVG.
+- Optional sync never weakens this: payloads are encrypted on-device with a key
+  derived from your passphrase, and only ever sent to _your own_ server.
 - Strict security headers and CSP; validated JSON import; no secrets in the repo.
 - Details: [PRIVACY.md](PRIVACY.md) · [SECURITY.md](SECURITY.md).
 
@@ -154,9 +164,10 @@ the critical flows on an iPhone viewport, including offline startup. See
 
 ## Roadmap
 
-Tracked as GitHub issues — highlights: optional self-hosted sync backend, dual
-n-back, richer auditory training, multilingual support, automated accessibility
-audits, server-side backups. See the issue list for motivation and acceptance
+Tracked as GitHub issues — device sync, dual n-back, auditory training,
+Swedish localisation and automated accessibility audits have all landed;
+remaining highlights include on-device VoiceOver verification and a native
+packaging evaluation. See the issue list for motivation and acceptance
 criteria.
 
 ## Contributing

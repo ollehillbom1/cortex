@@ -44,6 +44,10 @@ next-env.d.ts
 /test-results/
 /playwright-report/
 /blob-report/
+/.sync-test-data/
+
+# sync server storage (encrypted blobs; keep out of the repo)
+/data/
 
 # allow the documented env example
 !.env.example
