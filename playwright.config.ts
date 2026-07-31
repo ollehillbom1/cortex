@@ -15,6 +15,11 @@ export default defineConfig({
   use: {
     baseURL: "http://127.0.0.1:3100",
     trace: "on-first-retry",
+    // Allows pointing at a system Chromium when the Playwright-managed
+    // download is unavailable (e.g. sandboxed environments).
+    launchOptions: process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE
+      ? { executablePath: process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE }
+      : {},
   },
   projects: [
     {
