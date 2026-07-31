@@ -42,8 +42,10 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className="antialiased">
-        <ProfileProvider>{children}</ProfileProvider>
-        <ServiceWorkerManager />
+        <ProfileProvider>
+          {children}
+          <ServiceWorkerManager />
+        </ProfileProvider>
       </body>
     </html>
   );

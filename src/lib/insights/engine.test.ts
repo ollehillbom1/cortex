@@ -5,11 +5,7 @@ import type { ExerciseResult, Profile, SessionRecord } from "@/lib/domain/types"
 
 const TODAY = "2026-07-31";
 
-function exercise(
-  id: ExerciseResult["exerciseId"],
-  accuracy: number,
-  rounds = 4,
-): ExerciseResult {
+function exercise(id: ExerciseResult["exerciseId"], accuracy: number, rounds = 4): ExerciseResult {
   return { exerciseId: id, rounds, accuracy, levelBefore: 3, levelAfter: 3, xp: 20 };
 }
 

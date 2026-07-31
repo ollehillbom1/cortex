@@ -13,7 +13,7 @@ import { initialStreak } from "@/lib/progression/streak";
  * db.ts via the idb `upgrade` callback.
  */
 
-export const CURRENT_DATA_VERSION = 3;
+export const CURRENT_DATA_VERSION = 4;
 
 export type StoredProfile = Profile & { dataVersion?: number };
 
@@ -39,6 +39,11 @@ const MIGRATIONS: Migration[] = [
       upgraded[id] = { recentInputMs: [], ...skill };
     }
     return { ...p, skills: upgraded };
+  },
+  // v3 -> v4: introduced the locale preference ("auto" follows the browser).
+  (p) => {
+    const preferences = (p.preferences ?? {}) as Record<string, unknown>;
+    return { ...p, preferences: { locale: "auto", ...preferences } };
   },
 ];
 

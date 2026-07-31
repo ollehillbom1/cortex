@@ -19,6 +19,7 @@ import {
   requestPersistentStorage,
   type PersistenceState,
 } from "@/lib/storage/persistence";
+import { useT } from "@/lib/i18n/useT";
 import { useProfiles } from "@/components/app/ProfileProvider";
 import { Button } from "@/components/ui/Button";
 import { Dialog } from "@/components/ui/Dialog";
@@ -35,6 +36,7 @@ export default function ProfilePage() {
     setActiveProfile,
     refresh,
   } = useProfiles();
+  const { t } = useT();
   const [message, setMessage] = useState<string | null>(null);
   const [showNewProfile, setShowNewProfile] = useState(false);
   const [newName, setNewName] = useState("");
@@ -82,7 +84,7 @@ export default function ProfilePage() {
     const stamp = new Date().toISOString();
     await getStorage().setMeta(META_LAST_EXPORT_AT, stamp);
     setLastExportAt(stamp);
-    setMessage("Export downloaded. Keep it somewhere safe.");
+    setMessage(t("Export downloaded. Keep it somewhere safe."));
   };
 
   const doImport = async (file: File) => {
@@ -91,11 +93,16 @@ export default function ProfilePage() {
       const result = await importBundle(getStorage(), bundle);
       await refresh();
       setMessage(
-        `Imported ${result.profilesAdded} profile(s) and ${result.sessionsAdded} session(s). ` +
-          `Skipped ${result.profilesSkipped + result.sessionsSkipped} existing item(s).`,
+        t("Imported {p} profile(s) and {s} session(s). Skipped {skipped} existing item(s).", {
+          p: result.profilesAdded,
+          s: result.sessionsAdded,
+          skipped: result.profilesSkipped + result.sessionsSkipped,
+        }),
       );
     } catch (err) {
-      setMessage(err instanceof ImportError ? err.message : "Import failed — file not recognised.");
+      setMessage(
+        err instanceof ImportError ? err.message : t("Import failed — file not recognised."),
+      );
     }
   };
 
@@ -111,7 +118,7 @@ export default function ProfilePage() {
     await getStorage().deleteSessions(profile.id);
     await saveProfile(fresh);
     setConfirming(null);
-    setMessage("Progression reset. Profile and preferences kept.");
+    setMessage(t("Progression reset. Profile and preferences kept."));
   };
 
   const doDelete = async () => {
@@ -133,7 +140,7 @@ export default function ProfilePage() {
     await addProfile(p);
     setShowNewProfile(false);
     setNewName("");
-    setMessage(`Welcome, ${name}!`);
+    setMessage(t("Welcome, {name}!", { name }));
   };
 
   return (
@@ -149,10 +156,12 @@ export default function ProfilePage() {
         <div>
           <h1 className="text-2xl font-bold">{profile.name}</h1>
           <p className="text-sm text-[var(--color-ink-dim)]">
-            Level {progress.level} · {profile.xp} XP · member since{" "}
-            {new Date(profile.createdAt).toLocaleDateString(undefined, {
-              month: "short",
-              year: "numeric",
+            {t("Level {n}", { n: progress.level })} · {profile.xp} XP ·{" "}
+            {t("member since {date}", {
+              date: new Date(profile.createdAt).toLocaleDateString(undefined, {
+                month: "short",
+                year: "numeric",
+              }),
             })}
           </p>
         </div>
@@ -165,9 +174,9 @@ export default function ProfilePage() {
       )}
 
       {/* Household profiles */}
-      <section className="card p-5" aria-label="Profiles">
+      <section className="card p-5" aria-label={t("Profiles")}>
         <h2 className="text-sm font-semibold uppercase tracking-wide text-[var(--color-ink-dim)]">
-          Profiles on this device
+          {t("Profiles on this device")}
         </h2>
         <ul className="mt-3 space-y-2">
           {profiles.map((p) => (
@@ -187,7 +196,9 @@ export default function ProfilePage() {
                 </span>
                 <span className="flex-1 font-medium">{p.name}</span>
                 {p.id === profile.id && (
-                  <span className="text-xs font-semibold text-[var(--color-accent-2)]">active</span>
+                  <span className="text-xs font-semibold text-[var(--color-accent-2)]">
+                    {t("active")}
+                  </span>
                 )}
               </button>
             </li>
@@ -196,7 +207,7 @@ export default function ProfilePage() {
         {showNewProfile ? (
           <div className="mt-3 space-y-3 rounded-xl border border-white/10 p-3">
             <label className="block text-sm">
-              <span className="mb-1 block text-[var(--color-ink-dim)]">Name</span>
+              <span className="mb-1 block text-[var(--color-ink-dim)]">{t("Name")}</span>
               <input
                 value={newName}
                 onChange={(e) => setNewName(e.target.value)}
@@ -205,7 +216,7 @@ export default function ProfilePage() {
                 placeholder="e.g. Alex"
               />
             </label>
-            <div role="radiogroup" aria-label="Avatar" className="flex flex-wrap gap-2">
+            <div role="radiogroup" aria-label={t("Avatar")} className="flex flex-wrap gap-2">
               {AVATAR_CHOICES.map((a) => (
                 <button
                   key={a}
@@ -225,39 +236,39 @@ export default function ProfilePage() {
             </div>
             <div className="flex gap-2">
               <Button variant="ghost" onClick={() => setShowNewProfile(false)} className="flex-1">
-                Cancel
+                {t("Cancel")}
               </Button>
               <Button
                 onClick={() => void createNew()}
                 disabled={!newName.trim()}
                 className="flex-1"
               >
-                Create
+                {t("Create")}
               </Button>
             </div>
           </div>
         ) : (
           <Button variant="ghost" onClick={() => setShowNewProfile(true)} className="mt-3 w-full">
-            Add household profile
+            {t("Add household profile")}
           </Button>
         )}
       </section>
 
       {/* Preferences */}
-      <section className="card p-5" aria-label="Preferences">
+      <section className="card p-5" aria-label={t("Preferences")}>
         <h2 className="text-sm font-semibold uppercase tracking-wide text-[var(--color-ink-dim)]">
-          Preferences
+          {t("Preferences")}
         </h2>
         <div className="mt-3 space-y-4">
           <Toggle
-            label="Sound"
-            description="Tones and spoken digits during exercises"
+            label={t("Sound")}
+            description={t("Tones and spoken digits during exercises")}
             checked={profile.preferences.audioEnabled}
             onChange={(v) => setPref("audioEnabled", v)}
           />
           <label className="block">
             <span className="flex justify-between text-sm">
-              <span>Volume</span>
+              <span>{t("Volume")}</span>
               <span className="text-[var(--color-ink-faint)]">
                 {Math.round(profile.preferences.volume * 100)}%
               </span>
@@ -270,24 +281,24 @@ export default function ProfilePage() {
               onChange={(e) => setPref("volume", Number(e.target.value) / 100)}
               disabled={!profile.preferences.audioEnabled}
               className="mt-2 w-full accent-[var(--color-accent)]"
-              aria-label="Volume"
+              aria-label={t("Volume")}
             />
           </label>
           <Toggle
-            label="Larger text"
-            description="Increase text size across the app"
+            label={t("Larger text")}
+            description={t("Increase text size across the app")}
             checked={profile.preferences.largeText}
             onChange={(v) => setPref("largeText", v)}
           />
           <Toggle
-            label="Reduce motion"
-            description="Minimise animations (also follows your system setting)"
+            label={t("Reduce motion")}
+            description={t("Minimise animations (also follows your system setting)")}
             checked={profile.preferences.reduceMotion}
             onChange={(v) => setPref("reduceMotion", v)}
           />
           <label className="block">
             <span className="flex justify-between text-sm">
-              <span>Daily goal</span>
+              <span>{t("Daily goal")}</span>
               <span className="text-[var(--color-ink-faint)]">
                 {profile.preferences.dailyGoalMinutes} min
               </span>
@@ -300,57 +311,88 @@ export default function ProfilePage() {
               value={profile.preferences.dailyGoalMinutes}
               onChange={(e) => setPref("dailyGoalMinutes", Number(e.target.value))}
               className="mt-2 w-full accent-[var(--color-accent)]"
-              aria-label="Daily goal in minutes"
+              aria-label={t("Daily goal in minutes")}
             />
           </label>
+          <div>
+            <span className="block text-sm font-medium">{t("Language")}</span>
+            <div
+              role="group"
+              aria-label={t("Language")}
+              className="mt-2 grid grid-cols-3 gap-2 text-sm"
+            >
+              {(
+                [
+                  { value: "auto", label: t("Automatic") },
+                  { value: "en", label: "English" },
+                  { value: "sv", label: "Svenska" },
+                ] as const
+              ).map((opt) => (
+                <button
+                  key={opt.value}
+                  type="button"
+                  aria-pressed={profile.preferences.locale === opt.value}
+                  onClick={() => setPref("locale", opt.value)}
+                  className={`touch-target rounded-xl border px-3 py-2 font-medium transition-colors ${
+                    profile.preferences.locale === opt.value
+                      ? "border-[var(--color-accent-2)] bg-[var(--color-accent)]/15"
+                      : "border-white/10 bg-white/4"
+                  }`}
+                >
+                  {opt.label}
+                </button>
+              ))}
+            </div>
+          </div>
         </div>
       </section>
 
       {/* Data */}
-      <section className="card p-5" aria-label="Your data">
+      <section className="card p-5" aria-label={t("Your data")}>
         <h2 className="text-sm font-semibold uppercase tracking-wide text-[var(--color-ink-dim)]">
-          Your data
+          {t("Your data")}
         </h2>
         <p className="mt-2 text-sm text-[var(--color-ink-dim)]">
-          Everything is stored locally in this browser — nothing is sent anywhere. Export a backup
-          before clearing browser data or moving devices.
+          {t(
+            "Everything is stored locally in this browser — nothing is sent anywhere. Export a backup before clearing browser data or moving devices.",
+          )}
         </p>
         <p className="mt-2 text-xs text-[var(--color-ink-faint)]">
-          Last export:{" "}
+          {t("Last export:")}{" "}
           {lastExportAt
             ? new Date(lastExportAt).toLocaleDateString(undefined, {
                 year: "numeric",
                 month: "short",
                 day: "numeric",
               })
-            : "never"}
+            : t("never")}
           {" · "}
-          {persistence === "granted" && "Storage is protected against automatic clean-up."}
+          {persistence === "granted" && t("Storage is protected against automatic clean-up.")}
           {persistence === "denied" && (
             <>
-              Storage may be cleared under pressure.{" "}
+              {t("Storage may be cleared under pressure.")}{" "}
               <button
                 type="button"
                 className="underline"
                 onClick={() =>
                   void requestPersistentStorage().then((s) => {
                     setPersistence(s);
-                    if (s === "granted") setMessage("Persistent storage granted.");
+                    if (s === "granted") setMessage(t("Persistent storage granted."));
                   })
                 }
               >
-                Request protection
+                {t("Request protection")}
               </button>
             </>
           )}
-          {persistence === "unsupported" && "Persistent-storage API not available here."}
+          {persistence === "unsupported" && t("Persistent-storage API not available here.")}
         </p>
         <div className="mt-3 grid grid-cols-2 gap-2.5">
           <Button variant="ghost" onClick={() => void doExport()}>
-            Export JSON
+            {t("Export JSON")}
           </Button>
           <Button variant="ghost" onClick={() => fileInput.current?.click()}>
-            Import JSON
+            {t("Import JSON")}
           </Button>
           <input
             ref={fileInput}
@@ -366,56 +408,62 @@ export default function ProfilePage() {
             }}
           />
           <Button variant="danger" onClick={() => setConfirming("reset")}>
-            Reset progression
+            {t("Reset progression")}
           </Button>
           <Button variant="danger" onClick={() => setConfirming("delete")}>
-            Delete profile
+            {t("Delete profile")}
           </Button>
         </div>
       </section>
 
       {/* Install */}
-      <section className="card p-5" aria-label="Install Cortex">
+      <section className="card p-5" aria-label={t("Install Cortex")}>
         <h2 className="text-sm font-semibold uppercase tracking-wide text-[var(--color-ink-dim)]">
-          Install on your phone
+          {t("Install on your phone")}
         </h2>
         <p className="mt-2 text-sm leading-relaxed text-[var(--color-ink-dim)]">
-          On iPhone: open Cortex in Safari, tap the <span className="font-semibold">Share</span>{" "}
-          button, then <span className="font-semibold">Add to Home Screen</span>. Cortex then runs
-          full-screen and works offline. On Android, choose{" "}
-          <span className="font-semibold">Install app</span> from the browser menu.
+          {t(
+            "On iPhone: open Cortex in Safari, tap the Share button, then Add to Home Screen. Cortex then runs full-screen and works offline. On Android, choose Install app from the browser menu.",
+          )}
         </p>
       </section>
 
       <p className="pb-2 text-center text-xs text-[var(--color-ink-faint)]">
-        Cortex · self-hosted cognitive training · results reflect in-app performance, not clinical
-        cognition.
+        {t(
+          "Cortex · self-hosted cognitive training · results reflect in-app performance, not clinical cognition.",
+        )}
       </p>
 
       {/* Confirm dialogs */}
       {confirming && (
         <Dialog
-          label={confirming === "reset" ? "Reset progression?" : "Delete profile?"}
+          label={confirming === "reset" ? t("Reset progression?") : t("Delete profile?")}
           onClose={() => setConfirming(null)}
         >
           <p className="text-lg font-bold">
-            {confirming === "reset" ? "Reset progression?" : `Delete ${profile.name}?`}
+            {confirming === "reset"
+              ? t("Reset progression?")
+              : t("Delete {name}?", { name: profile.name })}
           </p>
           <p className="mt-1 text-sm text-[var(--color-ink-dim)]">
             {confirming === "reset"
-              ? "XP, levels, streak, records, achievements and session history will be permanently removed. The profile itself is kept. Consider exporting first."
-              : "This permanently removes the profile and all of its training history from this device. Consider exporting first."}
+              ? t(
+                  "XP, levels, streak, records, achievements and session history will be permanently removed. The profile itself is kept. Consider exporting first.",
+                )
+              : t(
+                  "This permanently removes the profile and all of its training history from this device. Consider exporting first.",
+                )}
           </p>
           <div className="mt-4 flex gap-3">
             <Button variant="ghost" onClick={() => setConfirming(null)} className="flex-1">
-              Cancel
+              {t("Cancel")}
             </Button>
             <Button
               variant="danger"
               onClick={() => void (confirming === "reset" ? doReset() : doDelete())}
               className="flex-1"
             >
-              {confirming === "reset" ? "Reset" : "Delete"}
+              {confirming === "reset" ? t("Reset") : t("Delete")}
             </Button>
           </div>
         </Dialog>

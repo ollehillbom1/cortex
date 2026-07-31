@@ -89,7 +89,7 @@ export class AudioEngine {
   }
 
   /** Speak a digit. Resolves when speech ends (with a safety timeout). */
-  speakDigit(digit: number, rate = 0.95): Promise<void> {
+  speakDigit(digit: number, lang = "en-US", rate = 0.95): Promise<void> {
     if (!AudioEngine.speechSupported() || this.effectiveVolume() === 0) {
       return Promise.resolve();
     }
@@ -97,7 +97,7 @@ export class AudioEngine {
       const utterance = new SpeechSynthesisUtterance(String(digit));
       utterance.rate = rate;
       utterance.volume = this.effectiveVolume();
-      utterance.lang = "en-US";
+      utterance.lang = lang;
       const timer = setTimeout(() => resolve(), 2500);
       utterance.onend = () => {
         clearTimeout(timer);

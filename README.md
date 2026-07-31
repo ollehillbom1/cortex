@@ -47,6 +47,9 @@ band with smooth, capped steps — see [docs/adaptive-difficulty.md](docs/adapti
 - **Data safety**: gentle backup reminders when progress is unexported, and
   persistent-storage protection (`navigator.storage.persist()`) requested on
   profile creation with status shown in the app.
+- **Two languages**: English and Swedish (per-profile setting, follows the
+  browser by default; spoken digits switch voice language too). Adding a locale
+  is one dictionary file in `src/lib/i18n/`.
 
 ## Architecture
 

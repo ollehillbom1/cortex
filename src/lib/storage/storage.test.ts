@@ -110,6 +110,18 @@ describe("migrations", () => {
     expect(migrated.skills["number-span"]?.recent).toEqual([0.8, 0.9]);
   });
 
+  it("adds the locale preference when migrating to v4", () => {
+    const v3 = {
+      ...createProfile({ id: "p", name: "P" }),
+      dataVersion: 3,
+    } as unknown as Record<string, unknown>;
+    delete (v3.preferences as Record<string, unknown>).locale;
+    const migrated = migrateProfile(v3);
+    expect(migrated.dataVersion).toBe(CURRENT_DATA_VERSION);
+    expect(migrated.preferences.locale).toBe("auto");
+    expect(migrated.preferences.audioEnabled).toBe(true);
+  });
+
   it("leaves current-version profiles untouched", () => {
     const p = { ...createProfile({ id: "p", name: "P" }), dataVersion: CURRENT_DATA_VERSION };
     expect(migrateProfile(p as unknown as Record<string, unknown>)).toEqual(p);

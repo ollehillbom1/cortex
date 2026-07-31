@@ -1,7 +1,16 @@
+"use client";
+
+import { useT } from "@/lib/i18n/useT";
+
 /**
  * Tiny dependency-free SVG charts. Each chart has an aria-label summary so
  * the information is available to screen readers without reading the SVG.
  */
+
+function NoData() {
+  const { t } = useT();
+  return <p className="text-sm text-[var(--color-ink-faint)]">{t("No data yet.")}</p>;
+}
 
 export function Sparkline({
   values,
@@ -17,8 +26,11 @@ export function Sparkline({
   /** For lower-is-better metrics, colour improvement accordingly. */
   invert?: boolean;
 }) {
+  const { t } = useT();
   if (values.length === 0) {
-    return <p className="text-sm text-[var(--color-ink-faint)]">No data yet.</p>;
+    // Callers render this only inside client pages; keep the string simple
+    // and translated at the one place charts show text.
+    return <NoData />;
   }
   const w = 280;
   const pad = 4;
@@ -43,7 +55,12 @@ export function Sparkline({
         viewBox={`0 0 ${w} ${height}`}
         className="w-full"
         role="img"
-        aria-label={`${label}: latest ${formatValue(last)}, ${values.length} data points, from ${formatValue(first)}.`}
+        aria-label={t("{label}: latest {last}, {n} data points, from {first}.", {
+          label,
+          last: formatValue(last),
+          n: values.length,
+          first: formatValue(first),
+        })}
       >
         <path d={path} fill="none" stroke="url(#spark)" strokeWidth={2.5} strokeLinecap="round" />
         <defs>
@@ -75,12 +92,17 @@ export function DayBars({
   height?: number;
   highlightLast?: boolean;
 }) {
+  const { t } = useT();
   const max = Math.max(...values, 1);
   const active = values.filter((v) => v > 0).length;
   return (
     <div
       role="img"
-      aria-label={`${label}: active on ${active} of the last ${values.length} days.`}
+      aria-label={t("{label}: active on {active} of the last {n} days.", {
+        label,
+        active,
+        n: values.length,
+      })}
       className="flex items-end gap-1"
       style={{ height }}
     >
@@ -106,6 +128,7 @@ export function DayBars({
 }
 
 export function BalanceBars({ entries }: { entries: { label: string; fraction: number }[] }) {
+  const { t } = useT();
   return (
     <ul className="space-y-2.5">
       {entries.map((e) => (
@@ -114,7 +137,10 @@ export function BalanceBars({ entries }: { entries: { label: string; fraction: n
           <div
             className="h-2.5 flex-1 overflow-hidden rounded-full bg-white/8"
             role="img"
-            aria-label={`${e.label}: ${(e.fraction * 100).toFixed(0)} percent of recent training`}
+            aria-label={t("{label}: {pct} percent of recent training", {
+              label: e.label,
+              pct: (e.fraction * 100).toFixed(0),
+            })}
           >
             <div
               className="h-full rounded-full bg-gradient-to-r from-[var(--color-accent)] to-[var(--color-accent-2)]"

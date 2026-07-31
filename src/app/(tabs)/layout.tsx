@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import type { ReactNode } from "react";
 import { HomeIcon, ProfileIcon, StatsIcon, TrainIcon } from "@/components/ui/icons";
+import { useT } from "@/lib/i18n/useT";
 
 const TABS = [
   { href: "/", label: "Today", Icon: HomeIcon },
@@ -14,6 +15,7 @@ const TABS = [
 
 export default function TabsLayout({ children }: { children: ReactNode }) {
   const pathname = usePathname();
+  const { t } = useT();
   return (
     <div className="mx-auto flex min-h-dvh w-full max-w-md flex-col">
       <main className="flex-1 px-4 pb-28 pt-safe">{children}</main>
@@ -36,7 +38,7 @@ export default function TabsLayout({ children }: { children: ReactNode }) {
                   }`}
                 >
                   <Icon className="h-6 w-6" />
-                  {label}
+                  {t(label)}
                 </Link>
               </li>
             );

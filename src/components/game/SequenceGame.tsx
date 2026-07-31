@@ -7,11 +7,13 @@ import {
   scoreSequenceResponse,
   sequenceParams,
 } from "@/lib/exercises/sequenceMemory";
+import { useT } from "@/lib/i18n/useT";
 import { PhaseHint, TileGrid, type GameProps } from "./shared";
 
 type Phase = "watch" | "repeat";
 
 export function SequenceGame({ level, seed, audio, soundOn, onRoundComplete }: GameProps) {
+  const { t } = useT();
   const params = sequenceParams(level);
   const [sequence] = useState(() => generateSequence(createRng(seed), params));
   const [phase, setPhase] = useState<Phase>("watch");
@@ -60,11 +62,11 @@ export function SequenceGame({ level, seed, audio, soundOn, onRoundComplete }: G
           inputStart.current !== null
             ? Math.round(performance.now() - inputStart.current)
             : undefined,
-        detail: `${score.correctPrefix} of ${sequence.length} steps`,
+        detail: t("{n} of {total} steps", { n: score.correctPrefix, total: sequence.length }),
         extras: score.perfect ? { maxSequence: sequence.length } : {},
       });
     },
-    [sequence, onRoundComplete],
+    [sequence, onRoundComplete, t],
   );
 
   const tap = (cell: number) => {
@@ -87,19 +89,19 @@ export function SequenceGame({ level, seed, audio, soundOn, onRoundComplete }: G
     <div className="flex flex-col gap-6">
       <PhaseHint>
         {phase === "watch"
-          ? "Watch the sequence…"
-          : `Repeat it — ${tapped.length}/${sequence.length}`}
+          ? t("Watch the sequence…")
+          : t("Repeat it — {n}/{total}", { n: tapped.length, total: sequence.length })}
       </PhaseHint>
       <TileGrid
         size={params.gridSize}
-        label={`${params.gridSize} by ${params.gridSize} tile grid`}
+        label={t("{size} by {size} tile grid", { size: params.gridSize })}
         renderTile={(i) => {
           const lit = litTile === i || flashTile === i;
           return (
             <button
               key={i}
               type="button"
-              aria-label={`Tile ${i + 1}`}
+              aria-label={t("Tile {n}", { n: i + 1 })}
               disabled={phase !== "repeat"}
               onClick={() => tap(i)}
               className={`touch-target aspect-square rounded-2xl border transition-all duration-150 ${

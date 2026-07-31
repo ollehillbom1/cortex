@@ -9,6 +9,8 @@ import {
   scoreSpanResponse,
 } from "@/lib/exercises/numberSpan";
 import { AudioEngine, TONE_FREQUENCIES } from "@/lib/audio/audio";
+import { speechLang } from "@/lib/i18n";
+import { useT } from "@/lib/i18n/useT";
 import { Button } from "@/components/ui/Button";
 import { SoundIcon } from "@/components/ui/icons";
 import { DigitKeypad, DigitSlots, PhaseHint, type GameProps } from "./shared";
@@ -24,6 +26,7 @@ import { DigitKeypad, DigitSlots, PhaseHint, type GameProps } from "./shared";
 type Phase = "arm" | "present" | "input" | "unavailable";
 
 export function AuditoryGame({ level, roundIndex, seed, audio, onRoundComplete }: GameProps) {
+  const { t, locale } = useT();
   const speechMode = AudioEngine.speechSupported();
   const params = numberSpanParams(level, roundIndex, "auditory");
   const [items] = useState(() => {
@@ -74,7 +77,7 @@ export function AuditoryGame({ level, roundIndex, seed, audio, onRoundComplete }
       if (cancelled.current) return;
       setPresentIndex(i);
       if (speechMode) {
-        await audio.speakDigit(items[i]);
+        await audio.speakDigit(items[i], speechLang(locale));
         await wait(params.gapMs + 150);
       } else {
         await audio.playTone(TONE_FREQUENCIES[items[i]], 420);
@@ -101,12 +104,17 @@ export function AuditoryGame({ level, roundIndex, seed, audio, onRoundComplete }
             ? Math.round(performance.now() - inputStart.current)
             : undefined,
         detail: speechMode
-          ? `${items.length} spoken digits · ${params.direction}`
-          : `${items.length}-note melody`,
+          ? t(
+              params.direction === "reverse"
+                ? "{n} spoken digits · reverse"
+                : "{n} spoken digits · forward",
+              { n: items.length },
+            )
+          : t("{n}-note melody", { n: items.length }),
         extras: score.perfect && speechMode ? { maxSpan: items.length } : {},
       });
     },
-    [items, params.direction, speechMode, onRoundComplete],
+    [items, params.direction, speechMode, onRoundComplete, t],
   );
 
   const addDigit = useCallback(
@@ -130,22 +138,26 @@ export function AuditoryGame({ level, roundIndex, seed, audio, onRoundComplete }
     return (
       <div className="card flex flex-col items-center gap-4 p-6 text-center">
         <SoundIcon className="h-10 w-10 text-[var(--color-ink-faint)]" />
-        <p className="font-semibold">Audio is not available</p>
+        <p className="font-semibold">{t("Audio is not available")}</p>
         <p className="text-sm text-[var(--color-ink-dim)]">
           {audio.muted || audio.volume === 0
-            ? "Sound is turned off for this profile, and Sound Span only works by ear. Enable sound under Profile → Preferences, then try again — or skip this exercise."
-            : "This browser could not start sound playback, and Sound Span only works by ear. Check your volume or silent switch and try again, or skip this exercise."}
+            ? t(
+                "Sound is turned off for this profile, and Sound Span only works by ear. Enable sound under Profile → Preferences, then try again — or skip this exercise.",
+              )
+            : t(
+                "This browser could not start sound playback, and Sound Span only works by ear. Check your volume or silent switch and try again, or skip this exercise.",
+              )}
         </p>
         <div className="flex gap-3">
           <Button variant="ghost" onClick={() => setPhase("arm")}>
-            Try again
+            {t("Try again")}
           </Button>
           <Button
             onClick={() =>
-              onRoundComplete({ accuracy: 0, perfect: false, detail: "Skipped — no audio" })
+              onRoundComplete({ accuracy: 0, perfect: false, detail: t("Skipped — no audio") })
             }
           >
-            Skip exercise
+            {t("Skip exercise")}
           </Button>
         </div>
       </div>
@@ -155,25 +167,26 @@ export function AuditoryGame({ level, roundIndex, seed, audio, onRoundComplete }
   return (
     <div className="flex flex-col gap-6">
       <PhaseHint>
-        {phase === "arm" && "Sound on? Tap play when you are ready to listen."}
-        {phase === "present" && (speechMode ? "Listen to the digits…" : "Listen to the melody…")}
+        {phase === "arm" && t("Sound on? Tap play when you are ready to listen.")}
+        {phase === "present" &&
+          (speechMode ? t("Listen to the digits…") : t("Listen to the melody…"))}
         {phase === "input" &&
           (speechMode
             ? params.direction === "reverse"
-              ? "Enter the digits in REVERSE order"
-              : "Enter the digits you heard"
-            : "Replay the melody on the pads")}
+              ? t("Enter the digits in REVERSE order")
+              : t("Enter the digits you heard")
+            : t("Replay the melody on the pads"))}
       </PhaseHint>
 
       {phase === "arm" && (
         <div className="flex flex-col items-center gap-3">
-          <Button onClick={() => void start()} aria-label="Play the audio sequence">
-            <SoundIcon className="h-5 w-5" /> Play sequence
+          <Button onClick={() => void start()} aria-label={t("Play the audio sequence")}>
+            <SoundIcon className="h-5 w-5" /> {t("Play sequence")}
           </Button>
           <p className="text-xs text-[var(--color-ink-faint)]">
             {speechMode
-              ? `${items.length} digits will be spoken.`
-              : `${items.length} notes will play.`}
+              ? t("{n} digits will be spoken.", { n: items.length })
+              : t("{n} notes will play.", { n: items.length })}
           </p>
         </div>
       )}
@@ -201,7 +214,7 @@ export function AuditoryGame({ level, roundIndex, seed, audio, onRoundComplete }
         <div className="flex flex-col gap-6">
           {params.direction === "reverse" && (
             <p className="text-center text-sm font-semibold text-[var(--color-warn)]">
-              Backwards! Last digit first.
+              {t("Backwards! Last digit first.")}
             </p>
           )}
           <DigitSlots expectedLength={items.length} entered={entered} />
@@ -219,13 +232,13 @@ export function AuditoryGame({ level, roundIndex, seed, audio, onRoundComplete }
           <div
             className="mx-auto grid w-full max-w-xs grid-cols-2 gap-3"
             role="group"
-            aria-label="Sound pads"
+            aria-label={t("Sound pads")}
           >
             {TONE_FREQUENCIES.map((_, pad) => (
               <button
                 key={pad}
                 type="button"
-                aria-label={`Sound pad ${pad + 1}`}
+                aria-label={t("Sound pad {n}", { n: pad + 1 })}
                 onClick={() => tapPad(pad)}
                 className={`touch-target aspect-square rounded-2xl border border-white/10 text-2xl font-bold transition-transform active:scale-95 ${
                   ["bg-violet-500/30", "bg-cyan-500/30", "bg-emerald-500/30", "bg-amber-500/30"][
@@ -238,7 +251,7 @@ export function AuditoryGame({ level, roundIndex, seed, audio, onRoundComplete }
             ))}
           </div>
           <Button variant="ghost" onClick={() => submit(entered)} className="mx-auto">
-            Done
+            {t("Done")}
           </Button>
         </div>
       )}

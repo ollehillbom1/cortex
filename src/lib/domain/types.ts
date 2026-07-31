@@ -53,6 +53,8 @@ export interface ProfilePreferences {
   reduceMotion: boolean;
   /** Daily training goal, in minutes. */
   dailyGoalMinutes: number;
+  /** UI language: follow the browser ("auto") or a fixed locale. */
+  locale: "auto" | "en" | "sv";
 }
 
 export interface PersonalRecord {
