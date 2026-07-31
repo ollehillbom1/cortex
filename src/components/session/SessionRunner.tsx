@@ -75,6 +75,9 @@ export function SessionRunner() {
   const seedBase = useRef(timeSeed());
   const startedAt = useRef<string>("");
   const persisted = useRef(false);
+  // Guards against the feedback auto-advance timer and the Continue button
+  // both firing advance() for the same round.
+  const advancing = useRef(false);
 
   // Volume/mute follow the profile.
   useEffect(() => {
@@ -156,6 +159,7 @@ export function SessionRunner() {
       blockRounds.current.push({ result, level, xp });
       setSkills((s) => ({ ...s, [id]: nextSkill }));
       setLastRound(result);
+      advancing.current = false;
       setPhase("feedback");
     },
     [currentItem, skills],
@@ -227,7 +231,8 @@ export function SessionRunner() {
   );
 
   const advance = useCallback(async () => {
-    if (!currentItem) return;
+    if (!currentItem || advancing.current) return;
+    advancing.current = true;
     if (roundIndex + 1 < currentItem.rounds) {
       setRoundIndex((r) => r + 1);
       setPhase("playing");

@@ -1,11 +1,16 @@
-import type { Page } from "@playwright/test";
+import { expect, type Page } from "@playwright/test";
 
 /** Walk the onboarding flow and create a profile named `name`. */
 export async function createProfile(page: Page, name = "Testa") {
   await page.goto("/");
   await page.waitForURL("**/welcome");
   for (let i = 0; i < 3; i++) {
-    await page.getByRole("button", { name: /get started|continue/i }).click();
+    // Retry the click until the step indicator advances — a click that lands
+    // before React hydration would otherwise be silently swallowed.
+    await expect(async () => {
+      await page.getByRole("button", { name: /get started|continue/i }).click();
+      await expect(page.getByLabel(`Step ${i + 2} of 4`)).toBeVisible({ timeout: 1_000 });
+    }).toPass({ timeout: 15_000 });
   }
   await page.getByPlaceholder("e.g. Olle").fill(name);
   await page.getByRole("button", { name: /start training/i }).click();

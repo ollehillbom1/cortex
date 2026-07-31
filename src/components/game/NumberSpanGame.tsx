@@ -94,11 +94,15 @@ export function NumberSpanGame({ level, roundIndex, seed, onRoundComplete }: Gam
       </PhaseHint>
 
       {phase === "show" ? (
-        <div className="flex h-40 items-center justify-center" aria-hidden>
+        <div className="flex h-40 items-center justify-center">
           <span
-            key={shownIndex}
+            aria-hidden
             className="pop-in text-7xl font-bold tabular-nums text-[var(--color-ink)]"
           >
+            {shownIndex >= 0 ? digits[shownIndex] : ""}
+          </span>
+          {/* Announce each digit for screen-reader users. */}
+          <span className="sr-only" aria-live="assertive">
             {shownIndex >= 0 ? digits[shownIndex] : ""}
           </span>
         </div>

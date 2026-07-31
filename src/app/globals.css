@@ -38,16 +38,25 @@ html {
 body {
   min-height: 100%;
   background-color: var(--color-night);
-  background-image:
-    radial-gradient(60rem 40rem at 85% -10%, rgba(139, 92, 246, 0.16), transparent 60%),
-    radial-gradient(50rem 35rem at -20% 30%, rgba(34, 211, 238, 0.1), transparent 55%),
-    radial-gradient(40rem 40rem at 50% 120%, rgba(139, 92, 246, 0.08), transparent 60%);
-  background-attachment: fixed;
   color: var(--color-ink);
   font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
   -webkit-tap-highlight-color: transparent;
   overscroll-behavior-y: none;
+}
+
+/* Ambient gradient on a fixed layer (background-attachment: fixed is broken
+   on iOS Safari). */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background-image:
+    radial-gradient(60rem 40rem at 85% -10%, rgba(139, 92, 246, 0.16), transparent 60%),
+    radial-gradient(50rem 35rem at -20% 30%, rgba(34, 211, 238, 0.1), transparent 55%),
+    radial-gradient(40rem 40rem at 50% 120%, rgba(139, 92, 246, 0.08), transparent 60%);
 }
 
 /* Larger base text when the profile asks for it (set on <html>). */

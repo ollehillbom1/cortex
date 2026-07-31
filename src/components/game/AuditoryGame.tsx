@@ -53,6 +53,12 @@ export function AuditoryGame({ level, roundIndex, seed, audio, onRoundComplete }
   }, [audio]);
 
   const start = async () => {
+    // Muted sound makes an auditory exercise unplayable — say so instead of
+    // silently flashing through an inaudible presentation.
+    if (audio.muted || audio.volume === 0) {
+      setPhase("unavailable");
+      return;
+    }
     const unlocked = await audio.unlock();
     if (!unlocked && !speechMode) {
       setPhase("unavailable");
@@ -117,8 +123,9 @@ export function AuditoryGame({ level, roundIndex, seed, audio, onRoundComplete }
         <SoundIcon className="h-10 w-10 text-[var(--color-ink-faint)]" />
         <p className="font-semibold">Audio is not available</p>
         <p className="text-sm text-[var(--color-ink-dim)]">
-          This browser could not start sound playback, and Sound Span only works by ear. Check your
-          volume or silent switch and try again, or skip this exercise.
+          {audio.muted || audio.volume === 0
+            ? "Sound is turned off for this profile, and Sound Span only works by ear. Enable sound under Profile → Preferences, then try again — or skip this exercise."
+            : "This browser could not start sound playback, and Sound Span only works by ear. Check your volume or silent switch and try again, or skip this exercise."}
         </p>
         <div className="flex gap-3">
           <Button variant="ghost" onClick={() => setPhase("arm")}>

@@ -104,13 +104,12 @@ export default function StatsPage() {
         <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-[var(--color-ink-dim)]">
           Accuracy trend
         </h2>
-        <div className="mb-3 flex flex-wrap gap-1.5" role="tablist" aria-label="Choose exercise">
+        <div className="mb-3 flex flex-wrap gap-1.5" role="group" aria-label="Choose exercise">
           {ALL_EXERCISE_IDS.map((id) => (
             <button
               key={id}
               type="button"
-              role="tab"
-              aria-selected={selected === id}
+              aria-pressed={selected === id}
               onClick={() => setSelected(id)}
               className={`rounded-full px-3 py-1.5 text-xs font-semibold transition-colors ${
                 selected === id
