@@ -70,11 +70,17 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
   );
 
   // Reflect accessibility preferences on <html> for CSS to pick up.
+  // Kid mode implies larger UI.
   useEffect(() => {
     const root = document.documentElement;
-    root.dataset.largeText = profile?.preferences.largeText ? "true" : "false";
+    root.dataset.largeText =
+      profile?.preferences.largeText || profile?.preferences.kidMode ? "true" : "false";
     root.dataset.reduceMotion = profile?.preferences.reduceMotion ? "true" : "false";
-  }, [profile?.preferences.largeText, profile?.preferences.reduceMotion]);
+  }, [
+    profile?.preferences.largeText,
+    profile?.preferences.reduceMotion,
+    profile?.preferences.kidMode,
+  ]);
 
   const setActiveProfile = useCallback(async (id: string) => {
     await getStorage().setMeta(ACTIVE_PROFILE_KEY, id);

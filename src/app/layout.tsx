@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import { ProfileProvider } from "@/components/app/ProfileProvider";
+import { ProfileGate } from "@/components/app/ProfileGate";
 import { ServiceWorkerManager } from "@/components/app/ServiceWorkerManager";
 
 export const metadata: Metadata = {
@@ -44,6 +45,7 @@ export default function RootLayout({
       <body className="antialiased">
         <ProfileProvider>
           {children}
+          <ProfileGate />
           <ServiceWorkerManager />
         </ProfileProvider>
       </body>

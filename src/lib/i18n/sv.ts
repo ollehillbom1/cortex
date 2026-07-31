@@ -437,6 +437,33 @@ export const SV: Record<string, string> = {
   Reset: "Nollställ",
   Delete: "Radera",
 
+  // Family profiles: picker, PIN, kid mode
+  "Who is training?": "Vem ska träna?",
+  "Don't ask next time": "Fråga inte nästa gång",
+  "Ask who's training at start": "Fråga vem som tränar vid start",
+  "Show the profile picker when the app opens": "Visa profilväljaren när appen öppnas",
+  "PIN protected": "PIN-skyddad",
+  "Enter PIN for {name}": "Ange PIN för {name}",
+  "PIN code": "PIN-kod",
+  "Wrong PIN — try again.": "Fel PIN — försök igen.",
+  Unlock: "Lås upp",
+  "Kid mode": "Barnläge",
+  "Larger interface and a gentler difficulty ramp": "Större gränssnitt och mjukare svårighetskurva",
+  "Profile PIN": "Profil-PIN",
+  "A PIN is required to switch to this profile.": "PIN krävs för att byta till den här profilen.",
+  "Ask for a 4-digit PIN when switching to this profile. Not a security feature — see PRIVACY.":
+    "Kräv en 4-siffrig PIN vid byte till den här profilen. Ingen säkerhetsfunktion — se PRIVACY.",
+  "Remove PIN": "Ta bort PIN",
+  "Set PIN": "Ange PIN",
+  "PIN set for {name}.": "PIN satt för {name}.",
+  "PIN removed.": "PIN borttagen.",
+  "Set a profile PIN": "Välj en profil-PIN",
+  "A courtesy barrier for household profiles — anyone with access to this browser can still reach the data. Choose 4 digits.":
+    "En artighetsspärr för hushållsprofiler — den som har tillgång till webbläsaren kan ändå nå datan. Välj 4 siffror.",
+  "New PIN": "Ny PIN",
+  "Repeat PIN": "Upprepa PIN",
+  "The PINs do not match.": "PIN-koderna stämmer inte överens.",
+
   // App shell
   "A new version of Cortex is ready.": "En ny version av Cortex är redo.",
   Reload: "Ladda om",
