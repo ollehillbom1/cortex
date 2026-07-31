@@ -33,7 +33,10 @@ test.describe("training sessions", () => {
     await page.getByRole("button", { name: /start number span/i }).click();
     await page.getByRole("button", { name: /end session/i }).click();
     await expect(page.getByText(/nothing will be saved/i)).toBeVisible();
-    await page.getByRole("dialog").getByRole("button", { name: /end session/i }).click();
+    await page
+      .getByRole("dialog")
+      .getByRole("button", { name: /end session/i })
+      .click();
     await page.waitForURL(/\/$/);
     await expect(page.getByText(/no sessions yet/i)).toBeVisible();
   });
@@ -52,8 +55,8 @@ test.describe("training sessions", () => {
     for (const d of [1, 2, 3]) {
       await page.getByRole("button", { name: String(d), exact: true }).click();
     }
-    await expect(
-      page.getByText(/perfect|well done|keep at it/i).first(),
-    ).toBeVisible({ timeout: 10_000 });
+    await expect(page.getByText(/perfect|well done|keep at it/i).first()).toBeVisible({
+      timeout: 10_000,
+    });
   });
 });

@@ -1,0 +1,15 @@
+.git
+node_modules
+.next
+out
+coverage
+test-results
+playwright-report
+e2e
+docs
+*.md
+!README.md
+.env*
+Dockerfile
+docker-compose.yml
+.github
