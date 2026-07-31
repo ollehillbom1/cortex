@@ -77,10 +77,20 @@ export function effectiveLevel(state: SkillState): number {
  * - 3+ consecutive failures: extra -0.25 safety valve
  * The net change per round is clamped to [-1, +1].
  */
+export interface UpdateOptions {
+  /**
+   * Kid mode: gentler ramp — calmer calibration (x1.4 instead of x1.8) and
+   * upward steps damped by 25%, so difficulty rises noticeably slower while
+   * downward relief stays unchanged.
+   */
+  gentle?: boolean;
+}
+
 export function updateSkill(
   state: SkillState,
   outcome: RoundOutcome,
   now = new Date(),
+  opts: UpdateOptions = {},
 ): SkillState {
   const { accuracy } = outcome;
   const fatigue = clamp(outcome.fatigue ?? 0, 0, 1);
@@ -92,7 +102,8 @@ export function updateSkill(
   else if (accuracy >= 0.5) delta = -0.25;
   else delta = -0.5;
 
-  if (state.attempts < 3) delta *= 1.8;
+  if (state.attempts < 3) delta *= opts.gentle ? 1.4 : 1.8;
+  if (delta > 0 && opts.gentle) delta *= 0.75;
   if (delta < 0) delta *= 1 - 0.5 * fatigue;
 
   const baseline = medianInputMs(state);

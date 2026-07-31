@@ -122,6 +122,18 @@ describe("migrations", () => {
     expect(migrated.preferences.audioEnabled).toBe(true);
   });
 
+  it("adds kid mode when migrating to v5", () => {
+    const v4 = {
+      ...createProfile({ id: "p", name: "P" }),
+      dataVersion: 4,
+    } as unknown as Record<string, unknown>;
+    delete (v4.preferences as Record<string, unknown>).kidMode;
+    const migrated = migrateProfile(v4);
+    expect(migrated.dataVersion).toBe(CURRENT_DATA_VERSION);
+    expect(migrated.preferences.kidMode).toBe(false);
+    expect(migrated.pin).toBeUndefined();
+  });
+
   it("leaves current-version profiles untouched", () => {
     const p = { ...createProfile({ id: "p", name: "P" }), dataVersion: CURRENT_DATA_VERSION };
     expect(migrateProfile(p as unknown as Record<string, unknown>)).toEqual(p);

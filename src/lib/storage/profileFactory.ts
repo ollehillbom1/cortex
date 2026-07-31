@@ -8,6 +8,7 @@ export const DEFAULT_PREFERENCES: ProfilePreferences = {
   reduceMotion: false,
   dailyGoalMinutes: 10,
   locale: "auto",
+  kidMode: false,
 };
 
 export const AVATAR_CHOICES = ["🧠", "🦊", "🐙", "🦉", "🐬", "🪐", "🌊", "⚡️", "🌱", "🔮"];

@@ -55,6 +55,8 @@ export interface ProfilePreferences {
   dailyGoalMinutes: number;
   /** UI language: follow the browser ("auto") or a fixed locale. */
   locale: "auto" | "en" | "sv";
+  /** Kid-friendly mode: larger UI and a gentler difficulty ramp. */
+  kidMode: boolean;
 }
 
 export interface PersonalRecord {
@@ -80,6 +82,11 @@ export interface Profile {
   achievements: Record<string, string>;
   /** Whether onboarding has been completed. */
   onboarded: boolean;
+  /**
+   * Optional profile PIN (salted SHA-256). A courtesy barrier for household
+   * profiles — NOT a security boundary; see PRIVACY.md.
+   */
+  pin?: { salt: string; hash: string };
 }
 
 /** Result of one exercise block (several rounds) inside a session. */

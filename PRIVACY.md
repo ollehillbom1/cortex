@@ -35,6 +35,13 @@ boundary: anyone with access to the browser profile can open any Cortex profile,
 and data is not encrypted at rest beyond what the browser/OS provides. Use
 separate OS/browser accounts if you need isolation.
 
+The optional **profile PIN** is a courtesy barrier so household members don't
+train on each other's profiles by accident. The PIN itself is stored as a
+salted SHA-256 hash (never in clear text), but the underlying training data is
+not encrypted with it — anyone with access to the browser's developer tools
+can read the data regardless. Treat the PIN as etiquette, not security. If you
+forget a PIN, export/delete paths remain available from any profile.
+
 ## Data lifecycle
 
 - **Export**: Profile → Your data → Export JSON (includes all profiles on the device).

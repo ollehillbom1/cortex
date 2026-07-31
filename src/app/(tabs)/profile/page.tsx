@@ -19,8 +19,11 @@ import {
   requestPersistentStorage,
   type PersistenceState,
 } from "@/lib/storage/persistence";
+import { createPinRecord, isValidPin } from "@/lib/security/pin";
 import { useT } from "@/lib/i18n/useT";
 import { useProfiles } from "@/components/app/ProfileProvider";
+import { META_SKIP_PROFILE_PICKER } from "@/components/app/ProfileGate";
+import { PinDialog } from "@/components/app/PinDialog";
 import { Button } from "@/components/ui/Button";
 import { Dialog } from "@/components/ui/Dialog";
 
@@ -44,18 +47,24 @@ export default function ProfilePage() {
   const [confirming, setConfirming] = useState<"reset" | "delete" | null>(null);
   const [lastExportAt, setLastExportAt] = useState<string | null>(null);
   const [persistence, setPersistence] = useState<PersistenceState>("unsupported");
+  const [askAtStart, setAskAtStart] = useState(true);
+  const [switchTo, setSwitchTo] = useState<Profile | null>(null);
+  const [pinSetup, setPinSetup] = useState(false);
+  const [pinRemove, setPinRemove] = useState(false);
   const fileInput = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     let cancelled = false;
     (async () => {
-      const [exportAt, status] = await Promise.all([
+      const [exportAt, status, skipPicker] = await Promise.all([
         getStorage().getMeta(META_LAST_EXPORT_AT),
         persistentStorageStatus(),
+        getStorage().getMeta(META_SKIP_PROFILE_PICKER),
       ]);
       if (!cancelled) {
         setLastExportAt(exportAt ?? null);
         setPersistence(status);
+        setAskAtStart(skipPicker !== "true");
       }
     })();
     return () => {
@@ -183,7 +192,11 @@ export default function ProfilePage() {
             <li key={p.id}>
               <button
                 type="button"
-                onClick={() => void setActiveProfile(p.id)}
+                onClick={() => {
+                  if (p.id === profile.id) return;
+                  if (p.pin) setSwitchTo(p);
+                  else void setActiveProfile(p.id);
+                }}
                 aria-pressed={p.id === profile.id}
                 className={`flex w-full items-center gap-3 rounded-xl border p-3 text-left transition-colors ${
                   p.id === profile.id
@@ -194,7 +207,14 @@ export default function ProfilePage() {
                 <span aria-hidden className="text-xl">
                   {p.avatar}
                 </span>
-                <span className="flex-1 font-medium">{p.name}</span>
+                <span className="flex-1 font-medium">
+                  {p.name}
+                  {p.pin && (
+                    <span aria-label={t("PIN protected")} className="ml-1.5 text-xs">
+                      🔒
+                    </span>
+                  )}
+                </span>
                 {p.id === profile.id && (
                   <span className="text-xs font-semibold text-[var(--color-accent-2)]">
                     {t("active")}
@@ -251,6 +271,19 @@ export default function ProfilePage() {
           <Button variant="ghost" onClick={() => setShowNewProfile(true)} className="mt-3 w-full">
             {t("Add household profile")}
           </Button>
+        )}
+        {profiles.length > 1 && (
+          <div className="mt-4 border-t border-white/8 pt-4">
+            <Toggle
+              label={t("Ask who's training at start")}
+              description={t("Show the profile picker when the app opens")}
+              checked={askAtStart}
+              onChange={(v) => {
+                setAskAtStart(v);
+                void getStorage().setMeta(META_SKIP_PROFILE_PICKER, v ? "false" : "true");
+              }}
+            />
+          </div>
         )}
       </section>
 
@@ -314,6 +347,31 @@ export default function ProfilePage() {
               aria-label={t("Daily goal in minutes")}
             />
           </label>
+          <Toggle
+            label={t("Kid mode")}
+            description={t("Larger interface and a gentler difficulty ramp")}
+            checked={profile.preferences.kidMode}
+            onChange={(v) => setPref("kidMode", v)}
+          />
+          <div className="flex items-center justify-between gap-4">
+            <span>
+              <span className="block text-sm font-medium">{t("Profile PIN")}</span>
+              <span className="block text-xs text-[var(--color-ink-faint)]">
+                {profile.pin
+                  ? t("A PIN is required to switch to this profile.")
+                  : t(
+                      "Ask for a 4-digit PIN when switching to this profile. Not a security feature — see PRIVACY.",
+                    )}
+              </span>
+            </span>
+            <Button
+              variant="ghost"
+              className="shrink-0 !px-4 !py-2 text-sm"
+              onClick={() => (profile.pin ? setPinRemove(true) : setPinSetup(true))}
+            >
+              {profile.pin ? t("Remove PIN") : t("Set PIN")}
+            </Button>
+          </div>
           <div>
             <span className="block text-sm font-medium">{t("Language")}</span>
             <div
@@ -434,6 +492,46 @@ export default function ProfilePage() {
         )}
       </p>
 
+      {/* PIN-gated profile switch */}
+      {switchTo && (
+        <PinDialog
+          profile={switchTo}
+          onResult={(ok) => {
+            const target = switchTo;
+            setSwitchTo(null);
+            if (ok && target) void setActiveProfile(target.id);
+          }}
+        />
+      )}
+
+      {/* Set PIN */}
+      {pinSetup && (
+        <SetPinDialog
+          onClose={() => setPinSetup(false)}
+          onSet={async (pin) => {
+            const record = await createPinRecord(pin);
+            await saveProfile({ ...profile, pin: record });
+            setPinSetup(false);
+            setMessage(t("PIN set for {name}.", { name: profile.name }));
+          }}
+        />
+      )}
+
+      {/* Remove PIN (requires the current PIN) */}
+      {pinRemove && profile.pin && (
+        <PinDialog
+          profile={profile}
+          onResult={(ok) => {
+            setPinRemove(false);
+            if (ok) {
+              const rest = { ...profile };
+              delete rest.pin;
+              void saveProfile(rest).then(() => setMessage(t("PIN removed.")));
+            }
+          }}
+        />
+      )}
+
       {/* Confirm dialogs */}
       {confirming && (
         <Dialog
@@ -469,6 +567,68 @@ export default function ProfilePage() {
         </Dialog>
       )}
     </div>
+  );
+}
+
+function SetPinDialog({
+  onClose,
+  onSet,
+}: {
+  onClose: () => void;
+  onSet: (pin: string) => Promise<void>;
+}) {
+  const { t } = useT();
+  const [pin, setPin] = useState("");
+  const [confirm, setConfirm] = useState("");
+  const [busy, setBusy] = useState(false);
+  const mismatch = confirm.length === 4 && pin !== confirm;
+  const ready = isValidPin(pin) && pin === confirm;
+
+  return (
+    <Dialog label={t("Set a profile PIN")} onClose={onClose}>
+      <p className="text-lg font-bold">{t("Set a profile PIN")}</p>
+      <p className="mt-1 text-sm text-[var(--color-ink-dim)]">
+        {t(
+          "A courtesy barrier for household profiles — anyone with access to this browser can still reach the data. Choose 4 digits.",
+        )}
+      </p>
+      {[
+        { value: pin, set: setPin, label: t("New PIN"), focus: true },
+        { value: confirm, set: setConfirm, label: t("Repeat PIN"), focus: false },
+      ].map((field) => (
+        <input
+          key={field.label}
+          autoFocus={field.focus}
+          type="password"
+          inputMode="numeric"
+          pattern="[0-9]*"
+          maxLength={4}
+          value={field.value}
+          onChange={(e) => field.set(e.target.value.replace(/\D/g, "").slice(0, 4))}
+          aria-label={field.label}
+          placeholder={field.label}
+          className="mt-3 w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-center text-xl tracking-[0.4em] outline-none placeholder:text-sm placeholder:tracking-normal focus:border-[var(--color-accent-2)]"
+        />
+      ))}
+      <p role="alert" className="mt-1.5 min-h-5 text-sm text-[var(--color-bad)]">
+        {mismatch ? t("The PINs do not match.") : ""}
+      </p>
+      <div className="mt-3 flex gap-3">
+        <Button variant="ghost" onClick={onClose} className="flex-1">
+          {t("Cancel")}
+        </Button>
+        <Button
+          onClick={() => {
+            setBusy(true);
+            void onSet(pin);
+          }}
+          disabled={!ready || busy}
+          className="flex-1"
+        >
+          {t("Set PIN")}
+        </Button>
+      </div>
+    </Dialog>
   );
 }
 

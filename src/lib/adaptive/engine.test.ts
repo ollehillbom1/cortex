@@ -132,6 +132,25 @@ describe("adaptive engine", () => {
     expect(medianInputMs({ ...s, recentInputMs: [3000, 1000, 2000] })).toBe(2000);
   });
 
+  it("kid mode ramps up more gently without changing downward relief", () => {
+    // Calibration phase: gentler multiplier.
+    const fresh = initialSkill(NOW);
+    const normal = updateSkill(fresh, { accuracy: 1 }, NOW);
+    const gentle = updateSkill(fresh, { accuracy: 1 }, NOW, { gentle: true });
+    expect(gentle.level).toBeLessThan(normal.level);
+    expect(gentle.level).toBeGreaterThan(1);
+
+    // Settled phase: up-steps damped by 25%.
+    const settled = { ...initialSkill(NOW), attempts: 10, level: 5 };
+    const up = updateSkill(settled, { accuracy: 0.9 }, NOW, { gentle: true });
+    expect(up.level - settled.level).toBeCloseTo(0.3, 5);
+
+    // Downward steps are identical with and without kid mode.
+    const downNormal = updateSkill(settled, { accuracy: 0.4 }, NOW);
+    const downGentle = updateSkill(settled, { accuracy: 0.4 }, NOW, { gentle: true });
+    expect(downGentle.level).toBeCloseTo(downNormal.level, 5);
+  });
+
   it("is deterministic", () => {
     const a = updateSkill(initialSkill(NOW), { accuracy: 0.9 }, NOW);
     const b = updateSkill(initialSkill(NOW), { accuracy: 0.9 }, NOW);
