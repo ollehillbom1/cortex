@@ -30,7 +30,9 @@ npm run build && npm run e2e   # for changes touching flows or games
   labels/live regions, ≥44 px touch targets, no colour-only meaning, respect
   reduced motion.
 - **No unsupported claims** in UI copy or docs: Cortex measures in-app
-  performance, not IQ or clinical cognition.
+  performance, not IQ or clinical cognition. The binding copy rules live in
+  [docs/measurement.md](docs/measurement.md) — check them before writing any
+  user-facing text.
 - Significant design decisions get an ADR in `docs/adr/`.
 
 ## Adding an exercise (the short version)
