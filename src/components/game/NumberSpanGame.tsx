@@ -8,11 +8,13 @@ import {
   numberSpanParams,
   scoreSpanResponse,
 } from "@/lib/exercises/numberSpan";
+import { useT } from "@/lib/i18n/useT";
 import { DigitKeypad, DigitSlots, PhaseHint, type GameProps } from "./shared";
 
 type Phase = "show" | "input";
 
 export function NumberSpanGame({ level, roundIndex, seed, onRoundComplete }: GameProps) {
+  const { t } = useT();
   const params = numberSpanParams(level, roundIndex);
   const [digits] = useState(() => generateDigits(createRng(seed), params.span));
   const [phase, setPhase] = useState<Phase>("show");
@@ -57,11 +59,13 @@ export function NumberSpanGame({ level, roundIndex, seed, onRoundComplete }: Gam
           inputStart.current !== null
             ? Math.round(performance.now() - inputStart.current)
             : undefined,
-        detail: `Span ${params.span} · ${params.direction === "reverse" ? "reverse" : "forward"}`,
+        detail: t(params.direction === "reverse" ? "Span {n} · reverse" : "Span {n} · forward", {
+          n: params.span,
+        }),
         extras: score.perfect ? { maxSpan: params.span } : {},
       });
     },
-    [digits, params.direction, params.span, onRoundComplete],
+    [digits, params.direction, params.span, onRoundComplete, t],
   );
 
   const addDigit = useCallback(
@@ -96,10 +100,10 @@ export function NumberSpanGame({ level, roundIndex, seed, onRoundComplete }: Gam
     <div className="flex flex-col gap-6">
       <PhaseHint>
         {phase === "show"
-          ? "Memorise the digits…"
+          ? t("Memorise the digits…")
           : params.direction === "reverse"
-            ? "Enter the digits in REVERSE order"
-            : "Enter the digits in order"}
+            ? t("Enter the digits in REVERSE order")
+            : t("Enter the digits in order")}
       </PhaseHint>
 
       {phase === "show" ? (
@@ -119,7 +123,7 @@ export function NumberSpanGame({ level, roundIndex, seed, onRoundComplete }: Gam
         <div className="flex flex-col gap-6">
           {params.direction === "reverse" && (
             <p className="text-center text-sm font-semibold text-[var(--color-warn)]">
-              Backwards! Last digit first.
+              {t("Backwards! Last digit first.")}
             </p>
           )}
           <DigitSlots expectedLength={digits.length} entered={entered} />

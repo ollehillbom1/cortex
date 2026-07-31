@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { createRng } from "@/lib/engine/rng";
 import { generateNBackStream, nBackParams, scoreNBack } from "@/lib/exercises/nback";
+import { useT } from "@/lib/i18n/useT";
 import { PhaseHint, TileGrid, type GameProps } from "./shared";
 
 /**
@@ -11,6 +12,7 @@ import { PhaseHint, TileGrid, type GameProps } from "./shared";
  * back. Responses are accepted while a stimulus or its gap is active.
  */
 export function NBackGame({ level, seed, audio, soundOn, onRoundComplete }: GameProps) {
+  const { t } = useT();
   const params = nBackParams(level);
   const [stream] = useState(() => generateNBackStream(createRng(seed), params));
   const [current, setCurrent] = useState(-1);
@@ -27,10 +29,14 @@ export function NBackGame({ level, seed, audio, soundOn, onRoundComplete }: Game
     onRoundComplete({
       accuracy: score.accuracy,
       perfect: score.perfect,
-      detail: `${score.hits} hits · ${score.misses} missed · ${score.falseAlarms} false alarms`,
+      detail: t("{hits} hits · {missed} missed · {fa} false alarms", {
+        hits: score.hits,
+        missed: score.misses,
+        fa: score.falseAlarms,
+      }),
       extras: { falseAlarms: score.falseAlarms, hits: score.hits },
     });
-  }, [stream, params.n, onRoundComplete]);
+  }, [stream, params.n, onRoundComplete, t]);
 
   useEffect(() => {
     const timers: ReturnType<typeof setTimeout>[] = [];
@@ -82,12 +88,17 @@ export function NBackGame({ level, seed, audio, soundOn, onRoundComplete }: Game
       <PhaseHint>
         <span className="font-semibold text-[var(--color-ink)]">{params.n}-back</span>
         {" · "}
-        {progress}/{stream.length} — tap Match when the position repeats from {params.n} step
-        {params.n > 1 ? "s" : ""} ago
+        {progress}/{stream.length} —{" "}
+        {t(
+          params.n > 1
+            ? "tap Match when the position repeats from {n} steps ago"
+            : "tap Match when the position repeats from {n} step ago",
+          { n: params.n },
+        )}
       </PhaseHint>
       <TileGrid
         size={3}
-        label="N-back position grid"
+        label={t("N-back position grid")}
         renderTile={(i) => {
           const active = stimulusVisible && current >= 0 && stream[current].position === i;
           return (
@@ -108,12 +119,14 @@ export function NBackGame({ level, seed, audio, soundOn, onRoundComplete }: Game
           onClick={respond}
           className="touch-target w-full max-w-xs rounded-2xl bg-[var(--color-accent)]/85 py-4 text-lg font-bold text-white shadow-lg transition-transform active:scale-[0.97]"
         >
-          Match
+          {t("Match")}
         </button>
         <p aria-live="polite" className="min-h-5 text-sm font-medium">
-          {feedback === "hit" && <span className="text-[var(--color-good)]">✓ Correct match</span>}
+          {feedback === "hit" && (
+            <span className="text-[var(--color-good)]">✓ {t("Correct match")}</span>
+          )}
           {feedback === "false" && (
-            <span className="text-[var(--color-bad)]">✗ Not a match — hold steady</span>
+            <span className="text-[var(--color-bad)]">✗ {t("Not a match — hold steady")}</span>
           )}
         </p>
       </div>

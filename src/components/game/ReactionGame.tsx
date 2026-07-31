@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { createRng } from "@/lib/engine/rng";
 import { generateDelay, reactionParams, scoreReaction } from "@/lib/exercises/reaction";
+import { useT } from "@/lib/i18n/useT";
 import { PhaseHint, type GameProps } from "./shared";
 
 type Phase = "ready" | "waiting" | "go" | "false-start" | "result";
@@ -19,6 +20,7 @@ export function ReactionGame({
   soundOn,
   onRoundComplete,
 }: GameProps) {
+  const { t } = useT();
   const params = reactionParams(level);
   const [delayMs] = useState(() => {
     const rng = createRng(seed + roundIndex * 7919);
@@ -46,11 +48,11 @@ export function ReactionGame({
         accuracy: score.accuracy,
         perfect: round.kind === "ok" && round.ms < 250,
         responseMs: round.kind === "ok" ? round.ms : undefined,
-        detail: round.kind === "ok" ? `${round.ms} ms` : "False start",
+        detail: round.kind === "ok" ? `${round.ms} ms` : t("False start"),
         extras: round.kind === "false-start" ? { falseStarts: 1 } : {},
       });
     },
-    [onRoundComplete],
+    [onRoundComplete, t],
   );
 
   const arm = () => {
@@ -92,24 +94,24 @@ export function ReactionGame({
   }, [press]);
 
   const surface: Record<Phase, { text: string; cls: string }> = {
-    ready: { text: "Tap to arm", cls: "bg-white/6 border-white/10" },
-    waiting: { text: "Wait for it…", cls: "bg-[#2a1530] border-[var(--color-accent)]/40" },
+    ready: { text: t("Tap to arm"), cls: "bg-white/6 border-white/10" },
+    waiting: { text: t("Wait for it…"), cls: "bg-[#2a1530] border-[var(--color-accent)]/40" },
     go: {
       text: "GO!",
       cls: "bg-gradient-to-br from-emerald-500 to-cyan-400 border-transparent text-[#04211a]",
     },
-    "false-start": { text: "Too early!", cls: "bg-[#3a1a1a] border-[var(--color-bad)]/60" },
+    "false-start": { text: t("Too early!"), cls: "bg-[#3a1a1a] border-[var(--color-bad)]/60" },
     result: { text: `${resultMs} ms`, cls: "bg-white/8 border-[var(--color-good)]/50" },
   };
 
   return (
     <div className="flex flex-col gap-6">
       <PhaseHint>
-        {phase === "ready" && "Tap the panel, then hold steady until it turns green."}
-        {phase === "waiting" && "Steady… wait for GO."}
-        {phase === "go" && "Now!"}
-        {phase === "false-start" && "That was before the signal — it will not count."}
-        {phase === "result" && "Nice. Next round coming up."}
+        {phase === "ready" && t("Tap the panel, then hold steady until it turns green.")}
+        {phase === "waiting" && t("Steady… wait for GO.")}
+        {phase === "go" && t("Now!")}
+        {phase === "false-start" && t("That was before the signal — it will not count.")}
+        {phase === "result" && t("Nice. Next round coming up.")}
       </PhaseHint>
       <button
         type="button"

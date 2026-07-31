@@ -8,11 +8,13 @@ import {
   scorePatternResponse,
 } from "@/lib/exercises/visualPattern";
 import { Button } from "@/components/ui/Button";
+import { useT } from "@/lib/i18n/useT";
 import { PhaseHint, TileGrid, type GameProps } from "./shared";
 
 type Phase = "show" | "recall";
 
 export function PatternGame({ level, seed, onRoundComplete }: GameProps) {
+  const { t } = useT();
   const params = patternParams(level);
   const [pattern] = useState(() => generatePattern(createRng(seed), params));
   const [phase, setPhase] = useState<Phase>("show");
@@ -21,8 +23,8 @@ export function PatternGame({ level, seed, onRoundComplete }: GameProps) {
   const inputStart = useRef<number | null>(null);
 
   useEffect(() => {
-    const t = setTimeout(() => setPhase("recall"), 500 + params.showMs);
-    return () => clearTimeout(t);
+    const timer = setTimeout(() => setPhase("recall"), 500 + params.showMs);
+    return () => clearTimeout(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -51,7 +53,9 @@ export function PatternGame({ level, seed, onRoundComplete }: GameProps) {
         inputStart.current !== null
           ? Math.round(performance.now() - inputStart.current)
           : undefined,
-      detail: `${score.hits} of ${pattern.length} tiles${score.extras ? `, ${score.extras} wrong` : ""}`,
+      detail:
+        t("{n} of {total} tiles", { n: score.hits, total: pattern.length }) +
+        (score.extras ? `, ${t("{n} wrong", { n: score.extras })}` : ""),
     });
   };
 
@@ -61,12 +65,15 @@ export function PatternGame({ level, seed, onRoundComplete }: GameProps) {
     <div className="flex flex-col gap-6">
       <PhaseHint>
         {phase === "show"
-          ? `Memorise the ${pattern.length} lit tiles…`
-          : `Rebuild the pattern — ${selected.size}/${pattern.length} selected`}
+          ? t("Memorise the {n} lit tiles…", { n: pattern.length })
+          : t("Rebuild the pattern — {n}/{total} selected", {
+              n: selected.size,
+              total: pattern.length,
+            })}
       </PhaseHint>
       <TileGrid
         size={params.gridSize}
-        label={`${params.gridSize} by ${params.gridSize} pattern grid`}
+        label={t("{size} by {size} pattern grid", { size: params.gridSize })}
         renderTile={(i) => {
           const showLit = phase === "show" && patternSet.has(i);
           const picked = phase === "recall" && selected.has(i);
@@ -74,7 +81,7 @@ export function PatternGame({ level, seed, onRoundComplete }: GameProps) {
             <button
               key={i}
               type="button"
-              aria-label={`Tile ${i + 1}`}
+              aria-label={t("Tile {n}", { n: i + 1 })}
               aria-pressed={phase === "recall" ? selected.has(i) : undefined}
               disabled={phase !== "recall"}
               onClick={() => toggle(i)}
@@ -91,7 +98,7 @@ export function PatternGame({ level, seed, onRoundComplete }: GameProps) {
       />
       {phase === "recall" && (
         <Button onClick={submit} disabled={selected.size === 0} className="mx-auto w-full max-w-xs">
-          Confirm pattern
+          {t("Confirm pattern")}
         </Button>
       )}
     </div>

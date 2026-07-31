@@ -7,6 +7,7 @@ import {
 } from "@/lib/domain/types";
 import { streakAtRisk } from "@/lib/progression/streak";
 import { DAY_PART_LABELS, modalityBalance, timeOfDayPerformance } from "@/lib/stats/aggregate";
+import type { Translator } from "@/lib/i18n";
 
 /**
  * Rule-based insight engine (issue #11, phase 1).
@@ -34,20 +35,27 @@ export interface InsightInput {
 
 const MIN_SESSIONS_FOR_PATTERNS = 5;
 
-export function deriveInsights(input: InsightInput): Insight[] {
+const identity: Translator = (text, vars) =>
+  vars ? text.replace(/\{(\w+)\}/g, (m, n: string) => (n in vars ? String(vars[n]) : m)) : text;
+
+/**
+ * Derive insights. `t` translates the generated sentences (defaults to
+ * English); passing it keeps the engine pure and locale-agnostic.
+ */
+export function deriveInsights(input: InsightInput, t: Translator = identity): Insight[] {
   const insights: Insight[] = [];
 
-  const streak = streakRule(input);
+  const streak = streakRule(input, t);
   if (streak) insights.push(streak);
 
   if (input.sessions.length >= MIN_SESSIONS_FOR_PATTERNS) {
-    const imbalance = imbalanceRule(input);
+    const imbalance = imbalanceRule(input, t);
     if (imbalance) insights.push(imbalance);
 
-    const fatigue = fatigueRule(input);
+    const fatigue = fatigueRule(input, t);
     if (fatigue) insights.push(fatigue);
 
-    const timing = timeOfDayRule(input);
+    const timing = timeOfDayRule(input, t);
     if (timing) insights.push(timing);
   }
 
@@ -55,18 +63,20 @@ export function deriveInsights(input: InsightInput): Insight[] {
 }
 
 /** Streak survives only if today is trained. */
-function streakRule({ profile, today }: InsightInput): Insight | null {
+function streakRule({ profile, today }: InsightInput, t: Translator): Insight | null {
   if (profile.streak.lastActiveDay === today) return null;
   if (!streakAtRisk(profile.streak, today)) return null;
   return {
     id: "streak-at-risk",
-    text: `A short session today keeps your ${profile.streak.current}-day streak alive.`,
+    text: t("A short session today keeps your {n}-day streak alive.", {
+      n: profile.streak.current,
+    }),
     priority: 1,
   };
 }
 
 /** One modality getting under 10% of recent training time. */
-function imbalanceRule({ sessions }: InsightInput): Insight | null {
+function imbalanceRule({ sessions }: InsightInput, t: Translator): Insight | null {
   const balance = modalityBalance(sessions);
   const entries = Object.entries(balance) as [Modality, number][];
   if (entries.every(([, share]) => share === 0)) return null;
@@ -75,15 +85,20 @@ function imbalanceRule({ sessions }: InsightInput): Insight | null {
   const suggestion = suggestExerciseFor(weakest);
   return {
     id: `imbalance-${weakest}`,
-    text: `${MODALITY_LABELS[weakest]} has had little attention lately${
-      suggestion ? ` — ${suggestion} would balance things out` : ""
-    }.`,
+    text: suggestion
+      ? t("{modality} has had little attention lately — {exercise} would balance things out.", {
+          modality: t(MODALITY_LABELS[weakest]),
+          exercise: t(suggestion),
+        })
+      : t("{modality} has had little attention lately.", {
+          modality: t(MODALITY_LABELS[weakest]),
+        }),
     priority: 2,
   };
 }
 
 /** Accuracy consistently drops from first to last block within sessions. */
-function fatigueRule({ sessions }: InsightInput): Insight | null {
+function fatigueRule({ sessions }: InsightInput, t: Translator): Insight | null {
   const multi = sessions.filter((s) => s.exercises.length >= 3);
   if (multi.length < MIN_SESSIONS_FOR_PATTERNS) return null;
   let diffSum = 0;
@@ -94,13 +109,15 @@ function fatigueRule({ sessions }: InsightInput): Insight | null {
   if (meanDrop < 0.1) return null;
   return {
     id: "late-session-drop",
-    text: "Your accuracy tends to dip late in sessions — slightly shorter sessions might land more of your rounds in the sweet spot.",
+    text: t(
+      "Your accuracy tends to dip late in sessions — slightly shorter sessions might land more of your rounds in the sweet spot.",
+    ),
     priority: 3,
   };
 }
 
 /** A clearly stronger time of day (>= 8pp, >= 3 sessions in both buckets). */
-function timeOfDayRule({ sessions }: InsightInput): Insight | null {
+function timeOfDayRule({ sessions }: InsightInput, t: Translator): Insight | null {
   const parts = timeOfDayPerformance(sessions).filter((p) => p.sessions >= 3);
   if (parts.length < 2) return null;
   const sorted = [...parts].sort((a, b) => b.accuracy - a.accuracy);
@@ -109,9 +126,11 @@ function timeOfDayRule({ sessions }: InsightInput): Insight | null {
   if (best.accuracy - worst.accuracy < 0.08) return null;
   return {
     id: `best-${best.part}`,
-    text: `${DAY_PART_LABELS[best.part]} sessions have scored highest for you so far (${Math.round(
-      best.accuracy * 100,
-    )}% vs ${Math.round(worst.accuracy * 100)}%).`,
+    text: t("{part} sessions have scored highest for you so far ({best}% vs {worst}%).", {
+      part: t(DAY_PART_LABELS[best.part]),
+      best: Math.round(best.accuracy * 100),
+      worst: Math.round(worst.accuracy * 100),
+    }),
     priority: 4,
   };
 }

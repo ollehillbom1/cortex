@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { AVATAR_CHOICES, createProfile, newId } from "@/lib/storage/profileFactory";
 import { requestPersistentStorage } from "@/lib/storage/persistence";
+import { useT } from "@/lib/i18n/useT";
 import { useProfiles } from "@/components/app/ProfileProvider";
 import { Button } from "@/components/ui/Button";
 import { BoltIcon, CheckIcon, StatsIcon, TrainIcon } from "@/components/ui/icons";
@@ -38,6 +39,7 @@ const STEPS = [
 export default function WelcomePage() {
   const router = useRouter();
   const { addProfile } = useProfiles();
+  const { t } = useT();
   const [step, setStep] = useState(0);
   const [name, setName] = useState("");
   const [avatar, setAvatar] = useState(AVATAR_CHOICES[0]);
@@ -69,7 +71,7 @@ export default function WelcomePage() {
         <div
           role="group"
           className="flex justify-center gap-1.5"
-          aria-label={`Step ${step + 1} of ${STEPS.length + 1}`}
+          aria-label={t("Step {step} of {total}", { step: step + 1, total: STEPS.length + 1 })}
         >
           {Array.from({ length: STEPS.length + 1 }, (_, i) => (
             <span
@@ -89,23 +91,25 @@ export default function WelcomePage() {
                 return <Icon className="h-10 w-10 text-white" />;
               })()}
             </div>
-            <h1 className="text-3xl font-bold leading-tight">{STEPS[step].title}</h1>
+            <h1 className="text-3xl font-bold leading-tight">{t(STEPS[step].title)}</h1>
             {STEPS[step].body.map((p, i) => (
               <p key={i} className="text-[15px] leading-relaxed text-[var(--color-ink-dim)]">
-                {p}
+                {t(p)}
               </p>
             ))}
           </div>
         ) : (
           <div className="rise-in flex flex-col gap-6">
             <div className="text-center">
-              <h1 className="text-3xl font-bold">Create your profile</h1>
+              <h1 className="text-3xl font-bold">{t("Create your profile")}</h1>
               <p className="mt-2 text-sm text-[var(--color-ink-dim)]">
-                Profiles keep training separate for each person in your household.
+                {t("Profiles keep training separate for each person in your household.")}
               </p>
             </div>
             <label className="block">
-              <span className="mb-1.5 block text-sm text-[var(--color-ink-dim)]">Your name</span>
+              <span className="mb-1.5 block text-sm text-[var(--color-ink-dim)]">
+                {t("Your name")}
+              </span>
               <input
                 autoFocus
                 value={name}
@@ -118,9 +122,9 @@ export default function WelcomePage() {
             </label>
             <div>
               <span className="mb-1.5 block text-sm text-[var(--color-ink-dim)]">
-                Pick an avatar
+                {t("Pick an avatar")}
               </span>
-              <div role="radiogroup" aria-label="Avatar" className="flex flex-wrap gap-2">
+              <div role="radiogroup" aria-label={t("Avatar")} className="flex flex-wrap gap-2">
                 {AVATAR_CHOICES.map((a) => (
                   <button
                     key={a}
@@ -147,11 +151,11 @@ export default function WelcomePage() {
         {!isForm ? (
           <>
             <Button onClick={() => setStep((s) => s + 1)} className="w-full">
-              {step === 0 ? "Get started" : "Continue"}
+              {step === 0 ? t("Get started") : t("Continue")}
             </Button>
             {step > 0 && (
               <Button variant="subtle" onClick={() => setStep((s) => s - 1)}>
-                Back
+                {t("Back")}
               </Button>
             )}
           </>
@@ -162,10 +166,10 @@ export default function WelcomePage() {
               disabled={!name.trim() || busy}
               className="w-full"
             >
-              <CheckIcon className="h-5 w-5" /> Start training
+              <CheckIcon className="h-5 w-5" /> {t("Start training")}
             </Button>
             <Button variant="subtle" onClick={() => setStep((s) => s - 1)}>
-              Back
+              {t("Back")}
             </Button>
           </>
         )}

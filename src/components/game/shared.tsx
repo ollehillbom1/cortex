@@ -2,6 +2,7 @@
 
 import type { ReactNode } from "react";
 import type { AudioEngine } from "@/lib/audio/audio";
+import { useT } from "@/lib/i18n/useT";
 
 /**
  * Shared contract between the session runner and individual game components.
@@ -47,7 +48,7 @@ export function DigitKeypad({
   onDigit,
   onBackspace,
   onSubmit,
-  submitLabel = "Done",
+  submitLabel,
   disabled = false,
 }: {
   onDigit: (d: number) => void;
@@ -56,12 +57,13 @@ export function DigitKeypad({
   submitLabel?: string;
   disabled?: boolean;
 }) {
+  const { t } = useT();
   const keys = [1, 2, 3, 4, 5, 6, 7, 8, 9];
   return (
     <div
       className="mx-auto grid w-full max-w-xs grid-cols-3 gap-2"
       role="group"
-      aria-label="Digit keypad"
+      aria-label={t("Digit keypad")}
     >
       {keys.map((k) => (
         <button
@@ -78,7 +80,7 @@ export function DigitKeypad({
         type="button"
         disabled={disabled}
         onClick={onBackspace}
-        aria-label="Delete last digit"
+        aria-label={t("Delete last digit")}
         className="touch-target rounded-2xl border border-white/10 bg-white/5 py-3.5 text-lg transition-colors active:bg-white/15 disabled:opacity-40"
       >
         ⌫
@@ -97,7 +99,7 @@ export function DigitKeypad({
         onClick={onSubmit}
         className="touch-target rounded-2xl bg-[var(--color-accent)]/80 py-3.5 text-base font-semibold text-white transition-colors active:bg-[var(--color-accent)] disabled:opacity-40"
       >
-        {submitLabel}
+        {submitLabel ?? t("Done")}
       </button>
     </div>
   );
@@ -111,10 +113,14 @@ export function DigitSlots({
   expectedLength: number;
   entered: number[];
 }) {
+  const { t } = useT();
   return (
     <div
       className="flex flex-wrap items-center justify-center gap-1.5"
-      aria-label={`Entered ${entered.length} of ${expectedLength} digits`}
+      aria-label={t("Entered {n} of {total} digits", {
+        n: entered.length,
+        total: expectedLength,
+      })}
     >
       {Array.from({ length: expectedLength }, (_, i) => (
         <span

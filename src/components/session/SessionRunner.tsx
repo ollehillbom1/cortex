@@ -20,6 +20,7 @@ import { getStorage } from "@/lib/storage/db";
 import { newId } from "@/lib/storage/profileFactory";
 import { getAudioEngine } from "@/lib/audio/audio";
 import { INSTRUCTIONS } from "@/lib/exercises/instructions";
+import { useT } from "@/lib/i18n/useT";
 import { useProfiles } from "@/components/app/ProfileProvider";
 import { Button } from "@/components/ui/Button";
 import { Dialog } from "@/components/ui/Dialog";
@@ -54,6 +55,7 @@ export function SessionRunner() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { ready, profile, saveProfile } = useProfiles();
+  const { t } = useT();
   const audio = getAudioEngine();
 
   const singleParam = searchParams.get("exercise");
@@ -291,7 +293,7 @@ export function SessionRunner() {
         <div
           className="flex h-2 flex-1 gap-1"
           role="progressbar"
-          aria-label="Session progress"
+          aria-label={t("Session progress")}
           aria-valuemin={0}
           aria-valuemax={totalRounds}
           aria-valuenow={doneRounds}
@@ -319,7 +321,7 @@ export function SessionRunner() {
         </div>
         <button
           type="button"
-          aria-label="End session"
+          aria-label={t("End session")}
           onClick={() => setQuitPrompt(true)}
           className="touch-target flex items-center justify-center rounded-full text-[var(--color-ink-faint)] hover:text-[var(--color-ink)]"
         >
@@ -331,10 +333,13 @@ export function SessionRunner() {
         {phase === "overview" && (
           <div className="rise-in flex flex-col gap-6">
             <div className="text-center">
-              <h1 className="text-2xl font-bold">Today&apos;s session</h1>
+              <h1 className="text-2xl font-bold">{t("Today's session")}</h1>
               <p className="mt-1 flex items-center justify-center gap-1.5 text-sm text-[var(--color-ink-dim)]">
-                <ClockIcon className="h-4 w-4" /> about {estimatedMinutes} min · {items.length}{" "}
-                exercises
+                <ClockIcon className="h-4 w-4" />{" "}
+                {t("about {min} min · {count} exercises", {
+                  min: estimatedMinutes,
+                  count: items.length,
+                })}
               </p>
             </div>
             <ol className="card divide-y divide-white/6 px-5">
@@ -344,9 +349,9 @@ export function SessionRunner() {
                 return (
                   <li key={item.exerciseId} className="flex items-center justify-between py-3.5">
                     <div>
-                      <p className="font-semibold">{def.name}</p>
+                      <p className="font-semibold">{t(def.name)}</p>
                       <p className="text-xs text-[var(--color-ink-dim)]">
-                        {def.modalities.map((m) => MODALITY_LABELS[m]).join(" · ")}
+                        {def.modalities.map((m) => t(MODALITY_LABELS[m])).join(" · ")}
                       </p>
                     </div>
                     <span className="rounded-full bg-white/8 px-2.5 py-1 text-xs font-semibold text-[var(--color-ink-dim)]">
@@ -357,7 +362,7 @@ export function SessionRunner() {
               })}
             </ol>
             <Button onClick={() => void beginSession()} className="w-full">
-              Start training
+              {t("Start training")}
             </Button>
           </div>
         )}
@@ -366,39 +371,41 @@ export function SessionRunner() {
           <div className="rise-in flex flex-col gap-5">
             <div className="text-center">
               <p className="text-xs font-semibold uppercase tracking-widest text-[var(--color-ink-faint)]">
-                Exercise {itemIndex + 1} of {items.length}
+                {t("Exercise {i} of {total}", { i: itemIndex + 1, total: items.length })}
               </p>
-              <h1 className="mt-1 text-3xl font-bold">{currentDef.name}</h1>
-              <p className="mt-1 text-sm text-[var(--color-ink-dim)]">{currentDef.tagline}</p>
+              <h1 className="mt-1 text-3xl font-bold">{t(currentDef.name)}</h1>
+              <p className="mt-1 text-sm text-[var(--color-ink-dim)]">{t(currentDef.tagline)}</p>
               <p className="mt-2 inline-block rounded-full bg-white/8 px-3 py-1 text-xs font-semibold">
-                Level {effectiveLevel(skills[currentDef.id] ?? initialSkill())} ·{" "}
-                {currentItem?.rounds} round{(currentItem?.rounds ?? 0) > 1 ? "s" : ""}
+                {t("Level {n}", { n: effectiveLevel(skills[currentDef.id] ?? initialSkill()) })} ·{" "}
+                {t((currentItem?.rounds ?? 0) > 1 ? "{n} rounds" : "{n} round", {
+                  n: currentItem?.rounds ?? 0,
+                })}
               </p>
             </div>
             <div className="card p-5">
               <h2 className="mb-2 text-sm font-semibold uppercase tracking-wide text-[var(--color-ink-dim)]">
-                How it works
+                {t("How it works")}
               </h2>
               <ul className="space-y-2 text-[15px] leading-snug">
                 {INSTRUCTIONS[currentDef.id].how.map((line, i) => (
                   <li key={i} className="flex gap-2.5">
                     <CheckIcon className="mt-0.5 h-4 w-4 shrink-0 text-[var(--color-accent-2)]" />
-                    <span>{line}</span>
+                    <span>{t(line)}</span>
                   </li>
                 ))}
               </ul>
               <p className="mt-3 border-t border-white/8 pt-3 text-sm text-[var(--color-ink-dim)]">
-                <span className="font-semibold text-[var(--color-ink)]">Scoring: </span>
-                {INSTRUCTIONS[currentDef.id].scoring}
+                <span className="font-semibold text-[var(--color-ink)]">{t("Scoring:")} </span>
+                {t(INSTRUCTIONS[currentDef.id].scoring)}
               </p>
               {INSTRUCTIONS[currentDef.id].accessibility && (
                 <p className="mt-2 text-sm text-[var(--color-ink-dim)]">
-                  {INSTRUCTIONS[currentDef.id].accessibility}
+                  {t(INSTRUCTIONS[currentDef.id].accessibility!)}
                 </p>
               )}
             </div>
             <Button onClick={() => void beginExercise()} className="w-full">
-              Start {currentDef.name}
+              {t("Start {name}", { name: t(currentDef.name) })}
             </Button>
           </div>
         )}
@@ -406,7 +413,8 @@ export function SessionRunner() {
         {phase === "playing" && currentItem && currentDef && (
           <div key={`${itemIndex}-${roundIndex}`}>
             <p className="mb-4 text-center text-xs font-semibold uppercase tracking-widest text-[var(--color-ink-faint)]">
-              {currentDef.name} · round {roundIndex + 1}/{currentItem.rounds}
+              {t(currentDef.name)} ·{" "}
+              {t("round {i}/{total}", { i: roundIndex + 1, total: currentItem.rounds })}
             </p>
             <CurrentGame
               exerciseId={currentItem.exerciseId}
@@ -438,17 +446,17 @@ export function SessionRunner() {
             <div>
               <p className="text-xl font-bold">
                 {lastRound.perfect
-                  ? "Perfect!"
+                  ? t("Perfect!")
                   : lastRound.accuracy >= 0.7
-                    ? "Well done"
-                    : "Keep at it"}
+                    ? t("Well done")
+                    : t("Keep at it")}
               </p>
               {lastRound.detail && (
                 <p className="mt-1 text-sm text-[var(--color-ink-dim)]">{lastRound.detail}</p>
               )}
             </div>
             <Button variant="ghost" onClick={() => void advance()}>
-              Continue
+              {t("Continue")}
             </Button>
           </div>
         )}
@@ -456,19 +464,24 @@ export function SessionRunner() {
 
       {/* Quit confirmation */}
       {quitPrompt && (
-        <Dialog label="End session?" onClose={() => setQuitPrompt(false)}>
-          <p className="text-lg font-bold">End this session?</p>
+        <Dialog label={t("End session?")} onClose={() => setQuitPrompt(false)}>
+          <p className="text-lg font-bold">{t("End this session?")}</p>
           <p className="mt-1 text-sm text-[var(--color-ink-dim)]">
             {completed.length > 0
-              ? `${completed.length} completed exercise${completed.length > 1 ? "s" : ""} will be saved. The current exercise is discarded.`
-              : "Nothing has been completed yet, so nothing will be saved."}
+              ? t(
+                  completed.length > 1
+                    ? "{n} completed exercises will be saved. The current exercise is discarded."
+                    : "{n} completed exercise will be saved. The current exercise is discarded.",
+                  { n: completed.length },
+                )
+              : t("Nothing has been completed yet, so nothing will be saved.")}
           </p>
           <div className="mt-4 flex gap-3">
             <Button variant="ghost" onClick={() => setQuitPrompt(false)} className="flex-1">
-              Keep training
+              {t("Keep training")}
             </Button>
             <Button variant="danger" onClick={() => void quit(true)} className="flex-1">
-              End session
+              {t("End session")}
             </Button>
           </div>
         </Dialog>

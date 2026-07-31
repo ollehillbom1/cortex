@@ -15,6 +15,7 @@ import {
   shouldRemindBackup,
 } from "@/lib/storage/backupReminder";
 import { deriveInsights, META_INSIGHTS_DISMISSED_DAY, type Insight } from "@/lib/insights/engine";
+import { useT } from "@/lib/i18n/useT";
 import { useProfiles } from "@/components/app/ProfileProvider";
 import { Button } from "@/components/ui/Button";
 import { ProgressBar } from "@/components/ui/ProgressBar";
@@ -23,6 +24,7 @@ import { BoltIcon, ChevronRightIcon, ClockIcon, FlameIcon } from "@/components/u
 export default function HomePage() {
   const router = useRouter();
   const { ready, profile } = useProfiles();
+  const { t } = useT();
   const [sessions, setSessions] = useState<SessionRecord[] | null>(null);
   const [backupHint, setBackupHint] = useState(false);
   const [insight, setInsight] = useState<Insight | null>(null);
@@ -55,7 +57,7 @@ export default function HomePage() {
         );
         const todayKey = dayKey(new Date());
         if (insightsDismissedDay !== todayKey) {
-          const insights = deriveInsights({ profile, sessions: list, today: todayKey });
+          const insights = deriveInsights({ profile, sessions: list, today: todayKey }, t);
           setInsight(insights[0] ?? null);
         }
       }
@@ -63,7 +65,7 @@ export default function HomePage() {
     return () => {
       cancelled = true;
     };
-  }, [profile]);
+  }, [profile, t]);
 
   const dismissBackupHint = async () => {
     setBackupHint(false);
@@ -98,14 +100,15 @@ export default function HomePage() {
   const { strengths, focus } = strengthsAndFocus(profile);
   const recent = (sessions ?? []).slice(0, 3);
 
-  const hello =
+  const hello = t(
     new Date().getHours() < 5
       ? "Night owl"
       : new Date().getHours() < 12
         ? "Good morning"
         : new Date().getHours() < 18
           ? "Good afternoon"
-          : "Good evening";
+          : "Good evening",
+  );
 
   return (
     <div className="flex flex-col gap-5 pt-2">
@@ -126,14 +129,14 @@ export default function HomePage() {
                 ? "bg-[var(--color-warn)]/15 text-[var(--color-warn)]"
                 : "bg-white/8 text-[var(--color-ink-dim)]"
             }`}
-            title={atRisk ? "Train today to keep your streak" : "Daily streak"}
+            title={atRisk ? t("Train today to keep your streak") : t("Daily streak")}
           >
             <FlameIcon className="h-4 w-4" />
             {streak}
           </span>
           <Link
             href="/profile"
-            aria-label={`Profile: ${profile.name}`}
+            aria-label={t("Profile: {name}", { name: profile.name })}
             className="flex h-10 w-10 items-center justify-center rounded-full border border-white/10 text-xl"
             style={{ background: `hsl(${profile.avatarHue} 60% 25% / 0.6)` }}
           >
@@ -146,26 +149,26 @@ export default function HomePage() {
       {backupHint && (
         <section
           className="card flex items-start gap-3 border-[var(--color-warn)]/25 p-4"
-          aria-label="Backup reminder"
+          aria-label={t("Backup reminder")}
         >
           <span aria-hidden className="text-lg">
             💾
           </span>
           <div className="flex-1 text-sm">
-            <p className="font-semibold">Back up your progress?</p>
+            <p className="font-semibold">{t("Back up your progress?")}</p>
             <p className="mt-0.5 text-[var(--color-ink-dim)]">
-              Your training lives only in this browser. A quick JSON export keeps it safe.
+              {t("Your training lives only in this browser. A quick JSON export keeps it safe.")}
             </p>
             <div className="mt-2 flex gap-4">
               <Link href="/profile" className="font-semibold text-[var(--color-accent-2)]">
-                Export now
+                {t("Export now")}
               </Link>
               <button
                 type="button"
                 onClick={() => void dismissBackupHint()}
                 className="text-[var(--color-ink-faint)] underline"
               >
-                Remind me later
+                {t("Remind me later")}
               </button>
             </div>
           </div>
@@ -174,7 +177,7 @@ export default function HomePage() {
 
       {/* Insight of the day (rule-based, from the user's own data) */}
       {insight && (
-        <section className="card flex items-start gap-3 p-4" aria-label="Training insight">
+        <section className="card flex items-start gap-3 p-4" aria-label={t("Training insight")}>
           <span aria-hidden className="text-lg">
             💡
           </span>
@@ -182,7 +185,7 @@ export default function HomePage() {
           <button
             type="button"
             onClick={() => void dismissInsight()}
-            aria-label="Dismiss insight for today"
+            aria-label={t("Dismiss insight for today")}
             className="touch-target -m-2 flex items-center justify-center p-2 text-[var(--color-ink-faint)] hover:text-[var(--color-ink)]"
           >
             ✕
@@ -191,27 +194,27 @@ export default function HomePage() {
       )}
 
       {/* Level */}
-      <section className="card p-4" aria-label="Level progress">
+      <section className="card p-4" aria-label={t("Level progress")}>
         <div className="flex items-baseline justify-between">
-          <p className="text-sm font-semibold">Level {progress.level}</p>
+          <p className="text-sm font-semibold">{t("Level {n}", { n: progress.level })}</p>
           <p className="text-xs text-[var(--color-ink-faint)]">
             {progress.inLevel}/{progress.needed} XP
           </p>
         </div>
-        <ProgressBar fraction={progress.fraction} label="Level progress" className="mt-2" />
+        <ProgressBar fraction={progress.fraction} label={t("Level progress")} className="mt-2" />
       </section>
 
       {/* Today's training */}
-      <section className="card relative overflow-hidden p-5" aria-label="Today's training">
+      <section className="card relative overflow-hidden p-5" aria-label={t("Today's training")}>
         <div
           aria-hidden
           className="pointer-events-none absolute -right-16 -top-16 h-48 w-48 rounded-full bg-[var(--color-accent)]/20 blur-3xl"
         />
         <div className="flex items-center justify-between">
-          <h2 className="text-lg font-bold">Today&apos;s training</h2>
+          <h2 className="text-lg font-bold">{t("Today's training")}</h2>
           {goalDone && (
             <span className="rounded-full bg-[var(--color-good)]/15 px-2.5 py-1 text-xs font-semibold text-[var(--color-good)]">
-              Goal reached ✓
+              {t("Goal reached ✓")}
             </span>
           )}
         </div>
@@ -219,7 +222,10 @@ export default function HomePage() {
           <>
             <p className="mt-1 flex items-center gap-1.5 text-sm text-[var(--color-ink-dim)]">
               <ClockIcon className="h-4 w-4" />
-              about {plan.estimatedMinutes} min · {plan.items.length} exercises
+              {t("about {min} min · {count} exercises", {
+                min: plan.estimatedMinutes,
+                count: plan.items.length,
+              })}
             </p>
             <div className="mt-3 flex flex-wrap gap-1.5">
               {plan.modalities.map((m) => (
@@ -227,7 +233,7 @@ export default function HomePage() {
                   key={m}
                   className="rounded-full border border-white/10 bg-white/5 px-2.5 py-1 text-xs text-[var(--color-ink-dim)]"
                 >
-                  {MODALITY_LABELS[m]}
+                  {t(MODALITY_LABELS[m])}
                 </span>
               ))}
             </div>
@@ -235,14 +241,14 @@ export default function HomePage() {
               {plan.items.map((i, idx) => (
                 <span key={i.exerciseId}>
                   {idx > 0 && " · "}
-                  {EXERCISES[i.exerciseId].name}
+                  {t(EXERCISES[i.exerciseId].name)}
                 </span>
               ))}
             </div>
             <Link href="/session" className="contents">
               <Button className="mt-4 w-full">
                 <BoltIcon className="h-5 w-5" />
-                {todaysSessions.length > 0 ? "Train again" : "Start session"}
+                {todaysSessions.length > 0 ? t("Train again") : t("Start session")}
               </Button>
             </Link>
           </>
@@ -252,14 +258,14 @@ export default function HomePage() {
         {goal > 0 && (
           <div className="mt-4">
             <div className="flex justify-between text-xs text-[var(--color-ink-faint)]">
-              <span>Daily goal</span>
+              <span>{t("Daily goal")}</span>
               <span>
                 {Math.min(goal, Math.round(minutesToday))}/{goal} min
               </span>
             </div>
             <ProgressBar
               fraction={minutesToday / goal}
-              label="Daily goal progress"
+              label={t("Daily goal progress")}
               className="mt-1.5"
             />
           </div>
@@ -268,36 +274,36 @@ export default function HomePage() {
 
       {/* Strengths / focus */}
       {(strengths.length > 0 || focus.length > 0) && (
-        <section className="grid grid-cols-2 gap-3" aria-label="Strengths and focus areas">
+        <section className="grid grid-cols-2 gap-3" aria-label={t("Strengths and focus areas")}>
           <div className="card p-4">
             <h3 className="text-xs font-semibold uppercase tracking-wide text-[var(--color-ink-faint)]">
-              Strengths
+              {t("Strengths")}
             </h3>
             <ul className="mt-2 space-y-1.5">
               {strengths.map((s) => (
                 <li key={s.exerciseId} className="text-sm">
-                  <span className="font-medium">{s.name}</span>{" "}
+                  <span className="font-medium">{t(s.name)}</span>{" "}
                   <span className="text-[var(--color-ink-faint)]">Lv {s.level}</span>
                 </li>
               ))}
               {strengths.length === 0 && (
-                <li className="text-sm text-[var(--color-ink-faint)]">Train to find out</li>
+                <li className="text-sm text-[var(--color-ink-faint)]">{t("Train to find out")}</li>
               )}
             </ul>
           </div>
           <div className="card p-4">
             <h3 className="text-xs font-semibold uppercase tracking-wide text-[var(--color-ink-faint)]">
-              Worth training
+              {t("Worth training")}
             </h3>
             <ul className="mt-2 space-y-1.5">
               {focus.map((s) => (
                 <li key={s.exerciseId} className="text-sm">
-                  <span className="font-medium">{s.name}</span>{" "}
+                  <span className="font-medium">{t(s.name)}</span>{" "}
                   <span className="text-[var(--color-ink-faint)]">Lv {s.level}</span>
                 </li>
               ))}
               {focus.length === 0 && (
-                <li className="text-sm text-[var(--color-ink-faint)]">Train to find out</li>
+                <li className="text-sm text-[var(--color-ink-faint)]">{t("Train to find out")}</li>
               )}
             </ul>
           </div>
@@ -305,18 +311,18 @@ export default function HomePage() {
       )}
 
       {/* Recent sessions */}
-      <section aria-label="Recent sessions">
+      <section aria-label={t("Recent sessions")}>
         <div className="mb-2 flex items-center justify-between">
           <h2 className="text-sm font-semibold uppercase tracking-wide text-[var(--color-ink-dim)]">
-            Recent
+            {t("Recent")}
           </h2>
           <Link href="/stats" className="flex items-center text-sm text-[var(--color-accent-2)]">
-            All stats <ChevronRightIcon className="h-4 w-4" />
+            {t("All stats")} <ChevronRightIcon className="h-4 w-4" />
           </Link>
         </div>
         {recent.length === 0 ? (
           <p className="card p-4 text-sm text-[var(--color-ink-dim)]">
-            No sessions yet. Your first session takes about {goal} minutes.
+            {t("No sessions yet. Your first session takes about {goal} minutes.", { goal })}
           </p>
         ) : (
           <ul className="card divide-y divide-white/6 px-4">
@@ -324,7 +330,8 @@ export default function HomePage() {
               <li key={s.id} className="flex items-center justify-between py-3">
                 <div>
                   <p className="text-sm font-medium">
-                    {s.exercises.map((e) => EXERCISES[e.exerciseId].name).join(" · ") || "Session"}
+                    {s.exercises.map((e) => t(EXERCISES[e.exerciseId].name)).join(" · ") ||
+                      t("Session")}
                   </p>
                   <p className="text-xs text-[var(--color-ink-faint)]">
                     {formatWhen(s.startedAt)} · {Math.max(1, Math.round(s.durationMs / 60_000))} min
