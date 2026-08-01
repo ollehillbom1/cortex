@@ -4,7 +4,13 @@ import { readdir } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { emptyTombstones, mergeStates, type SyncState } from "./merge";
-import { decryptJson, deriveCredentials, encryptJson, isValidGroupId } from "./crypto";
+import {
+  decryptJson,
+  deriveCredentials,
+  deriveLegacyCredentials,
+  encryptJson,
+  isValidGroupId,
+} from "./crypto";
 import { readRecord, RevConflictError, writeRecord, type StoredSyncRecord } from "./serverStore";
 import { createProfile } from "@/lib/storage/profileFactory";
 import { CURRENT_DATA_VERSION } from "@/lib/storage/migrations";
@@ -38,6 +44,11 @@ function state(over: Partial<SyncState>): SyncState {
     tombstones: emptyTombstones(),
     ...over,
   };
+}
+
+async function sha256Hex(text: string): Promise<string> {
+  const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(text));
+  return [...new Uint8Array(digest)].map((b) => b.toString(16).padStart(2, "0")).join("");
 }
 
 describe("sync merge", () => {
@@ -143,6 +154,49 @@ describe("sync crypto", () => {
     const one = await encryptJson(key, { a: 1 });
     const two = await encryptJson(key, { a: 1 });
     expect(one.blob).not.toBe(two.blob);
+  });
+
+  it("the group id is not a cheap hash of the passphrase", async () => {
+    const passphrase = "hemlig lösenfras";
+    const { groupId } = await deriveCredentials(passphrase);
+
+    // v1 handed the server SHA-256(context + passphrase) as a filename, so a
+    // single hash per guess was enough to brute-force the household secret.
+    // Any derivation reproducible that cheaply is a regression.
+    for (const context of [
+      "cortex-sync-id:v1:",
+      "cortex-sync-key:v1:",
+      "cortex-sync:v2",
+      "cortex-sync-id:v2",
+      "",
+    ]) {
+      expect(groupId).not.toBe(await sha256Hex(context + passphrase));
+      expect(groupId).not.toBe(await sha256Hex(passphrase + context));
+    }
+  });
+
+  it("the group id reveals nothing usable about the key", async () => {
+    const { groupId, key } = await deriveCredentials("hemlig lösenfras");
+    const raw = Buffer.from(await crypto.subtle.exportKey("raw", key)).toString("hex");
+    // Separate HKDF info strings: neither output is a prefix, suffix or copy
+    // of the other, so publishing the id cannot leak key material.
+    expect(raw).not.toBe(groupId);
+    expect(groupId.includes(raw)).toBe(false);
+    expect(raw.includes(groupId)).toBe(false);
+  });
+
+  it("v2 lands in a different group than v1, and v1 is still readable", async () => {
+    const passphrase = "hemlig lösenfras";
+    const v2 = await deriveCredentials(passphrase);
+    const v1 = await deriveLegacyCredentials(passphrase);
+    expect(v2.groupId).not.toBe(v1.groupId);
+    expect(isValidGroupId(v1.groupId)).toBe(true);
+
+    // Migration depends on v1 still round-tripping its own ciphertext.
+    const payload = await encryptJson(v1.key, { legacy: true });
+    expect(await decryptJson(v1.key, payload)).toEqual({ legacy: true });
+    // And the two keys must not be interchangeable.
+    await expect(decryptJson(v2.key, payload)).rejects.toThrow();
   });
 });
 

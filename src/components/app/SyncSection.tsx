@@ -96,6 +96,24 @@ export function SyncSection() {
         </>
       ) : (
         <>
+          {status.needsUpgrade && (
+            <div
+              role="status"
+              className="mt-3 rounded-2xl border border-[var(--color-warn)]/40 bg-[var(--color-warn)]/10 p-3"
+            >
+              <p className="text-sm font-semibold text-[var(--color-warn)]">
+                {t("Security upgrade available")}
+              </p>
+              <p className="mt-1 text-xs text-[var(--color-ink-dim)]">
+                {t(
+                  "This device still uses the old key derivation, which made the passphrase easier to guess from the server's files. Enter your passphrase to upgrade — your synced data comes with you. Until you do, this device will not see devices that have already upgraded.",
+                )}
+              </p>
+              <Button variant="ghost" onClick={() => setShowEnable(true)} className="mt-3 w-full">
+                {t("Upgrade sync security")}
+              </Button>
+            </div>
+          )}
           <p className="mt-2 text-xs text-[var(--color-ink-faint)]">
             {t("Last sync:")}{" "}
             {status.lastSyncAt

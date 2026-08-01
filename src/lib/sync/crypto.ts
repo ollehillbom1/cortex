@@ -7,9 +7,17 @@
  * and write the group — document strength requirements accordingly.
  */
 
-const ID_CONTEXT = "cortex-sync-id:v1:";
-const KEY_CONTEXT = "cortex-sync-key:v1:";
+const LEGACY_ID_CONTEXT = "cortex-sync-id:v1:";
+const LEGACY_KEY_CONTEXT = "cortex-sync-key:v1:";
 const PBKDF2_ITERATIONS = 310_000;
+
+/** v2 derivation contexts. Bumping these changes every group id. */
+const V2_SALT = "cortex-sync:v2";
+const V2_ID_INFO = "cortex-sync-id:v2";
+const V2_KEY_INFO = "cortex-sync-key:v2";
+
+/** Schema version of the credentials a device currently holds. */
+export const CURRENT_SYNC_SCHEMA = 2;
 
 export const MIN_PASSPHRASE_LENGTH = 8;
 
@@ -20,11 +28,72 @@ export interface SyncCredentials {
   key: CryptoKey;
 }
 
+/**
+ * Derive the group id and encryption key from the passphrase.
+ *
+ * Both come from ONE PBKDF2 run, split with HKDF. This matters: v1 derived
+ * the group id as a bare SHA-256 of the passphrase, and the server stores
+ * that id as a filename. Anyone who could read the data directory — a
+ * backup, a volume snapshot, the host itself — held an unsalted,
+ * single-iteration hash of the household passphrase and could brute-force it
+ * about 21 000x cheaper than attacking the PBKDF2 key, which made the
+ * 310 000 iterations worthless. The weakest derivation sets the real cost,
+ * so both outputs now sit behind the same one.
+ *
+ * The salt is a constant. That is inherent to the design — the passphrase is
+ * the only identity and two devices must land on the same group with no
+ * server round-trip — and it is not a regression: v1 salted PBKDF2 with the
+ * group id, itself derived from the same passphrase. The iteration count is
+ * the defence.
+ */
 export async function deriveCredentials(passphrase: string): Promise<SyncCredentials> {
-  const groupId = await sha256Hex(ID_CONTEXT + passphrase);
+  const encoder = new TextEncoder();
   const material = await crypto.subtle.importKey(
     "raw",
-    new TextEncoder().encode(KEY_CONTEXT + passphrase),
+    encoder.encode(passphrase),
+    "PBKDF2",
+    false,
+    ["deriveBits"],
+  );
+  const master = await crypto.subtle.deriveBits(
+    {
+      name: "PBKDF2",
+      salt: encoder.encode(V2_SALT),
+      iterations: PBKDF2_ITERATIONS,
+      hash: "SHA-256",
+    },
+    material,
+    256,
+  );
+
+  // HKDF is cheap; the PBKDF2 work above is what an attacker must repeat per
+  // guess. Separate info strings keep the id and the key independent, so
+  // publishing the id says nothing about the key.
+  const prk = await crypto.subtle.importKey("raw", master, "HKDF", false, ["deriveBits"]);
+  const expand = (info: string) =>
+    crypto.subtle.deriveBits(
+      { name: "HKDF", hash: "SHA-256", salt: new Uint8Array(0), info: encoder.encode(info) },
+      prk,
+      256,
+    );
+
+  const [idBits, keyBits] = await Promise.all([expand(V2_ID_INFO), expand(V2_KEY_INFO)]);
+  const key = await crypto.subtle.importKey("raw", keyBits, { name: "AES-GCM" }, true, [
+    "encrypt",
+    "decrypt",
+  ]);
+  return { groupId: toHex(new Uint8Array(idBits)), key };
+}
+
+/**
+ * The v1 derivation, kept solely so an existing group can be found and
+ * migrated when its passphrase is entered again. Never used for new groups.
+ */
+export async function deriveLegacyCredentials(passphrase: string): Promise<SyncCredentials> {
+  const groupId = await sha256Hex(LEGACY_ID_CONTEXT + passphrase);
+  const material = await crypto.subtle.importKey(
+    "raw",
+    new TextEncoder().encode(LEGACY_KEY_CONTEXT + passphrase),
     "PBKDF2",
     false,
     ["deriveKey"],
@@ -32,7 +101,6 @@ export async function deriveCredentials(passphrase: string): Promise<SyncCredent
   const key = await crypto.subtle.deriveKey(
     {
       name: "PBKDF2",
-      // The salt only needs to differ per group; the group id serves.
       salt: new TextEncoder().encode(groupId),
       iterations: PBKDF2_ITERATIONS,
       hash: "SHA-256",
@@ -86,7 +154,11 @@ export function isValidGroupId(id: string): boolean {
 
 async function sha256Hex(text: string): Promise<string> {
   const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(text));
-  return [...new Uint8Array(digest)].map((b) => b.toString(16).padStart(2, "0")).join("");
+  return toHex(new Uint8Array(digest));
+}
+
+function toHex(bytes: Uint8Array): string {
+  return [...bytes].map((b) => b.toString(16).padStart(2, "0")).join("");
 }
 
 function toBase64(bytes: Uint8Array): string {

@@ -27,11 +27,36 @@ Constraints that shaped the design:
 Enabling sync asks for a passphrase (min 8 chars). From it the browser
 derives, deterministically:
 
-- the **group id** — `SHA-256("cortex-sync-id:v1:" + passphrase)` as 64 hex
-  chars. This is what the server files the data under; being a one-way hash,
-  it reveals nothing about the passphrase.
-- the **encryption key** — PBKDF2 (310 000 iterations, SHA-256, salt = group
-  id, context-prefixed input) → AES-GCM-256.
+One PBKDF2 run (310 000 iterations, SHA-256, salt `"cortex-sync:v2"`) produces
+a master secret, which HKDF splits into two independent outputs:
+
+- the **group id** — HKDF info `"cortex-sync-id:v2"`, 64 hex chars. This is
+  what the server files the data under.
+- the **encryption key** — HKDF info `"cortex-sync-key:v2"` → AES-GCM-256.
+
+Both sit behind the same PBKDF2 work, deliberately. **v1 got this wrong**: it
+derived the group id as `SHA-256("cortex-sync-id:v1:" + passphrase)` — one
+unsalted iteration — and this ADR claimed that "being a one-way hash, it
+reveals nothing about the passphrase". That was false. The context prefix is
+a published constant, not a salt, and the server stores the id as a filename,
+so anyone who could read the data directory (a backup, a volume snapshot, the
+host itself) held a cheap hash of the household passphrase. Measured on one
+core: ~783 000 guesses/s against the id versus ~37/s against the PBKDF2 key —
+about 21 000x cheaper. The expensive KDF protected nothing, because the same
+secret leaked through the cheap path. A derivation is only as strong as its
+weakest output.
+
+The salt is a constant. That is inherent — the passphrase is the only
+identity and two devices must reach the same group with no server round-trip
+— and it is not a regression: v1 salted PBKDF2 with the group id, itself
+derived from the same passphrase. The iteration count is the defence.
+
+Devices holding v1 credentials keep working, but cannot re-derive on their
+own: the passphrase is never stored. `getSyncStatus` reports `needsUpgrade`
+and the profile page asks for the passphrase. On re-entry, `enableSync`
+derives both schemas, and if the v2 group is empty while a v1 group exists it
+re-encrypts that state under the v2 key before switching over — so upgrading
+carries the household's data with it instead of stranding it.
 
 There is no registration step: two devices that type the same passphrase end
 up at the same group id with the same key. The passphrase is a shared
