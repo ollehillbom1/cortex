@@ -10,7 +10,11 @@ RUN npm ci --no-audit --no-fund
 # --- build: compile the production bundle -----------------------------------
 FROM node:22-alpine AS build
 WORKDIR /app
-ENV NEXT_TELEMETRY_DISABLED=1
+# Emulated arm64 builds crash Next's parallel build workers (SIGILL under
+# QEMU); build in a single process. Costs some build time, buys a working
+# Raspberry Pi image.
+ENV NEXT_TELEMETRY_DISABLED=1 \
+    NEXT_SINGLE_PROCESS_BUILD=1
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 RUN npm run build

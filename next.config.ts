@@ -39,6 +39,13 @@ const nextConfig: NextConfig = {
   output: "standalone",
   reactStrictMode: true,
   poweredByHeader: false,
+  // Building the arm64 image runs under QEMU emulation, where Next's parallel
+  // build workers crash with SIGILL on an instruction QEMU cannot emulate.
+  // Single-process builds avoid it. Set only in the Docker build, so native
+  // builds (local and CI) keep their parallelism.
+  ...(process.env.NEXT_SINGLE_PROCESS_BUILD === "1"
+    ? { experimental: { workerThreads: false, cpus: 1 } }
+    : {}),
   async headers() {
     return [
       {
