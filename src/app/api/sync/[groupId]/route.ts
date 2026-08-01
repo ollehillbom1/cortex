@@ -1,4 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server";
+import { clientKey, createRateLimiter } from "@/lib/security/rateLimit";
 import { isValidGroupId } from "@/lib/sync/crypto";
 import {
   MAX_BLOB_CHARS,
@@ -20,7 +21,23 @@ export const dynamic = "force-dynamic";
 
 type Params = { params: Promise<{ groupId: string }> };
 
-export async function GET(_request: NextRequest, { params }: Params) {
+// Real clients sync on app start and on explicit "Sync now" taps, so a
+// handful of requests per minute per address is generous. Writes get the
+// tighter budget: an unauthenticated PUT is what can create files, and at up
+// to ~11 MB of JSON per request the write path is the disk-exhaustion vector.
+const readLimiter = createRateLimiter({ capacity: 60, refillPerMinute: 60 });
+const writeLimiter = createRateLimiter({ capacity: 20, refillPerMinute: 10 });
+
+function rateLimited(retryAfterSeconds: number | undefined): NextResponse {
+  return NextResponse.json(
+    { error: "rate limited" },
+    { status: 429, headers: { "Retry-After": String(retryAfterSeconds ?? 60) } },
+  );
+}
+
+export async function GET(request: NextRequest, { params }: Params) {
+  const verdict = readLimiter.check(clientKey(request.headers));
+  if (!verdict.allowed) return rateLimited(verdict.retryAfterSeconds);
   const { groupId } = await params;
   if (!isValidGroupId(groupId)) {
     return NextResponse.json({ error: "invalid group id" }, { status: 400 });
@@ -31,6 +48,8 @@ export async function GET(_request: NextRequest, { params }: Params) {
 }
 
 export async function PUT(request: NextRequest, { params }: Params) {
+  const verdict = writeLimiter.check(clientKey(request.headers));
+  if (!verdict.allowed) return rateLimited(verdict.retryAfterSeconds);
   const { groupId } = await params;
   if (!isValidGroupId(groupId)) {
     return NextResponse.json({ error: "invalid group id" }, { status: 400 });
