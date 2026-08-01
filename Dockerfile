@@ -10,9 +10,11 @@ RUN npm ci --no-audit --no-fund
 # --- build: compile the production bundle -----------------------------------
 FROM node:22-alpine AS build
 WORKDIR /app
-# Emulated arm64 builds crash Next's parallel build workers (SIGILL under
-# QEMU); build in a single process. Costs some build time, buys a working
-# Raspberry Pi image.
+# Emulated arm64 builds intermittently crash Next's parallel build workers
+# ("qemu: uncaught target signal 4 (Illegal instruction)" / SIGILL). Observed
+# on two CI runs; other runs of the same source succeeded, so this is a
+# mitigation for a flaky failure, not a proven cure. Building in a single
+# process removes the worker that crashes, at some build-time cost.
 ENV NEXT_TELEMETRY_DISABLED=1 \
     NEXT_SINGLE_PROCESS_BUILD=1
 COPY --from=deps /app/node_modules ./node_modules
