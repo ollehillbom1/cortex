@@ -60,6 +60,12 @@ export interface ProfilePreferences {
   locale: "auto" | "en" | "sv";
   /** Kid-friendly mode: larger UI and a gentler difficulty ramp. */
   kidMode: boolean;
+  /**
+   * Leave out exercises that cannot be played without sight (see
+   * `ExerciseDefinition.requiresVision`). Planned sessions and the default
+   * library view then only offer non-visual exercises.
+   */
+  excludeVisionRequired: boolean;
 }
 
 export interface PersonalRecord {
@@ -132,6 +138,16 @@ export interface ExerciseDefinition {
   secondsPerRound: number;
   /** Default number of rounds in a session block. */
   defaultRounds: number;
+  /**
+   * True when the exercise cannot honestly be played without sight — the
+   * stimulus itself is visual (tiles, positions, a colour change) and there
+   * is no equivalent non-visual pathway. Labelled in the UI and filterable
+   * by the `excludeVisionRequired` preference; we state this plainly rather
+   * than pretending a screen-reader can convey a flashed grid.
+   */
+  requiresVision: boolean;
+  /** True when the exercise needs audible sound to be playable at all. */
+  requiresAudio: boolean;
 }
 
 export const EXERCISES: Record<ExerciseId, ExerciseDefinition> = {
@@ -142,6 +158,8 @@ export const EXERCISES: Record<ExerciseId, ExerciseDefinition> = {
     modalities: ["working-memory"],
     secondsPerRound: 22,
     defaultRounds: 4,
+    requiresVision: true,
+    requiresAudio: false,
   },
   "sequence-memory": {
     id: "sequence-memory",
@@ -150,6 +168,8 @@ export const EXERCISES: Record<ExerciseId, ExerciseDefinition> = {
     modalities: ["working-memory", "visual-memory"],
     secondsPerRound: 20,
     defaultRounds: 4,
+    requiresVision: true,
+    requiresAudio: false,
   },
   "visual-pattern": {
     id: "visual-pattern",
@@ -158,6 +178,8 @@ export const EXERCISES: Record<ExerciseId, ExerciseDefinition> = {
     modalities: ["visual-memory"],
     secondsPerRound: 16,
     defaultRounds: 5,
+    requiresVision: true,
+    requiresAudio: false,
   },
   "n-back": {
     id: "n-back",
@@ -166,6 +188,8 @@ export const EXERCISES: Record<ExerciseId, ExerciseDefinition> = {
     modalities: ["working-memory", "attention"],
     secondsPerRound: 55,
     defaultRounds: 1,
+    requiresVision: true,
+    requiresAudio: false,
   },
   "dual-n-back": {
     id: "dual-n-back",
@@ -174,6 +198,8 @@ export const EXERCISES: Record<ExerciseId, ExerciseDefinition> = {
     modalities: ["working-memory", "attention", "auditory-memory"],
     secondsPerRound: 65,
     defaultRounds: 1,
+    requiresVision: true,
+    requiresAudio: true,
   },
   "auditory-digits": {
     id: "auditory-digits",
@@ -182,6 +208,8 @@ export const EXERCISES: Record<ExerciseId, ExerciseDefinition> = {
     modalities: ["auditory-memory", "working-memory"],
     secondsPerRound: 24,
     defaultRounds: 4,
+    requiresVision: false,
+    requiresAudio: true,
   },
   "tone-pattern": {
     id: "tone-pattern",
@@ -190,6 +218,8 @@ export const EXERCISES: Record<ExerciseId, ExerciseDefinition> = {
     modalities: ["auditory-memory", "working-memory"],
     secondsPerRound: 18,
     defaultRounds: 4,
+    requiresVision: false,
+    requiresAudio: true,
   },
   "rhythm-recall": {
     id: "rhythm-recall",
@@ -198,6 +228,8 @@ export const EXERCISES: Record<ExerciseId, ExerciseDefinition> = {
     modalities: ["auditory-memory", "attention"],
     secondsPerRound: 16,
     defaultRounds: 4,
+    requiresVision: false,
+    requiresAudio: true,
   },
   "reaction-time": {
     id: "reaction-time",
@@ -206,6 +238,8 @@ export const EXERCISES: Record<ExerciseId, ExerciseDefinition> = {
     modalities: ["speed", "attention"],
     secondsPerRound: 8,
     defaultRounds: 5,
+    requiresVision: true,
+    requiresAudio: false,
   },
 };
 

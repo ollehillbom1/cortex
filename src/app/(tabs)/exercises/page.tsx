@@ -1,16 +1,25 @@
 "use client";
 
 import Link from "next/link";
+import { useState } from "react";
 import { ALL_EXERCISE_IDS, EXERCISES, MODALITY_LABELS } from "@/lib/domain/types";
 import { effectiveLevel, recentAccuracy } from "@/lib/adaptive/engine";
+import { availableExerciseIds } from "@/lib/exercises/availability";
 import { useT } from "@/lib/i18n/useT";
 import { useProfiles } from "@/components/app/ProfileProvider";
+import { Button } from "@/components/ui/Button";
 import { ChevronRightIcon } from "@/components/ui/icons";
 
 export default function ExercisesPage() {
   const { ready, profile } = useProfiles();
   const { t } = useT();
+  const [showAll, setShowAll] = useState(false);
   if (!ready) return null;
+
+  // With "leave out vision-only exercises" on, the library shows the playable
+  // ones first; the rest stay reachable behind an explicit toggle.
+  const visible = profile && !showAll ? availableExerciseIds(profile) : [...ALL_EXERCISE_IDS];
+  const hiddenCount = ALL_EXERCISE_IDS.length - visible.length;
 
   return (
     <div className="flex flex-col gap-5 pt-2">
@@ -21,7 +30,7 @@ export default function ExercisesPage() {
         </p>
       </header>
       <ul className="flex flex-col gap-3">
-        {ALL_EXERCISE_IDS.map((id) => {
+        {visible.map((id) => {
           const def = EXERCISES[id];
           const skill = profile?.skills[id];
           const level = skill ? effectiveLevel(skill) : 1;
@@ -46,6 +55,15 @@ export default function ExercisesPage() {
                     {def.modalities.map((m) => t(MODALITY_LABELS[m])).join(" · ")}
                     {acc !== null && ` · ${t("recent")} ${Math.round(acc * 100)}%`}
                   </p>
+                  {(def.requiresVision || def.requiresAudio) && (
+                    <p className="mt-1 text-xs text-[var(--color-ink-faint)]">
+                      {def.requiresVision && def.requiresAudio
+                        ? t("Needs sight and sound")
+                        : def.requiresVision
+                          ? t("Needs sight")
+                          : t("Needs sound")}
+                    </p>
+                  )}
                 </div>
                 <ChevronRightIcon className="h-5 w-5 shrink-0 text-[var(--color-ink-faint)]" />
               </Link>
@@ -53,6 +71,11 @@ export default function ExercisesPage() {
           );
         })}
       </ul>
+      {hiddenCount > 0 && (
+        <Button variant="subtle" onClick={() => setShowAll(true)}>
+          {t("Show {n} exercises that need sight", { n: hiddenCount })}
+        </Button>
+      )}
       <p className="text-xs leading-relaxed text-[var(--color-ink-faint)]">
         {t(
           "Levels adapt to keep each exercise challenging but doable. Scores reflect in-app performance only — they are not medical or IQ measurements.",

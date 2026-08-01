@@ -19,7 +19,8 @@ export const INSTRUCTIONS: Record<ExerciseId, ExerciseInstructions> = {
       "The sequence grows as you improve.",
     ],
     scoring: "Each digit in the right position counts. A full sequence is a perfect round.",
-    accessibility: "You can use your physical keyboard: digits, Backspace and Enter.",
+    accessibility:
+      "This exercise needs sight — the digits are shown on screen. Sound Span is the same task by ear. Keyboard: digits, Backspace and Enter.",
   },
   "sequence-memory": {
     how: [
@@ -28,6 +29,8 @@ export const INSTRUCTIONS: Record<ExerciseId, ExerciseInstructions> = {
       "Longer and faster sequences unlock as you improve.",
     ],
     scoring: "Your streak of correct taps from the start of the sequence counts.",
+    accessibility:
+      "This exercise needs sight: the sequence is shown as lit tiles, with no equivalent by ear. Tone Pattern trains the same recall through sound.",
   },
   "visual-pattern": {
     how: [
@@ -36,6 +39,8 @@ export const INSTRUCTIONS: Record<ExerciseId, ExerciseInstructions> = {
     ],
     scoring:
       "Correct tiles score; wrong tiles subtract. Rebuild the exact pattern for a perfect round.",
+    accessibility:
+      "This exercise needs sight: the pattern is purely visual and cannot be conveyed by a screen reader.",
   },
   "n-back": {
     how: [
@@ -45,7 +50,8 @@ export const INSTRUCTIONS: Record<ExerciseId, ExerciseInstructions> = {
     ],
     scoring:
       "Correct matches and correct passes both count. Tapping Match when there is no match (a false alarm) costs accuracy.",
-    accessibility: "You can press the space bar instead of tapping Match.",
+    accessibility:
+      "This exercise needs sight — the stimulus is a square's position. Dual N-Back adds a spoken stream, and Sound Span is fully auditory. Keyboard: space bar instead of tapping Match.",
   },
   "auditory-digits": {
     how: [
@@ -95,5 +101,7 @@ export const INSTRUCTIONS: Record<ExerciseId, ExerciseInstructions> = {
     ],
     scoring:
       "Your reaction time in milliseconds. Lower is better; your average and best are tracked.",
+    accessibility:
+      "This exercise needs sight: the GO signal is a visual change. Keyboard: the space bar works instead of tapping.",
   },
 };

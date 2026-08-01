@@ -145,6 +145,18 @@ describe("migrations", () => {
     expect(migrated.updatedAt).toBe("2026-03-01T00:00:00.000Z");
   });
 
+  it("adds the vision-exclusion preference when migrating to v7", () => {
+    const v6 = {
+      ...createProfile({ id: "p", name: "P" }),
+      dataVersion: 6,
+    } as unknown as Record<string, unknown>;
+    delete (v6.preferences as Record<string, unknown>).excludeVisionRequired;
+    const migrated = migrateProfile(v6);
+    expect(migrated.dataVersion).toBe(CURRENT_DATA_VERSION);
+    expect(migrated.preferences.excludeVisionRequired).toBe(false);
+    expect(migrated.preferences.kidMode).toBe(false);
+  });
+
   it("leaves current-version profiles untouched", () => {
     const p = { ...createProfile({ id: "p", name: "P" }), dataVersion: CURRENT_DATA_VERSION };
     expect(migrateProfile(p as unknown as Record<string, unknown>)).toEqual(p);
