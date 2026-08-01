@@ -37,6 +37,9 @@ export interface RoundOutcome {
   inputMs?: number;
 }
 
+/** Near-perfect rounds before this one needed to arm the hot streak. */
+export const HOT_STREAK_PRIOR_ROUNDS = 2;
+
 /** "Correct but laboured": latency this far above baseline halves up-steps. */
 export const LATENCY_STRAIN_RATIO = 1.35;
 /** Baseline needs at least this many samples before latency modulates. */
@@ -69,6 +72,9 @@ export function effectiveLevel(state: SkillState): number {
  * - below 0.5               -> -0.50  (clearly too hard)
  *
  * Modifiers:
+ * - hot streak: from the third near-perfect (>= 0.95) round in a row the
+ *   step is a full +1 level, ending on the first round below 0.95 — a run
+ *   of cleared rounds is direct evidence the estimate sits far too low
  * - first 3 attempts: x1.8 to find the right level quickly
  * - fatigue discounts downward steps by up to 50%
  * - "correct but laboured": with >= LATENCY_MIN_SAMPLES of latency history,
@@ -101,6 +107,20 @@ export function updateSkill(
   else if (accuracy >= TARGET_LOW) delta = 0.1;
   else if (accuracy >= 0.5) delta = -0.25;
   else delta = -0.5;
+
+  // Hot streak: from the third near-perfect round in a row, step a full
+  // level. At +0.6 a skilled newcomer needed ~19 rounds (3-4 sessions) to
+  // climb from level 1 to level 8 — days of too-easy exercises. Clearing
+  // round after round IS the evidence the estimate is far off, so follow it
+  // at the maximum smooth rate; the one-level-per-round ceiling still holds,
+  // and the run ends on the first round below 95%.
+  if (
+    accuracy >= 0.95 &&
+    state.recent.length >= HOT_STREAK_PRIOR_ROUNDS &&
+    state.recent.slice(-HOT_STREAK_PRIOR_ROUNDS).every((a) => a >= 0.95)
+  ) {
+    delta = 1;
+  }
 
   if (state.attempts < 3) delta *= opts.gentle ? 1.4 : 1.8;
   if (delta > 0 && opts.gentle) delta *= 0.75;
