@@ -20,6 +20,9 @@ export function PatternGame({ level, seed, onRoundComplete }: GameProps) {
   const [phase, setPhase] = useState<Phase>("show");
   const [selected, setSelected] = useState<Set<number>>(new Set());
   const done = useRef(false);
+  const cancelled = useRef(false);
+  // Auto-confirm grace timer; cancelled whenever the selection changes again.
+  const confirmTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const inputStart = useRef<number | null>(null);
 
   useEffect(() => {
@@ -28,24 +31,41 @@ export function PatternGame({ level, seed, onRoundComplete }: GameProps) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  useEffect(
+    () => () => {
+      cancelled.current = true;
+      if (confirmTimer.current) clearTimeout(confirmTimer.current);
+    },
+    [],
+  );
+
   useEffect(() => {
     if (phase === "recall") inputStart.current = performance.now();
   }, [phase]);
 
   const toggle = (cell: number) => {
-    if (phase !== "recall") return;
-    setSelected((cur) => {
-      const next = new Set(cur);
-      if (next.has(cell)) next.delete(cell);
-      else next.add(cell);
-      return next;
-    });
+    if (phase !== "recall" || done.current) return;
+    const next = new Set(selected);
+    if (next.has(cell)) next.delete(cell);
+    else next.add(cell);
+    setSelected(next);
+    // Every other game confirms itself once the answer is complete; requiring
+    // an extra "Confirm" tap here was the odd one out. A short grace keeps
+    // change-of-mind possible — any further toggle cancels and re-arms it.
+    // The button stays for deliberately partial answers.
+    if (confirmTimer.current) clearTimeout(confirmTimer.current);
+    if (next.size === pattern.length) {
+      const answer = [...next];
+      confirmTimer.current = setTimeout(() => submit(answer), 650);
+    }
   };
 
-  const submit = () => {
-    if (done.current) return;
+  const submit = (answer?: number[]) => {
+    // cancelled: the auto-confirm timer may fire after unmount (user quit
+    // during the grace); a dead round must not report itself.
+    if (done.current || cancelled.current) return;
     done.current = true;
-    const score = scorePatternResponse(pattern, [...selected]);
+    const score = scorePatternResponse(pattern, answer ?? [...selected]);
     onRoundComplete({
       accuracy: score.accuracy,
       perfect: score.perfect,
@@ -97,7 +117,11 @@ export function PatternGame({ level, seed, onRoundComplete }: GameProps) {
         }}
       />
       {phase === "recall" && (
-        <Button onClick={submit} disabled={selected.size === 0} className="mx-auto w-full max-w-xs">
+        <Button
+          onClick={() => submit()}
+          disabled={selected.size === 0}
+          className="mx-auto w-full max-w-xs"
+        >
           {t("Confirm pattern")}
         </Button>
       )}
