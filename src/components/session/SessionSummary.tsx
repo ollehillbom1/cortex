@@ -20,10 +20,12 @@ const RECORD_LABELS: Record<string, string> = {
 export function SessionSummary({
   applied,
   completed,
+  practice = false,
 }: {
   applied: ReturnType<typeof applySession> | null;
   completed: ExerciseResult[];
   skills: Record<string, SkillState>;
+  practice?: boolean;
 }) {
   const { t } = useT();
   const xpEarned = completed.reduce((a, e) => a + e.xp, 0);
@@ -45,9 +47,19 @@ export function SessionSummary({
             {t(completed.length !== 1 ? "{n} exercises" : "{n} exercise", {
               n: completed.length,
             })}{" "}
-            · {t("{pct}% average accuracy", { pct: Math.round(meanAccuracy * 100) })} ·{" "}
-            <span className="font-semibold text-gradient">+{xpEarned} XP</span>
+            · {t("{pct}% average accuracy", { pct: Math.round(meanAccuracy * 100) })}
+            {!practice && (
+              <>
+                {" "}
+                · <span className="font-semibold text-gradient">+{xpEarned} XP</span>
+              </>
+            )}
           </p>
+          {practice && (
+            <p className="mt-1 text-xs font-semibold text-[var(--color-accent-2)]">
+              {t("Practice — does not affect XP, streak or level")}
+            </p>
+          )}
         </div>
 
         {applied && progress && (
@@ -86,7 +98,7 @@ export function SessionSummary({
                     {t("{pct}% accuracy", { pct: Math.round(e.accuracy * 100) })}
                     {e.avgResponseMs !== undefined &&
                       ` · ${t("avg {ms} ms", { ms: e.avgResponseMs })}`}
-                    {` · +${e.xp} XP`}
+                    {!practice && ` · +${e.xp} XP`}
                   </p>
                 </div>
                 <span

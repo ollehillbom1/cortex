@@ -32,13 +32,16 @@ export async function createProfile(page: Page, name = "Testa") {
 }
 
 /**
- * Play one full Reaction block (5 rounds): wait for GO each round, click,
- * then continue through the feedback screen.
+ * Play one full Reaction block: wait for GO each round, click, then continue
+ * through the feedback screen. Navigates to the default single-exercise
+ * session unless the page is already on one (e.g. a practice session).
  */
-export async function playReactionBlock(page: Page) {
-  await page.goto("/session?exercise=reaction-time");
+export async function playReactionBlock(page: Page, rounds = 5) {
+  if (!/\/session\?exercise=reaction-time/.test(page.url())) {
+    await page.goto("/session?exercise=reaction-time");
+  }
   await page.getByRole("button", { name: /start reaction/i }).click();
-  for (let round = 0; round < 5; round++) {
+  for (let round = 0; round < rounds; round++) {
     const arm = page.getByRole("button", { name: /tap to arm/i });
     await arm.waitFor({ state: "visible", timeout: 15_000 });
     await arm.click();

@@ -14,6 +14,7 @@ import {
 import { effectiveLevel, initialSkill, updateSkill } from "@/lib/adaptive/engine";
 import { xpForRound } from "@/lib/progression/xp";
 import { planSession, type PlannedItem } from "@/lib/session/planner";
+import { parsePracticeParams } from "@/lib/session/practice";
 import { applySession } from "@/lib/session/apply";
 import { timeSeed } from "@/lib/engine/rng";
 import { getStorage } from "@/lib/storage/db";
@@ -68,6 +69,13 @@ export function SessionRunner() {
   const single: ExerciseId | null = ALL_EXERCISE_IDS.includes(singleParam as ExerciseId)
     ? (singleParam as ExerciseId)
     : null;
+  // Practice: a single exercise at a chosen, fixed level, outside progression.
+  const practiceLevelRaw = searchParams.get("level");
+  const practiceRoundsRaw = searchParams.get("rounds");
+  const practice = useMemo(
+    () => (single ? parsePracticeParams(practiceLevelRaw, practiceRoundsRaw) : null),
+    [single, practiceLevelRaw, practiceRoundsRaw],
+  );
 
   const [phase, setPhase] = useState<Phase>("loading");
   const [items, setItems] = useState<PlannedItem[]>([]);
@@ -112,11 +120,10 @@ export function SessionRunner() {
     (async () => {
       if (single) {
         const def = EXERCISES[single];
+        const rounds = practice?.rounds ?? def.defaultRounds;
         if (!cancelled) {
-          setItems([{ exerciseId: single, rounds: def.defaultRounds }]);
-          setEstimatedMinutes(
-            Math.max(1, Math.round((def.secondsPerRound * def.defaultRounds) / 60)),
-          );
+          setItems([{ exerciseId: single, rounds }]);
+          setEstimatedMinutes(Math.max(1, Math.round((def.secondsPerRound * rounds) / 60)));
           setPhase("instructions");
         }
       } else {
@@ -136,7 +143,7 @@ export function SessionRunner() {
     return () => {
       cancelled = true;
     };
-  }, [ready, profile, single, router, items.length, seedBase]);
+  }, [ready, profile, single, practice, router, items.length, seedBase]);
 
   const currentItem = items[itemIndex];
   const currentDef = currentItem ? EXERCISES[currentItem.exerciseId] : null;
@@ -162,7 +169,7 @@ export function SessionRunner() {
       if (!currentItem) return;
       const id = currentItem.exerciseId;
       const skill = skills[id] ?? initialSkill();
-      const level = effectiveLevel(skill);
+      const level = practice ? practice.level : effectiveLevel(skill);
       const elapsedMin = startedAt.current
         ? (Date.now() - new Date(startedAt.current).getTime()) / 60_000
         : 0;
@@ -178,14 +185,18 @@ export function SessionRunner() {
         new Date(),
         { gentle: profile?.preferences.kidMode ?? false },
       );
-      const xp = xpForRound({ accuracy: result.accuracy, level, perfect: result.perfect });
+      // Practice stays outside progression: the skill estimate is not fed and
+      // no XP accrues — a chosen difficulty must not farm or wreck either.
+      const xp = practice
+        ? 0
+        : xpForRound({ accuracy: result.accuracy, level, perfect: result.perfect });
       blockRounds.current.push({ result, level, xp });
-      setSkills((s) => ({ ...s, [id]: nextSkill }));
+      if (!practice) setSkills((s) => ({ ...s, [id]: nextSkill }));
       setLastRound(result);
       advancing.current = false;
       setPhase("feedback");
     },
-    [currentItem, skills, profile?.preferences.kidMode],
+    [currentItem, skills, practice, profile?.preferences.kidMode],
   );
 
   const finalizeBlock = useCallback((): ExerciseResult | null => {
@@ -208,7 +219,7 @@ export function SessionRunner() {
       rounds: rounds.length,
       accuracy,
       levelBefore: rounds[0].level,
-      levelAfter: effectiveLevel(skills[id] ?? initialSkill()),
+      levelAfter: practice ? practice.level : effectiveLevel(skills[id] ?? initialSkill()),
       xp: rounds.reduce((a, r) => a + r.xp, 0),
       avgResponseMs:
         responseTimes.length > 0
@@ -217,7 +228,7 @@ export function SessionRunner() {
       bestResponseMs: responseTimes.length > 0 ? Math.min(...responseTimes) : undefined,
       details: Object.keys(details).length > 0 ? details : undefined,
     };
-  }, [currentItem, skills]);
+  }, [currentItem, skills, practice]);
 
   const persistSession = useCallback(
     async (exercises: ExerciseResult[]) => {
@@ -270,11 +281,21 @@ export function SessionRunner() {
       setItemIndex((i) => i + 1);
       setPhase("instructions");
     } else {
-      const applied = await persistSession(allCompleted);
+      // Practice: nothing to persist — no record, no XP, no streak, no sync.
+      const applied = practice ? null : await persistSession(allCompleted);
       setSummaryData(applied);
       setPhase("summary");
     }
-  }, [currentItem, roundIndex, finalizeBlock, completed, itemIndex, items.length, persistSession]);
+  }, [
+    currentItem,
+    roundIndex,
+    finalizeBlock,
+    completed,
+    itemIndex,
+    items.length,
+    persistSession,
+    practice,
+  ]);
 
   // Auto-advance the feedback interstitial (a Continue button remains).
   useEffect(() => {
@@ -284,7 +305,7 @@ export function SessionRunner() {
   }, [phase, advance]);
 
   const quit = async (save: boolean) => {
-    if (save && completed.length > 0) await persistSession(completed);
+    if (save && !practice && completed.length > 0) await persistSession(completed);
     router.push("/");
   };
 
@@ -300,7 +321,14 @@ export function SessionRunner() {
   }
 
   if (phase === "summary") {
-    return <SessionSummary applied={summaryData} completed={completed} skills={skills} />;
+    return (
+      <SessionSummary
+        applied={summaryData}
+        completed={completed}
+        skills={skills}
+        practice={!!practice}
+      />
+    );
   }
 
   return (
@@ -392,8 +420,18 @@ export function SessionRunner() {
               </p>
               <h1 className="mt-1 text-3xl font-bold">{t(currentDef.name)}</h1>
               <p className="mt-1 text-sm text-[var(--color-ink-dim)]">{t(currentDef.tagline)}</p>
+              {practice && (
+                <p className="mt-2 text-xs font-semibold text-[var(--color-accent-2)]">
+                  {t("Practice — does not affect XP, streak or level")}
+                </p>
+              )}
               <p className="mt-2 inline-block rounded-full bg-white/8 px-3 py-1 text-xs font-semibold">
-                {t("Level {n}", { n: effectiveLevel(skills[currentDef.id] ?? initialSkill()) })} ·{" "}
+                {t("Level {n}", {
+                  n: practice
+                    ? practice.level
+                    : effectiveLevel(skills[currentDef.id] ?? initialSkill()),
+                })}{" "}
+                ·{" "}
                 {t((currentItem?.rounds ?? 0) > 1 ? "{n} rounds" : "{n} round", {
                   n: currentItem?.rounds ?? 0,
                 })}
@@ -435,7 +473,11 @@ export function SessionRunner() {
             </p>
             <CurrentGame
               exerciseId={currentItem.exerciseId}
-              level={effectiveLevel(skills[currentItem.exerciseId] ?? initialSkill())}
+              level={
+                practice
+                  ? practice.level
+                  : effectiveLevel(skills[currentItem.exerciseId] ?? initialSkill())
+              }
               roundIndex={roundIndex}
               seed={seed}
               audio={audio}
