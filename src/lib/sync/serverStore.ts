@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import { promises as fs } from "node:fs";
 import path from "node:path";
 
@@ -44,28 +45,70 @@ export async function readRecord(dir: string, groupId: string): Promise<StoredSy
 }
 
 /**
+ * Serialises writes per sync group.
+ *
+ * Reading the current revision and writing the next one is a check-then-act
+ * sequence: without this, two requests quoting the same `expectedRev` both
+ * pass the check and both write, so one device's state is lost even though
+ * the server answered 200. Optimistic concurrency only holds if the pair is
+ * indivisible.
+ *
+ * This covers concurrency within one server process, which is how Cortex is
+ * deployed (a single container — see docker-compose.yml). Running several
+ * replicas against one shared volume would need a cross-process lock.
+ */
+const groupWrites = new Map<string, Promise<unknown>>();
+
+function withGroupLock<T>(groupId: string, fn: () => Promise<T>): Promise<T> {
+  const previous = groupWrites.get(groupId) ?? Promise.resolve();
+  // Chain on settlement, not success: one failed write must not wedge the group.
+  const result = previous.then(fn, fn);
+  const settled = result.then(
+    () => {},
+    () => {},
+  );
+  groupWrites.set(groupId, settled);
+  void settled.then(() => {
+    // Drop the entry once this is the last write queued, so the map does not
+    // grow without bound across group ids.
+    if (groupWrites.get(groupId) === settled) groupWrites.delete(groupId);
+  });
+  return result;
+}
+
+/**
  * Write the next revision. `expectedRev` must match the stored revision
  * (0 when no record exists yet) or a RevConflictError is thrown.
  */
-export async function writeRecord(
+export function writeRecord(
   dir: string,
   groupId: string,
   input: { blob: string; iv: string; expectedRev: number },
 ): Promise<StoredSyncRecord> {
-  const current = await readRecord(dir, groupId);
-  const currentRev = current?.rev ?? 0;
-  if (input.expectedRev !== currentRev) throw new RevConflictError(currentRev);
+  return withGroupLock(groupId, async () => {
+    const current = await readRecord(dir, groupId);
+    const currentRev = current?.rev ?? 0;
+    if (input.expectedRev !== currentRev) throw new RevConflictError(currentRev);
 
-  const record: StoredSyncRecord = {
-    rev: currentRev + 1,
-    blob: input.blob,
-    iv: input.iv,
-    updatedAt: new Date().toISOString(),
-  };
-  const target = recordPath(dir, groupId);
-  await fs.mkdir(path.dirname(target), { recursive: true });
-  const tmp = `${target}.${process.pid}.${record.rev}.tmp`;
-  await fs.writeFile(tmp, JSON.stringify(record), "utf8");
-  await fs.rename(tmp, target);
-  return record;
+    const record: StoredSyncRecord = {
+      rev: currentRev + 1,
+      blob: input.blob,
+      iv: input.iv,
+      updatedAt: new Date().toISOString(),
+    };
+    const target = recordPath(dir, groupId);
+    await fs.mkdir(path.dirname(target), { recursive: true });
+    // Unique per write: a name derived from pid and rev collides between
+    // concurrent writes, which corrupts the temp file and makes one rename
+    // fail with ENOENT after the other has moved it.
+    const tmp = `${target}.${randomUUID()}.tmp`;
+    try {
+      await fs.writeFile(tmp, JSON.stringify(record), "utf8");
+      await fs.rename(tmp, target);
+    } catch (err) {
+      await fs.rm(tmp, { force: true });
+      throw err;
+    }
+    return record;
+  });
 }
