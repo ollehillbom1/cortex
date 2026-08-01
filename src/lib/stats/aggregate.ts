@@ -131,7 +131,9 @@ export function strengthsAndFocus(profile: Profile): {
   };
 }
 
-export type DayPart = "morning" | "afternoon" | "evening" | "night";
+export const DAY_PARTS = ["morning", "afternoon", "evening", "night"] as const;
+
+export type DayPart = (typeof DAY_PARTS)[number];
 
 export const DAY_PART_LABELS: Record<DayPart, string> = {
   morning: "Morning",

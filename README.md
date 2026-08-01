@@ -59,6 +59,11 @@ band with smooth, capped steps — see [docs/adaptive-difficulty.md](docs/adapti
   household passphrase (AES-GCM-256; the server only stores ciphertext), with
   a "Restore from sync" path for new devices. Off by default, fully offline
   capable either way — see [docs/adr/0007-sync-backend.md](docs/adr/0007-sync-backend.md).
+- **Grounded insights**, rule-based and deterministic ("your accuracy tends to
+  dip late in sessions"), with optional rewording by a language model _you_
+  host. That option sends only the numbers behind an insight, never names, and
+  rejects any output that invents a figure or makes a health claim — see
+  [docs/adr/0008-optional-coach.md](docs/adr/0008-optional-coach.md).
 
 ## Architecture
 
@@ -166,11 +171,12 @@ the critical flows on an iPhone viewport, including offline startup. See
 
 ## Roadmap
 
-Tracked as GitHub issues — device sync, dual n-back, auditory training,
-Swedish localisation and automated accessibility audits have all landed;
-remaining highlights include on-device VoiceOver verification and a native
-packaging evaluation. See the issue list for motivation and acceptance
-criteria.
+Tracked as GitHub issues. Device sync, dual n-back, auditory training, Swedish
+localisation, automated accessibility audits and optional AI phrasing have all
+landed. Native packaging was evaluated and deliberately declined for now
+([ADR 0009](docs/adr/0009-native-packaging.md) records what would reopen it).
+What remains needs a physical iPhone: the scripted
+[VoiceOver walkthrough](docs/voiceover-protocol.md).
 
 ## Contributing
 

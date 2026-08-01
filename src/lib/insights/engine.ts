@@ -1,13 +1,14 @@
 import {
   EXERCISES,
-  MODALITY_LABELS,
+  type ExerciseId,
   type Modality,
   type Profile,
   type SessionRecord,
 } from "@/lib/domain/types";
 import { streakAtRisk } from "@/lib/progression/streak";
-import { DAY_PART_LABELS, modalityBalance, timeOfDayPerformance } from "@/lib/stats/aggregate";
+import { modalityBalance, timeOfDayPerformance } from "@/lib/stats/aggregate";
 import type { Translator } from "@/lib/i18n";
+import { renderFact, type InsightFact } from "@/lib/coach/protocol";
 
 /**
  * Rule-based insight engine (issue #11, phase 1).
@@ -23,6 +24,12 @@ export interface Insight {
   text: string;
   /** Lower = more important. */
   priority: number;
+  /**
+   * The structured fact this sentence was rendered from. The optional coach
+   * (issue #11 phase 2) sends this — never the rendered text — so no free
+   * text can leave the device.
+   */
+  fact: InsightFact;
 }
 
 export interface InsightInput {
@@ -66,13 +73,8 @@ export function deriveInsights(input: InsightInput, t: Translator = identity): I
 function streakRule({ profile, today }: InsightInput, t: Translator): Insight | null {
   if (profile.streak.lastActiveDay === today) return null;
   if (!streakAtRisk(profile.streak, today)) return null;
-  return {
-    id: "streak-at-risk",
-    text: t("A short session today keeps your {n}-day streak alive.", {
-      n: profile.streak.current,
-    }),
-    priority: 1,
-  };
+  const fact: InsightFact = { kind: "streak-at-risk", days: profile.streak.current };
+  return { id: "streak-at-risk", text: renderFact(fact, t), priority: 1, fact };
 }
 
 /** One modality getting under 10% of recent training time. */
@@ -82,19 +84,12 @@ function imbalanceRule({ sessions }: InsightInput, t: Translator): Insight | nul
   if (entries.every(([, share]) => share === 0)) return null;
   const [weakest, share] = entries.reduce((min, cur) => (cur[1] < min[1] ? cur : min));
   if (share >= 0.1) return null;
-  const suggestion = suggestExerciseFor(weakest);
-  return {
-    id: `imbalance-${weakest}`,
-    text: suggestion
-      ? t("{modality} has had little attention lately — {exercise} would balance things out.", {
-          modality: t(MODALITY_LABELS[weakest]),
-          exercise: t(suggestion),
-        })
-      : t("{modality} has had little attention lately.", {
-          modality: t(MODALITY_LABELS[weakest]),
-        }),
-    priority: 2,
+  const fact: InsightFact = {
+    kind: "modality-imbalance",
+    modality: weakest,
+    suggestion: suggestExerciseFor(weakest),
   };
+  return { id: `imbalance-${weakest}`, text: renderFact(fact, t), priority: 2, fact };
 }
 
 /** Accuracy consistently drops from first to last block within sessions. */
@@ -107,13 +102,8 @@ function fatigueRule({ sessions }: InsightInput, t: Translator): Insight | null 
   }
   const meanDrop = diffSum / multi.length;
   if (meanDrop < 0.1) return null;
-  return {
-    id: "late-session-drop",
-    text: t(
-      "Your accuracy tends to dip late in sessions — slightly shorter sessions might land more of your rounds in the sweet spot.",
-    ),
-    priority: 3,
-  };
+  const fact: InsightFact = { kind: "late-session-drop" };
+  return { id: "late-session-drop", text: renderFact(fact, t), priority: 3, fact };
 }
 
 /** A clearly stronger time of day (>= 8pp, >= 3 sessions in both buckets). */
@@ -124,23 +114,21 @@ function timeOfDayRule({ sessions }: InsightInput, t: Translator): Insight | nul
   const best = sorted[0];
   const worst = sorted[sorted.length - 1];
   if (best.accuracy - worst.accuracy < 0.08) return null;
-  return {
-    id: `best-${best.part}`,
-    text: t("{part} sessions have scored highest for you so far ({best}% vs {worst}%).", {
-      part: t(DAY_PART_LABELS[best.part]),
-      best: Math.round(best.accuracy * 100),
-      worst: Math.round(worst.accuracy * 100),
-    }),
-    priority: 4,
+  const fact: InsightFact = {
+    kind: "best-time-of-day",
+    part: best.part,
+    bestPct: Math.round(best.accuracy * 100),
+    worstPct: Math.round(worst.accuracy * 100),
   };
+  return { id: `best-${best.part}`, text: renderFact(fact, t), priority: 4, fact };
 }
 
-function suggestExerciseFor(modality: Modality): string | null {
+function suggestExerciseFor(modality: Modality): ExerciseId | null {
   const defs = Object.values(EXERCISES);
   // Prefer an exercise whose primary focus is this modality.
   const primary = defs.find((def) => def.modalities[0] === modality);
   const match = primary ?? defs.find((def) => def.modalities.includes(modality));
-  return match ? match.name : null;
+  return match ? match.id : null;
 }
 
 /** Meta key: day on which the user dismissed insights. */

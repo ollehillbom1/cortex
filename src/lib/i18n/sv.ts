@@ -395,6 +395,9 @@ export const SV: Record<string, string> = {
   "Reduce motion": "Minska rörelse",
   "Minimise animations (also follows your system setting)":
     "Minimera animationer (följer även systeminställningen)",
+  "AI phrasing of insights": "AI-formulering av insikter",
+  "Let the language model on your own server reword the daily insight. It only ever receives the numbers behind that insight — never names — and the original wording is kept if anything looks off.":
+    "Låt språkmodellen på din egen server formulera om dagens insikt. Den får bara siffrorna bakom insikten — aldrig namn — och originaltexten behålls om något ser fel ut.",
   "Skip exercises that need sight": "Hoppa över övningar som kräver syn",
   "Leave grid, position and signal exercises out of recommendations and the library. The remaining exercises are played entirely by ear.":
     "Utelämna rutnäts-, positions- och signalövningar från rekommendationer och biblioteket. Övriga övningar spelas helt med hörseln.",

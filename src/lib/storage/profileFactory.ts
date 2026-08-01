@@ -10,6 +10,7 @@ export const DEFAULT_PREFERENCES: ProfilePreferences = {
   locale: "auto",
   kidMode: false,
   excludeVisionRequired: false,
+  aiCoach: false,
 };
 
 export const AVATAR_CHOICES = ["🧠", "🦊", "🐙", "🦉", "🐬", "🪐", "🌊", "⚡️", "🌱", "🔮"];

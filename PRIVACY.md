@@ -61,6 +61,42 @@ not encrypted with it — anyone with access to the browser's developer tools
 can read the data regardless. Treat the PIN as etiquette, not security. If you
 forget a PIN, export/delete paths remain available from any profile.
 
+## Optional AI phrasing of insights
+
+Also **off by default**, and doubly so: it does nothing unless the person
+running the server configures a language-model endpoint **and** you switch it
+on in your profile. Cortex ships no endpoint and no API key.
+
+When both are on, the daily insight is reworded by the model at the address
+the operator configured — typically one running on their own machine.
+
+- **What is sent**: only the structured numbers behind the insight, plus your
+  language (`en` or `sv`). Every field is a number or a fixed keyword, for
+  example:
+
+  ```json
+  { "kind": "best-time-of-day", "part": "morning", "bestPct": 82, "worstPct": 71 }
+  ```
+
+- **What is never sent**: names, profile ids, timestamps, session history, and
+  any free text. The format has no field capable of carrying them, and the
+  server rejects anything that does not match it exactly. The one temporal
+  detail that can appear is a coarse bucket like `"morning"` in the example
+  above — no dates, no clock times.
+- **How often**: at most once per day per insight. The result is cached for
+  the local day so the endpoint cannot observe how often you open the app.
+- Your browser only ever contacts your own Cortex server, which relays the
+  request. If the operator points it at a third-party API, that third party
+  sees the numbers above and nothing else.
+- The model may only _reword_ what Cortex already worked out. Every word it
+  produces must come from the original sentence or a small list of ordinary
+  connecting words, every number must match, and anything else — an added
+  claim, a fabricated statistic, a refusal — means the original sentence is
+  shown instead. These checks are strict by design and reject often; when they
+  do, you simply see Cortex's own wording.
+- Your consent stays on this device: the setting is never carried by an export
+  or by device sync, so enabling it here never enables it elsewhere.
+
 ## Data lifecycle
 
 - **Export**: Profile → Your data → Export JSON (includes all profiles on the device).
