@@ -10,10 +10,11 @@ allow a reasonable window before public disclosure.
 
 ## Security model
 
-Cortex is a static-ish Next.js app with one health endpoint and **no server-side
-state**: there is no authentication, no database, no user input processed on the
-server. The main assets to protect are the user's local data and the integrity
-of the served code.
+Cortex is a static-ish Next.js app with one health endpoint and one optional
+sync endpoint. There is no authentication and no database; the only server-side
+state is the sync store: **end-to-end-encrypted blobs** the server cannot read
+(see below). The main assets to protect are the user's local data and the
+integrity of the served code.
 
 Measures in place:
 
@@ -33,7 +34,16 @@ Measures in place:
 - **Docker**: multi-stage build, non-root runtime user, no secrets in the image,
   minimal alpine base, health check without external calls.
 - **No secrets in the repository**; configuration is documented in
-  `.env.example` (ports only — no keys exist).
+  `.env.example` (ports and a data directory — no keys exist).
+- **Sync endpoint** (`/api/sync/{groupId}`): the browser encrypts everything
+  with AES-GCM-256 before upload (key: PBKDF2, 310 000 iterations, derived from
+  the household passphrase); the server never sees the passphrase or key, only
+  a hash-derived 64-hex group id, ciphertext, IV and a revision counter. Input
+  is strictly validated (hex id, base64 payload, size caps) and writes use
+  optimistic concurrency, so a stale device cannot silently overwrite newer
+  data. Knowing a passphrase grants read/write to that group — that is the
+  model (a shared household secret), so passphrases should be long and the
+  server ideally not exposed beyond your LAN/VPN.
 
 ## Deployment recommendations
 

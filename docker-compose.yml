@@ -1,5 +1,6 @@
-# Production example. All training data lives in each user's browser
-# (IndexedDB), so the container itself is stateless — no volumes required.
+# Production example. Training data lives in each user's browser (IndexedDB).
+# The volume below only holds end-to-end-encrypted sync blobs for households
+# that opt in to device sync — safe to skip if nobody enables sync.
 services:
   cortex:
     build: .
@@ -10,6 +11,8 @@ services:
       - "${PORT:-3000}:3000"
     environment:
       - NODE_ENV=production
+    volumes:
+      - cortex-sync:/app/data
     # Resource-conscious defaults suitable for a Raspberry Pi 5.
     deploy:
       resources:
@@ -21,3 +24,6 @@ services:
       timeout: 5s
       retries: 3
       start_period: 10s
+
+volumes:
+  cortex-sync:

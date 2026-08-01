@@ -21,9 +21,11 @@ WORKDIR /app
 ENV NODE_ENV=production \
     NEXT_TELEMETRY_DISABLED=1 \
     PORT=3000 \
-    HOSTNAME=0.0.0.0
+    HOSTNAME=0.0.0.0 \
+    SYNC_DATA_DIR=/app/data
 
-RUN addgroup -S cortex && adduser -S cortex -G cortex
+RUN addgroup -S cortex && adduser -S cortex -G cortex \
+    && mkdir -p /app/data && chown cortex:cortex /app/data
 
 # Standalone output contains the server and pruned node_modules.
 COPY --from=build --chown=cortex:cortex /app/.next/standalone ./

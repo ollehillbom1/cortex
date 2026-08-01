@@ -58,6 +58,14 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
       } finally {
         if (!cancelled) setReady(true);
       }
+      // Background sync on app start (no-op when sync is disabled); pick up
+      // whatever it merged. Failures land in sync meta, never block the app.
+      const { syncNow, META_SYNC_GROUP_ID } = await import("@/lib/sync/engine");
+      const enabled = await getStorage().getMeta(META_SYNC_GROUP_ID);
+      if (!cancelled && enabled) {
+        const ok = await syncNow(getStorage());
+        if (ok && !cancelled) await refresh();
+      }
     })();
     return () => {
       cancelled = true;
@@ -88,8 +96,10 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const saveProfile = useCallback(async (updated: Profile) => {
-    await getStorage().putProfile(updated);
-    setProfiles((list) => list.map((p) => (p.id === updated.id ? updated : p)));
+    // User-driven change: bump the sync timestamp (last-write-wins).
+    const stamped = { ...updated, updatedAt: new Date().toISOString() };
+    await getStorage().putProfile(stamped);
+    setProfiles((list) => list.map((p) => (p.id === stamped.id ? stamped : p)));
   }, []);
 
   const addProfile = useCallback(async (created: Profile, activate = true) => {

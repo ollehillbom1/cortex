@@ -75,6 +75,8 @@ export interface Profile {
   /** Accent hue (0-360) for the avatar background. */
   avatarHue: number;
   createdAt: string;
+  /** Bumped on every user-driven change; drives last-write-wins sync. */
+  updatedAt: string;
   preferences: ProfilePreferences;
   xp: number;
   streak: StreakState;

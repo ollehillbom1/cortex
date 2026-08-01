@@ -20,10 +20,12 @@ import {
   type PersistenceState,
 } from "@/lib/storage/persistence";
 import { createPinRecord, isValidPin } from "@/lib/security/pin";
+import { recordProfileDeletion, recordSessionsCleared, syncNow } from "@/lib/sync/engine";
 import { useT } from "@/lib/i18n/useT";
 import { useProfiles } from "@/components/app/ProfileProvider";
 import { META_SKIP_PROFILE_PICKER } from "@/components/app/ProfileGate";
 import { PinDialog } from "@/components/app/PinDialog";
+import { SyncSection } from "@/components/app/SyncSection";
 import { Button } from "@/components/ui/Button";
 import { Dialog } from "@/components/ui/Dialog";
 
@@ -125,14 +127,20 @@ export default function ProfilePage() {
       achievements: {},
     };
     await getStorage().deleteSessions(profile.id);
+    // Watermark so old sessions do not resurrect via sync.
+    await recordSessionsCleared(getStorage(), profile.id);
     await saveProfile(fresh);
     setConfirming(null);
     setMessage(t("Progression reset. Profile and preferences kept."));
+    void syncNow(getStorage());
   };
 
   const doDelete = async () => {
+    // Tombstone first so the deletion sticks across synced devices.
+    await recordProfileDeletion(getStorage(), profile.id);
     await removeProfile(profile.id);
     setConfirming(null);
+    void syncNow(getStorage());
     if (profiles.length <= 1) router.replace("/welcome");
   };
 
@@ -473,6 +481,9 @@ export default function ProfilePage() {
           </Button>
         </div>
       </section>
+
+      {/* Sync */}
+      <SyncSection />
 
       {/* Install */}
       <section className="card p-5" aria-label={t("Install Cortex")}>

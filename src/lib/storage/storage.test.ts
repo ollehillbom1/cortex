@@ -134,6 +134,17 @@ describe("migrations", () => {
     expect(migrated.pin).toBeUndefined();
   });
 
+  it("adds updatedAt from createdAt when migrating to v6", () => {
+    const v5 = {
+      ...createProfile({ id: "p", name: "P", now: new Date("2026-03-01T00:00:00Z") }),
+      dataVersion: 5,
+    } as unknown as Record<string, unknown>;
+    delete v5.updatedAt;
+    const migrated = migrateProfile(v5);
+    expect(migrated.dataVersion).toBe(CURRENT_DATA_VERSION);
+    expect(migrated.updatedAt).toBe("2026-03-01T00:00:00.000Z");
+  });
+
   it("leaves current-version profiles untouched", () => {
     const p = { ...createProfile({ id: "p", name: "P" }), dataVersion: CURRENT_DATA_VERSION };
     expect(migrateProfile(p as unknown as Record<string, unknown>)).toEqual(p);

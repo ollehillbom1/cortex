@@ -244,6 +244,8 @@ export function SessionRunner() {
       });
       await getStorage().addSession(applied.session);
       await saveProfile(applied.profile);
+      // Fire-and-forget: push the finished session to synced devices.
+      void import("@/lib/sync/engine").then(({ syncNow }) => syncNow(getStorage()));
       return applied;
     },
     [profile, single, skills, saveProfile],

@@ -20,12 +20,14 @@ export function createProfile(input: {
   avatarHue?: number;
   now?: Date;
 }): Profile {
+  const created = (input.now ?? new Date()).toISOString();
   return {
     id: input.id,
     name: input.name.trim(),
     avatar: input.avatar ?? AVATAR_CHOICES[0],
     avatarHue: input.avatarHue ?? 250,
-    createdAt: (input.now ?? new Date()).toISOString(),
+    createdAt: created,
+    updatedAt: created,
     preferences: { ...DEFAULT_PREFERENCES },
     xp: 0,
     streak: initialStreak(),

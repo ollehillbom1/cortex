@@ -1,7 +1,7 @@
 import { expect, type Page } from "@playwright/test";
 
-/** Walk the onboarding flow and create a profile named `name`. */
-export async function createProfile(page: Page, name = "Testa") {
+/** Walk the onboarding intro screens until the profile form is showing. */
+export async function advanceToProfileForm(page: Page) {
   await page.goto("/");
   await page.waitForURL("**/welcome");
   for (let i = 0; i < 3; i++) {
@@ -12,6 +12,11 @@ export async function createProfile(page: Page, name = "Testa") {
       await expect(page.getByLabel(`Step ${i + 2} of 4`)).toBeVisible({ timeout: 1_000 });
     }).toPass({ timeout: 15_000 });
   }
+}
+
+/** Walk the onboarding flow and create a profile named `name`. */
+export async function createProfile(page: Page, name = "Testa") {
+  await advanceToProfileForm(page);
   await page.getByPlaceholder("e.g. Olle").fill(name);
   await page.getByRole("button", { name: /start training/i }).click();
   await page.waitForURL(/\/$/);

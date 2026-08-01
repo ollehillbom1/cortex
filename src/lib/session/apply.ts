@@ -39,6 +39,7 @@ export function applySession(input: ApplySessionInput): ApplySessionOutput {
     xp: input.profile.xp + session.xpEarned,
     streak: streakUpdate.streak,
     records,
+    updatedAt: now.toISOString(),
   };
 
   const unlocked = evaluateAchievements({
