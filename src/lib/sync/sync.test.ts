@@ -1,10 +1,11 @@
 import { afterEach, describe, expect, it } from "vitest";
 import { mkdtempSync, rmSync } from "node:fs";
+import { readdir } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { emptyTombstones, mergeStates, type SyncState } from "./merge";
 import { decryptJson, deriveCredentials, encryptJson, isValidGroupId } from "./crypto";
-import { readRecord, RevConflictError, writeRecord } from "./serverStore";
+import { readRecord, RevConflictError, writeRecord, type StoredSyncRecord } from "./serverStore";
 import { createProfile } from "@/lib/storage/profileFactory";
 import { CURRENT_DATA_VERSION } from "@/lib/storage/migrations";
 import type { Profile, SessionRecord } from "@/lib/domain/types";
@@ -175,5 +176,56 @@ describe("sync server store", () => {
     ).rejects.toThrow(RevConflictError);
     // The stored record is untouched by the failed write.
     expect((await readRecord(dir, GROUP))?.blob).toBe("AAAA");
+  });
+
+  it("two devices pushing the same rev at once: exactly one wins", async () => {
+    const dir = tempDir();
+    await writeRecord(dir, GROUP, { blob: "AAAA", iv: "BBBB", expectedRev: 0 });
+
+    // Both devices pulled rev 1 and push their own merged state.
+    const results = await Promise.allSettled([
+      writeRecord(dir, GROUP, { blob: "DEVICEONE", iv: "IVAA", expectedRev: 1 }),
+      writeRecord(dir, GROUP, { blob: "DEVICETWO", iv: "IVBB", expectedRev: 1 }),
+    ]);
+
+    const accepted = results.filter((r) => r.status === "fulfilled");
+    const rejected = results.filter((r) => r.status === "rejected");
+    expect(accepted).toHaveLength(1);
+    expect(rejected).toHaveLength(1);
+    // The loser is told to re-merge, not handed a storage error: only 409
+    // makes the client pull, merge and retry.
+    expect((rejected[0] as PromiseRejectedResult).reason).toBeInstanceOf(RevConflictError);
+
+    // What the winner was told it stored is what is actually on disk.
+    const winner = (accepted[0] as PromiseFulfilledResult<StoredSyncRecord>).value;
+    const stored = await readRecord(dir, GROUP);
+    expect(stored?.blob).toBe(winner.blob);
+    expect(stored?.rev).toBe(winner.rev);
+    expect(stored?.rev).toBe(2);
+  });
+
+  it("a burst of writes leaves one record per revision, none blended", async () => {
+    const dir = tempDir();
+    await writeRecord(dir, GROUP, { blob: "SEED", iv: "IV", expectedRev: 0 });
+
+    // Ten devices race on rev 1. Nine must be told to re-merge.
+    const blobs = Array.from({ length: 10 }, (_, i) => "ABCDEFGHIJ"[i].repeat(4096));
+    const results = await Promise.allSettled(
+      blobs.map((blob) => writeRecord(dir, GROUP, { blob, iv: "IV", expectedRev: 1 })),
+    );
+    expect(results.filter((r) => r.status === "fulfilled")).toHaveLength(1);
+    // Every loser must be told to re-merge. A storage error here would make
+    // those nine clients give up instead of retrying.
+    for (const r of results.filter((x) => x.status === "rejected")) {
+      expect((r as PromiseRejectedResult).reason).toBeInstanceOf(RevConflictError);
+    }
+
+    // The survivor is exactly one writer's payload, not a splice of several.
+    const stored = await readRecord(dir, GROUP);
+    expect(blobs).toContain(stored?.blob);
+
+    // No temp files left behind.
+    const leftovers = (await readdir(path.join(dir, "sync"))).filter((f) => f.endsWith(".tmp"));
+    expect(leftovers).toEqual([]);
   });
 });
