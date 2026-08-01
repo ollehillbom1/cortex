@@ -44,9 +44,15 @@ Measures in place:
   the browser. Model output is validated before display — invented numbers and
   health-claim vocabulary are rejected. See `docs/adr/0008-optional-coach.md`.
 - **Sync endpoint** (`/api/sync/{groupId}`): the browser encrypts everything
-  with AES-GCM-256 before upload (key: PBKDF2, 310 000 iterations, derived from
-  the household passphrase); the server never sees the passphrase or key, only
-  a hash-derived 64-hex group id, ciphertext, IV and a revision counter. Input
+  with AES-GCM-256 before upload. One PBKDF2 run (310 000 iterations) over the
+  household passphrase is split with HKDF into the group id and the encryption
+  key, so the id the server stores costs as much to attack as the key itself.
+  Before v2 the id was a single unsalted SHA-256 of the passphrase, roughly
+  21 000x cheaper to brute-force from the server's filenames than the key —
+  anyone holding a copy of the data directory could have attacked it offline.
+  Devices still on v1 are prompted to re-enter their passphrase, which
+  migrates their group. The server never sees the passphrase or key, only the
+  group id, ciphertext, IV and a revision counter. Input
   is strictly validated (hex id, base64 payload, size caps) and writes use
   optimistic concurrency, so a stale device cannot silently overwrite newer
   data. Knowing a passphrase grants read/write to that group — that is the

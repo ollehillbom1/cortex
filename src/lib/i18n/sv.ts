@@ -546,6 +546,10 @@ export const SV: Record<string, string> = {
     "Synken är på. Den här enheten delar nu data med alla som använder samma lösenfras.",
   "Sync is off. Local data stays on this device.":
     "Synken är av. Lokal data stannar på den här enheten.",
+  "Security upgrade available": "Säkerhetsuppgradering tillgänglig",
+  "This device still uses the old key derivation, which made the passphrase easier to guess from the server's files. Enter your passphrase to upgrade — your synced data comes with you. Until you do, this device will not see devices that have already upgraded.":
+    "Den här enheten använder fortfarande den gamla nyckelhärledningen, som gjorde lösenfrasen lättare att gissa utifrån serverns filer. Ange din lösenfras för att uppgradera — din synkade data följer med. Tills dess ser den här enheten inte enheter som redan uppgraderat.",
+  "Upgrade sync security": "Uppgradera synksäkerheten",
   "Choose a strong passphrase (at least {n} characters). It is the only key to your data: anyone who knows it can read and change the synced data, and it cannot be recovered if lost.":
     "Välj en stark lösenfras (minst {n} tecken). Den är enda nyckeln till din data: den som kan frasen kan läsa och ändra synkad data, och den går inte att återställa om den tappas bort.",
   "Sync passphrase": "Synk-lösenfras",
