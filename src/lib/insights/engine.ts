@@ -1,6 +1,7 @@
 import {
   EXERCISES,
   MODALITY_LABELS,
+  type ExerciseId,
   type Modality,
   type Profile,
   type SessionRecord,
@@ -8,6 +9,7 @@ import {
 import { streakAtRisk } from "@/lib/progression/streak";
 import { DAY_PART_LABELS, modalityBalance, timeOfDayPerformance } from "@/lib/stats/aggregate";
 import type { Translator } from "@/lib/i18n";
+import type { InsightFact } from "@/lib/coach/protocol";
 
 /**
  * Rule-based insight engine (issue #11, phase 1).
@@ -23,6 +25,12 @@ export interface Insight {
   text: string;
   /** Lower = more important. */
   priority: number;
+  /**
+   * The structured fact this sentence was rendered from. The optional coach
+   * (issue #11 phase 2) sends this — never the rendered text — so no free
+   * text can leave the device.
+   */
+  fact: InsightFact;
 }
 
 export interface InsightInput {
@@ -72,6 +80,7 @@ function streakRule({ profile, today }: InsightInput, t: Translator): Insight | 
       n: profile.streak.current,
     }),
     priority: 1,
+    fact: { kind: "streak-at-risk", days: profile.streak.current },
   };
 }
 
@@ -88,12 +97,13 @@ function imbalanceRule({ sessions }: InsightInput, t: Translator): Insight | nul
     text: suggestion
       ? t("{modality} has had little attention lately — {exercise} would balance things out.", {
           modality: t(MODALITY_LABELS[weakest]),
-          exercise: t(suggestion),
+          exercise: t(EXERCISES[suggestion].name),
         })
       : t("{modality} has had little attention lately.", {
           modality: t(MODALITY_LABELS[weakest]),
         }),
     priority: 2,
+    fact: { kind: "modality-imbalance", modality: weakest, suggestion },
   };
 }
 
@@ -113,6 +123,7 @@ function fatigueRule({ sessions }: InsightInput, t: Translator): Insight | null 
       "Your accuracy tends to dip late in sessions — slightly shorter sessions might land more of your rounds in the sweet spot.",
     ),
     priority: 3,
+    fact: { kind: "late-session-drop" },
   };
 }
 
@@ -132,15 +143,21 @@ function timeOfDayRule({ sessions }: InsightInput, t: Translator): Insight | nul
       worst: Math.round(worst.accuracy * 100),
     }),
     priority: 4,
+    fact: {
+      kind: "best-time-of-day",
+      part: best.part,
+      bestPct: Math.round(best.accuracy * 100),
+      worstPct: Math.round(worst.accuracy * 100),
+    },
   };
 }
 
-function suggestExerciseFor(modality: Modality): string | null {
+function suggestExerciseFor(modality: Modality): ExerciseId | null {
   const defs = Object.values(EXERCISES);
   // Prefer an exercise whose primary focus is this modality.
   const primary = defs.find((def) => def.modalities[0] === modality);
   const match = primary ?? defs.find((def) => def.modalities.includes(modality));
-  return match ? match.name : null;
+  return match ? match.id : null;
 }
 
 /** Meta key: day on which the user dismissed insights. */

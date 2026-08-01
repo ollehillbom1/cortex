@@ -21,6 +21,7 @@ import {
 } from "@/lib/storage/persistence";
 import { createPinRecord, isValidPin } from "@/lib/security/pin";
 import { recordProfileDeletion, recordSessionsCleared, syncNow } from "@/lib/sync/engine";
+import { isCoachConfigured } from "@/lib/coach/client";
 import { useT } from "@/lib/i18n/useT";
 import { useProfiles } from "@/components/app/ProfileProvider";
 import { META_SKIP_PROFILE_PICKER } from "@/components/app/ProfileGate";
@@ -53,6 +54,7 @@ export default function ProfilePage() {
   const [switchTo, setSwitchTo] = useState<Profile | null>(null);
   const [pinSetup, setPinSetup] = useState(false);
   const [pinRemove, setPinRemove] = useState(false);
+  const [coachAvailable, setCoachAvailable] = useState(false);
   const fileInput = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -68,6 +70,10 @@ export default function ProfilePage() {
         setPersistence(status);
         setAskAtStart(skipPicker !== "true");
       }
+      // The AI-phrasing option only exists when the operator configured an
+      // endpoint; otherwise the setting would be a dead switch.
+      const configured = await isCoachConfigured();
+      if (!cancelled) setCoachAvailable(configured);
     })();
     return () => {
       cancelled = true;
@@ -363,6 +369,16 @@ export default function ProfilePage() {
               aria-label={t("Daily goal in minutes")}
             />
           </label>
+          {coachAvailable && (
+            <Toggle
+              label={t("AI phrasing of insights")}
+              description={t(
+                "Let the language model on your own server reword the daily insight. It only ever receives the numbers behind that insight — never names — and the original wording is kept if anything looks off.",
+              )}
+              checked={profile.preferences.aiCoach}
+              onChange={(v) => setPref("aiCoach", v)}
+            />
+          )}
           <Toggle
             label={t("Kid mode")}
             description={t("Larger interface and a gentler difficulty ramp")}

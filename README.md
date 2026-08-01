@@ -59,6 +59,11 @@ band with smooth, capped steps — see [docs/adaptive-difficulty.md](docs/adapti
   household passphrase (AES-GCM-256; the server only stores ciphertext), with
   a "Restore from sync" path for new devices. Off by default, fully offline
   capable either way — see [docs/adr/0007-sync-backend.md](docs/adr/0007-sync-backend.md).
+- **Grounded insights**, rule-based and deterministic ("your accuracy tends to
+  dip late in sessions"), with optional rewording by a language model _you_
+  host. That option sends only the numbers behind an insight, never names, and
+  rejects any output that invents a figure or makes a health claim — see
+  [docs/adr/0008-optional-coach.md](docs/adr/0008-optional-coach.md).
 
 ## Architecture
 

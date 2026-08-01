@@ -66,6 +66,12 @@ export interface ProfilePreferences {
    * library view then only offer non-visual exercises.
    */
   excludeVisionRequired: boolean;
+  /**
+   * Opt in to having insights rephrased by the operator's own language model
+   * (issue #11 phase 2). Has no effect unless the server is configured with
+   * a COACH_API_BASE; only structured facts are ever sent. Off by default.
+   */
+  aiCoach: boolean;
 }
 
 export interface PersonalRecord {

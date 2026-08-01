@@ -61,6 +61,33 @@ not encrypted with it — anyone with access to the browser's developer tools
 can read the data regardless. Treat the PIN as etiquette, not security. If you
 forget a PIN, export/delete paths remain available from any profile.
 
+## Optional AI phrasing of insights
+
+Also **off by default**, and doubly so: it does nothing unless the person
+running the server configures a language-model endpoint **and** you switch it
+on in your profile. Cortex ships no endpoint and no API key.
+
+When both are on, the daily insight is reworded by the model at the address
+the operator configured — typically one running on their own machine.
+
+- **What is sent**: only the structured numbers behind the insight, plus your
+  language (`en` or `sv`). Every field is a number or a fixed keyword, for
+  example:
+
+  ```json
+  { "kind": "best-time-of-day", "part": "morning", "bestPct": 82, "worstPct": 71 }
+  ```
+
+- **What is never sent**: names, profile ids, dates and times, session
+  history, and any free text. The format has no field capable of carrying
+  them, and the server rejects anything that does not match it exactly.
+- Your browser only ever contacts your own Cortex server, which relays the
+  request. If the operator points it at a third-party API, that third party
+  sees the numbers above and nothing else.
+- The model may only _reword_ what Cortex already worked out. Output is
+  checked before display: any invented number, or any health/IQ/diagnosis
+  wording, and the original sentence is shown instead.
+
 ## Data lifecycle
 
 - **Export**: Profile → Your data → Export JSON (includes all profiles on the device).

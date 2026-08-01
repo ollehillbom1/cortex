@@ -157,6 +157,17 @@ describe("migrations", () => {
     expect(migrated.preferences.kidMode).toBe(false);
   });
 
+  it("leaves the AI coach off when migrating to v8", () => {
+    const v7 = {
+      ...createProfile({ id: "p", name: "P" }),
+      dataVersion: 7,
+    } as unknown as Record<string, unknown>;
+    delete (v7.preferences as Record<string, unknown>).aiCoach;
+    const migrated = migrateProfile(v7);
+    expect(migrated.dataVersion).toBe(CURRENT_DATA_VERSION);
+    expect(migrated.preferences.aiCoach).toBe(false);
+  });
+
   it("leaves current-version profiles untouched", () => {
     const p = { ...createProfile({ id: "p", name: "P" }), dataVersion: CURRENT_DATA_VERSION };
     expect(migrateProfile(p as unknown as Record<string, unknown>)).toEqual(p);

@@ -34,7 +34,15 @@ Measures in place:
 - **Docker**: multi-stage build, non-root runtime user, no secrets in the image,
   minimal alpine base, health check without external calls.
 - **No secrets in the repository**; configuration is documented in
-  `.env.example` (ports and a data directory — no keys exist).
+  `.env.example` (ports, a data directory, and optional coach endpoint
+  settings — no keys are shipped or committed).
+- **Optional coach endpoint** (`/api/coach`): disabled unless the operator
+  sets `COACH_API_BASE`/`COACH_MODEL`. The browser posts only a closed set of
+  structured facts (numbers and fixed enums, strictly parsed server-side), so
+  there is no prompt-injection path from the client and no free text can be
+  relayed. `COACH_API_KEY`, if used, stays server-side and is never exposed to
+  the browser. Model output is validated before display — invented numbers and
+  health-claim vocabulary are rejected. See `docs/adr/0008-optional-coach.md`.
 - **Sync endpoint** (`/api/sync/{groupId}`): the browser encrypts everything
   with AES-GCM-256 before upload (key: PBKDF2, 310 000 iterations, derived from
   the household passphrase); the server never sees the passphrase or key, only

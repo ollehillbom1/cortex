@@ -64,9 +64,24 @@ gives every node a valid HTTPS name with zero exposure to the internet.
 
 ## Environment variables
 
-See `.env.example`. Only `PORT`, `HOSTNAME` and `SYNC_DATA_DIR` exist — there
-are no secrets, API keys or feature flags. `SYNC_DATA_DIR` (default `./data`,
-`/app/data` in the image) is where the sync endpoint stores encrypted blobs.
+See `.env.example`. `PORT`, `HOSTNAME` and `SYNC_DATA_DIR` (default `./data`,
+`/app/data` in the image — where the sync endpoint stores encrypted blobs) are
+all a normal deployment needs; no secrets or API keys are required.
+
+Optionally, `COACH_API_BASE` + `COACH_MODEL` enable AI rewording of insights
+against a language-model endpoint you run yourself, e.g. Ollama on the same
+host:
+
+```yaml
+environment:
+  - COACH_API_BASE=http://host.docker.internal:11434/v1
+  - COACH_MODEL=llama3.2
+```
+
+Leave them unset and the feature does not exist — no setting appears in the
+app and the endpoint refuses every request. Users must additionally opt in per
+profile. Only structured numbers are sent, never names; see
+[docs/adr/0008-optional-coach.md](adr/0008-optional-coach.md) and PRIVACY.md.
 
 ## Updating
 
