@@ -83,6 +83,14 @@ app and the endpoint refuses every request. Users must additionally opt in per
 profile. Only structured numbers are sent, never names; see
 [docs/adr/0008-optional-coach.md](adr/0008-optional-coach.md) and PRIVACY.md.
 
+Two operational notes. `COACH_API_BASE` must be `https://` unless it points at
+a loopback or private-network address — Cortex refuses to start the feature
+otherwise rather than send statistics over plaintext internet. And because the
+endpoint spends your compute (or your credit, against a paid provider) on
+behalf of whoever can reach it, it is rate limited per client and per instance,
+and you should keep a coach-enabled instance on your LAN or behind a VPN
+rather than exposed publicly.
+
 ## Updating
 
 ```bash

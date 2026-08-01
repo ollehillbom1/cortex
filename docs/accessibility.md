@@ -64,8 +64,10 @@ instead of degrading into a visual exercise.
 
 - **VoiceOver on iOS** (the primary target) has not been walked through on a
   physical device; axe-core catches markup-level problems but not the lived
-  experience of navigating a timed exercise with a screen reader. Findings
-  from such a walkthrough belong in this file — see issue #6.
+  experience of navigating a timed exercise with a screen reader. A scripted
+  30-minute walkthrough is ready to run — see
+  [`docs/voiceover-protocol.md`](voiceover-protocol.md). Findings from it
+  belong in this file — see issue #6.
 - A **haptic** channel for Reaction (vibration as the GO signal) would give
   that exercise a non-visual pathway; `navigator.vibrate` is unavailable on
   iOS Safari, so this needs a device-specific evaluation before promising it.

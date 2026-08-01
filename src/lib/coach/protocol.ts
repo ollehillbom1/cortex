@@ -1,21 +1,28 @@
-import { ALL_EXERCISE_IDS, EXERCISES, MODALITY_LABELS, type ExerciseId } from "@/lib/domain/types";
+import {
+  ALL_EXERCISE_IDS,
+  EXERCISES,
+  MODALITY_LABELS,
+  type ExerciseId,
+  type Modality,
+} from "@/lib/domain/types";
 import { DAY_PARTS, DAY_PART_LABELS, type DayPart } from "@/lib/stats/aggregate";
+import type { Translator } from "@/lib/i18n";
 
 /**
  * Wire format between the browser and the optional coach endpoint
  * (issue #11, phase 2).
  *
  * The browser sends *structured facts*, never sentences: every field is a
- * number or a value from a closed enum, so no free text — and therefore no
- * profile name or other personal data — can leave the device even by
- * accident. The server renders the English sentence from its own copy of the
- * templates, which is what makes "every generated sentence traces to a
- * structured fact" enforceable rather than aspirational.
+ * number or a value from a closed enum, so no profile name or other personal
+ * data can leave the device. The sentence is rendered from these templates —
+ * the same ones the UI renders — on both sides, which is what makes "every
+ * generated sentence traces to a structured fact" checkable rather than
+ * merely asserted.
  */
 
 export type InsightFact =
   | { kind: "streak-at-risk"; days: number }
-  | { kind: "modality-imbalance"; modality: string; suggestion: ExerciseId | null }
+  | { kind: "modality-imbalance"; modality: Modality; suggestion: ExerciseId | null }
   | { kind: "late-session-drop" }
   | { kind: "best-time-of-day"; part: DayPart; bestPct: number; worstPct: number };
 
@@ -33,7 +40,21 @@ export interface CoachRequest {
   locale: CoachLocale;
 }
 
-const MODALITY_KEYS = Object.keys(MODALITY_LABELS);
+/**
+ * The English source strings for every insight sentence. They are also the
+ * i18n keys, so `sv.ts` already carries the translations.
+ */
+export const INSIGHT_TEMPLATES = {
+  streak: "A short session today keeps your {n}-day streak alive.",
+  imbalanceWithSuggestion:
+    "{modality} has had little attention lately — {exercise} would balance things out.",
+  imbalance: "{modality} has had little attention lately.",
+  lateDrop:
+    "Your accuracy tends to dip late in sessions — slightly shorter sessions might land more of your rounds in the sweet spot.",
+  bestTime: "{part} sessions have scored highest for you so far ({best}% vs {worst}%).",
+} as const;
+
+const MODALITY_KEYS = Object.keys(MODALITY_LABELS) as Modality[];
 
 function isFiniteInRange(v: unknown, min: number, max: number): v is number {
   return typeof v === "number" && Number.isFinite(v) && v >= min && v <= max;
@@ -41,7 +62,7 @@ function isFiniteInRange(v: unknown, min: number, max: number): v is number {
 
 /**
  * Strictly validate an untrusted request body. Returns null on anything
- * unexpected — this is the only door into the outbound LLM call, so it
+ * unexpected — this is the only door into the outbound model call, so it
  * rejects rather than coerces.
  */
 export function parseCoachRequest(body: unknown): CoachRequest | null {
@@ -64,14 +85,16 @@ function parseFact(raw: unknown): InsightFact | null {
   const f = raw as Record<string, unknown>;
   switch (f.kind) {
     case "streak-at-risk":
-      return isFiniteInRange(f.days, 1, 10_000) ? { kind: "streak-at-risk", days: f.days } : null;
+      return isFiniteInRange(f.days, 1, 10_000)
+        ? { kind: "streak-at-risk", days: Math.round(f.days) }
+        : null;
     case "modality-imbalance": {
-      if (typeof f.modality !== "string" || !MODALITY_KEYS.includes(f.modality)) return null;
+      if (!MODALITY_KEYS.includes(f.modality as Modality)) return null;
       const suggestion = f.suggestion;
       if (suggestion !== null && !ALL_EXERCISE_IDS.includes(suggestion as ExerciseId)) return null;
       return {
         kind: "modality-imbalance",
-        modality: f.modality,
+        modality: f.modality as Modality,
         suggestion: suggestion as ExerciseId | null,
       };
     }
@@ -93,22 +116,28 @@ function parseFact(raw: unknown): InsightFact | null {
 }
 
 /**
- * Render the canonical English sentence for a fact. The server builds the
- * prompt from these — the browser's own wording is never transmitted.
+ * Render a fact to its sentence. Used by the insight engine for what the user
+ * sees and by the coach endpoint for what the model is asked to rephrase, so
+ * the two can never drift apart.
  */
-export function renderFactEnglish(fact: InsightFact): string {
+export function renderFact(fact: InsightFact, t: Translator): string {
   switch (fact.kind) {
     case "streak-at-risk":
-      return `A short session today keeps the ${fact.days}-day streak alive.`;
-    case "modality-imbalance": {
-      const modality = MODALITY_LABELS[fact.modality as keyof typeof MODALITY_LABELS];
+      return t(INSIGHT_TEMPLATES.streak, { n: fact.days });
+    case "modality-imbalance":
       return fact.suggestion
-        ? `${modality} has had little attention lately — ${EXERCISES[fact.suggestion].name} would balance things out.`
-        : `${modality} has had little attention lately.`;
-    }
+        ? t(INSIGHT_TEMPLATES.imbalanceWithSuggestion, {
+            modality: t(MODALITY_LABELS[fact.modality]),
+            exercise: t(EXERCISES[fact.suggestion].name),
+          })
+        : t(INSIGHT_TEMPLATES.imbalance, { modality: t(MODALITY_LABELS[fact.modality]) });
     case "late-session-drop":
-      return "Accuracy tends to dip late in sessions — slightly shorter sessions might land more rounds in the sweet spot.";
+      return t(INSIGHT_TEMPLATES.lateDrop);
     case "best-time-of-day":
-      return `${DAY_PART_LABELS[fact.part]} sessions have scored highest so far (${fact.bestPct}% vs ${fact.worstPct}%).`;
+      return t(INSIGHT_TEMPLATES.bestTime, {
+        part: t(DAY_PART_LABELS[fact.part]),
+        best: fact.bestPct,
+        worst: fact.worstPct,
+      });
   }
 }

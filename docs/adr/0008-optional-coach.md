@@ -31,16 +31,20 @@ that constraint enforceable rather than aspirational".
 ```ts
 type InsightFact =
   | { kind: "streak-at-risk"; days: number }
-  | { kind: "modality-imbalance"; modality: string; suggestion: ExerciseId | null }
+  | { kind: "modality-imbalance"; modality: Modality; suggestion: ExerciseId | null }
   | { kind: "late-session-drop" }
   | { kind: "best-time-of-day"; part: DayPart; bestPct: number; worstPct: number };
 ```
 
-Every field is a number or a value from a closed enum. There is no free-text
-field, so a profile name, a timestamp or any other personal datum cannot leave
-the device even by mistake — the type system and a strict server-side parser
-both refuse it. The server renders the English sentence from _its own_ copy of
-the templates; the browser's wording is never transmitted.
+Every field is a number or a value from a closed enum, and there is no
+free-text field, so a profile name cannot be placed in this payload without
+both the type checker and the server-side parser objecting. The sentence is
+rendered from the templates on the server; the browser's wording is never
+transmitted.
+
+One honest caveat: `best-time-of-day` carries a coarse time-of-day bucket
+(`"morning"`), which is a _time_ in the ordinary sense even though it is not a
+timestamp. PRIVACY.md says so rather than claiming no temporal data is sent.
 
 This also removes the prompt-injection surface: the browser cannot contribute
 prompt text, only a validated fact.
@@ -62,21 +66,55 @@ The feature is on only when **both** the operator configured an endpoint
 **and** the user enabled `aiCoach` in their profile (data version 8, default
 false). Either one off means the deterministic text is what renders.
 
-### Output is validated, and failure is silent and safe
+### Output is checked with an allowlist, not a denylist
 
-Rephrased lines must survive `validateCoachLines` before display:
+The first version of this used a denylist of forbidden words. Adversarial
+review destroyed it: eleven health claims passed, including "…and strengthens
+your working memory" and "Your brain is rewiring itself". The failure is
+structural, not a missing entry — the app's own copy says "Working memory has
+had little attention lately", so banning _memory_ would reject faithful
+rephrasings of a real insight. In Swedish it was worse: compounding walks
+straight through a word-boundary pattern, so `demens` never matched
+"demensrisken".
 
-- **No invented numbers** — every digit run in a rewritten line must already
-  appear in the fact it came from. This kills fabricated statistics, the most
-  dangerous failure mode, with a check that cannot be argued with.
-- **No health-adjacent vocabulary** — IQ, diagnosis, medical, treatment,
-  dementia, cognitive decline, and their Swedish equivalents, matched on word
-  boundaries.
-- **Same number of lines**, each non-empty and under 240 characters.
+The check therefore runs the other way round. Every content word in the output
+must come from the source sentence or from a small closed set of connectives
+and warmth words. "Strengthens" appears in neither, so the claim above is
+rejected without anyone having had to predict that sentence. Four further
+checks close the rest:
+
+- **Numbers must match the source exactly** — none invented, none dropped, and
+  none re-attached to a different unit, so a 5-day streak cannot become "5%
+  ahead of other users". Unicode digits are normalised and spelled-out
+  numerals rejected.
+- **A faithfulness floor** — enough of the source's content must survive that
+  refusals ("I'm sorry, I can't help") and unrelated text cannot render.
+- **Model voice rejected** — preambles, apologies, "here is your rewrite".
+- **Length bounded** relative to the source, leaving little room to append.
+
+Sources are rendered in the _target_ locale, which is what makes any of this
+work for Swedish: the model rephrases a Swedish sentence and its words are
+compared against Swedish words.
 
 Any violation, parse failure, timeout or non-200 response means the app keeps
 its own wording. The user never sees an error; at worst they see the phrasing
 they would have seen anyway.
+
+### The route spends the operator's resources, so it is bounded
+
+`/api/coach` has no one to authenticate — Cortex has no accounts. It does,
+however, occupy a model for up to 20 seconds per call, and may bill a paid
+provider. It is therefore rate limited per client and per instance, and the
+deployment docs say to keep the instance off the public internet. Failures
+return a fixed reason (`timeout`, `upstream-error`, `unparseable`,
+`rejected`) and never upstream error text, which would otherwise disclose the
+operator's internal hostnames and ports.
+
+### One call per insight per day
+
+Results are cached against the local day. Without that, the endpoint would see
+a request per home-screen visit, and streak length plus accuracy percentages
+arriving repeatedly is itself a household activity pattern.
 
 ## Alternatives considered
 
@@ -98,13 +136,19 @@ they would have seen anyway.
 
 ## Consequences
 
-- Adding an insight rule now means adding a fact kind in two places (the
-  engine and the wire protocol's parser/renderer). That duplication is
-  deliberate: the server refusing to render a fact it does not know is what
-  makes the protocol closed.
-- The guardrails are conservative and will sometimes reject a perfectly good
-  rewrite (a model that helpfully adds "about 3 times a week" gets dropped).
-  A silent fallback to correct text is the right side to err on.
+- Adding an insight rule means adding a fact kind and a template in
+  `protocol.ts`. The engine and the endpoint render through the same function,
+  so the displayed sentence and the rephrased one cannot drift apart.
+- **The guardrails are strict, and will often reject.** A rewrite that reaches
+  for a synonym the source does not contain is refused — in Swedish,
+  inflection alone ("liv" → "lever") is enough. Expect the deterministic
+  wording to stand a good share of the time, more so in Swedish. That is the
+  intended trade-off: the fallback is text that was always correct, and the
+  alternative is a check that can be talked past.
+- These are layered mitigations, not a proof. A sufficiently odd model, or a
+  hostile endpoint the operator configured, can still produce something
+  unhelpful within the allowlist. The feature is off by default, the operator
+  chooses the model, and the blast radius is one sentence on the home screen.
 - `docs/measurement.md`'s copy rules now have a machine-checked counterpart
   for generated text, which is stronger than the human review the rest of the
   copy relies on.

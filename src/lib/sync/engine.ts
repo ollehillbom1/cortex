@@ -1,5 +1,6 @@
 import type { StorageAdapter } from "@/lib/storage/adapter";
 import { CURRENT_DATA_VERSION } from "@/lib/storage/migrations";
+import { withLocalConsent } from "@/lib/storage/exportImport";
 import {
   decryptJson,
   deriveCredentials,
@@ -143,8 +144,12 @@ async function applyLocally(storage: StorageAdapter, merged: SyncState): Promise
   }
   for (const profile of merged.profiles) {
     const local = localProfiles.find((p) => p.id === profile.id);
-    if (!local || JSON.stringify(local) !== JSON.stringify(profile)) {
-      await storage.putProfile(profile);
+    // Coach consent is per device and per operator; it never syncs in.
+    const incoming = local?.preferences.aiCoach
+      ? { ...profile, preferences: { ...profile.preferences, aiCoach: true } }
+      : withLocalConsent(profile);
+    if (!local || JSON.stringify(local) !== JSON.stringify(incoming)) {
+      await storage.putProfile(incoming);
     }
   }
   for (const profile of merged.profiles) {

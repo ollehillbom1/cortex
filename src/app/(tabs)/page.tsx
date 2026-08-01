@@ -15,7 +15,7 @@ import {
   shouldRemindBackup,
 } from "@/lib/storage/backupReminder";
 import { deriveInsights, META_INSIGHTS_DISMISSED_DAY, type Insight } from "@/lib/insights/engine";
-import { coachLocaleOf, rephraseInsights } from "@/lib/coach/client";
+import { coachLocaleOf, rephraseInsight } from "@/lib/coach/client";
 import { useT } from "@/lib/i18n/useT";
 import { useProfiles } from "@/components/app/ProfileProvider";
 import { Button } from "@/components/ui/Button";
@@ -60,11 +60,17 @@ export default function HomePage() {
         if (insightsDismissedDay !== todayKey) {
           const insights = deriveInsights({ profile, sessions: list, today: todayKey }, t);
           setInsight(insights[0] ?? null);
-          // Opt-in phrasing pass. Structured facts only, and the original
-          // wording stays whenever the coach is off, unreachable or rejected.
-          if (insights.length > 0 && profile.preferences.aiCoach) {
-            const rephrased = await rephraseInsights([insights[0]], coachLocaleOf(locale));
-            if (!cancelled) setInsight(rephrased[0]);
+          // Opt-in phrasing pass: structured facts only, cached for the day,
+          // and the original wording stays whenever the coach is off,
+          // unreachable or its output failed validation.
+          if (insights[0] && profile.preferences.aiCoach) {
+            const reworded = await rephraseInsight(
+              storage,
+              insights[0],
+              coachLocaleOf(locale),
+              todayKey,
+            );
+            if (!cancelled) setInsight(reworded);
           }
         }
       }

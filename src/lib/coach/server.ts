@@ -21,11 +21,54 @@ export interface CoachConfig {
   apiKey: string | null;
 }
 
-/** Returns null when the operator has not configured a coach endpoint. */
+/**
+ * Plaintext HTTP is only acceptable to a machine on your own network — the
+ * derived statistics would otherwise cross the public internet in the clear.
+ */
+export function isLocalOrPrivateUrl(raw: string): boolean {
+  let url: URL;
+  try {
+    url = new URL(raw);
+  } catch {
+    return false;
+  }
+  const host = url.hostname.toLowerCase().replace(/^\[|\]$/g, "");
+  if (host === "localhost" || host.endsWith(".localhost") || host === "::1") return true;
+  if (/^127\./.test(host)) return true;
+  if (/^10\./.test(host)) return true;
+  if (/^192\.168\./.test(host)) return true;
+  if (/^172\.(1[6-9]|2\d|3[01])\./.test(host)) return true;
+  if (/^169\.254\./.test(host)) return true;
+  // Unique-local and link-local IPv6.
+  if (/^f[cd][0-9a-f]{2}:/.test(host) || /^fe80:/.test(host)) return true;
+  // Container/compose conveniences that resolve inside the host's network.
+  if (host === "host.docker.internal" || host === "cortex" || !host.includes(".")) return true;
+  return false;
+}
+
+export class CoachConfigError extends Error {}
+
+/**
+ * Returns null when the operator has not configured a coach endpoint.
+ * Throws CoachConfigError when they configured one unsafely, so the mistake
+ * surfaces instead of silently sending statistics over plaintext internet.
+ */
 export function coachConfig(): CoachConfig | null {
   const baseUrl = process.env.COACH_API_BASE?.trim();
   const model = process.env.COACH_MODEL?.trim();
   if (!baseUrl || !model) return null;
+
+  let parsed: URL;
+  try {
+    parsed = new URL(baseUrl);
+  } catch {
+    throw new CoachConfigError("COACH_API_BASE is not a valid URL");
+  }
+  if (parsed.protocol !== "https:" && !isLocalOrPrivateUrl(baseUrl)) {
+    throw new CoachConfigError(
+      "COACH_API_BASE must use https:// unless it points at a local or private-network address",
+    );
+  }
   return {
     baseUrl: baseUrl.replace(/\/+$/, ""),
     model,
@@ -33,46 +76,58 @@ export function coachConfig(): CoachConfig | null {
   };
 }
 
+/** Fixed reasons; upstream error text never reaches the client. */
+export type CoachFailure = "timeout" | "upstream-error" | "unparseable" | "rejected";
+
 export type CoachOutcome =
-  | { status: "ok"; lines: string[] }
-  | { status: "rejected"; reason: string }
-  | { status: "unavailable"; reason: string };
+  { status: "ok"; lines: string[] } | { status: "failed"; failure: CoachFailure; detail: string };
 
 /**
  * Ask the configured model to rephrase the facts, then hold the result to
- * the guardrails. Any doubt resolves to a non-"ok" outcome and the caller
- * falls back to the app's own wording.
+ * the guardrails. Any doubt resolves to a failure and the caller falls back
+ * to the app's own wording.
+ *
+ * `fetchImpl` is injectable so the outbound request can be asserted in tests
+ * without a live model.
  */
 export async function rephraseFacts(
   config: CoachConfig,
   facts: InsightFact[],
   locale: CoachLocale,
+  fetchImpl: typeof fetch = fetch,
 ): Promise<CoachOutcome> {
-  const sources = sourceLines(facts);
+  const sources = sourceLines(facts, locale);
   let raw: string;
   try {
-    raw = await callModel(config, buildMessages(facts, locale));
+    raw = await callModel(config, buildMessages(facts, locale), fetchImpl);
   } catch (err) {
-    return { status: "unavailable", reason: err instanceof Error ? err.message : "request failed" };
+    const aborted = err instanceof Error && err.name === "AbortError";
+    return {
+      status: "failed",
+      failure: aborted ? "timeout" : "upstream-error",
+      detail: err instanceof Error ? err.message : "request failed",
+    };
   }
 
   const lines = parseCoachLines(raw, sources.length);
-  if (!lines) return { status: "rejected", reason: "unparseable" };
+  if (!lines) return { status: "failed", failure: "unparseable", detail: "line count" };
 
   const verdict = validateCoachLines(sources, lines);
-  if (!verdict.ok) return { status: "rejected", reason: verdict.reason ?? "invalid" };
-
+  if (!verdict.ok) {
+    return { status: "failed", failure: "rejected", detail: verdict.reason ?? "invalid" };
+  }
   return { status: "ok", lines };
 }
 
 async function callModel(
   config: CoachConfig,
   messages: { role: string; content: string }[],
+  fetchImpl: typeof fetch,
 ): Promise<string> {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
   try {
-    const res = await fetch(`${config.baseUrl}/chat/completions`, {
+    const res = await fetchImpl(`${config.baseUrl}/chat/completions`, {
       method: "POST",
       signal: controller.signal,
       headers: {

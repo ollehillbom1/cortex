@@ -44,6 +44,16 @@ export interface ImportResult {
 
 export class ImportError extends Error {}
 
+/**
+ * Consent to the optional AI coach is a decision about *this* device and the
+ * endpoint *this* operator configured, so it never travels with the data.
+ * An imported or synced profile always arrives with the coach off.
+ */
+export function withLocalConsent(profile: Profile): Profile {
+  if (!profile.preferences.aiCoach) return profile;
+  return { ...profile, preferences: { ...profile.preferences, aiCoach: false } };
+}
+
 const MAX_STRING = 200;
 const MAX_PROFILES = 50;
 const MAX_SESSIONS = 20_000;
@@ -99,9 +109,8 @@ export async function importBundle(
       result.profilesSkipped++;
       continue;
     }
-    await storage.putProfile(
-      migrateProfile({ ...profile, dataVersion: bundle.dataVersion }) as Profile,
-    );
+    const migrated = migrateProfile({ ...profile, dataVersion: bundle.dataVersion }) as Profile;
+    await storage.putProfile(withLocalConsent(migrated));
     knownProfiles.add(profile.id);
     result.profilesAdded++;
   }

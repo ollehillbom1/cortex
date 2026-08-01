@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { parseCoachRequest } from "@/lib/coach/protocol";
-import { coachConfig, rephraseFacts } from "@/lib/coach/server";
+import { CoachConfigError, coachConfig, rephraseFacts } from "@/lib/coach/server";
+import { checkRateLimit } from "@/lib/coach/rateLimit";
 
 /**
  * Optional coach endpoint (issue #11, phase 2).
@@ -9,19 +10,50 @@ import { coachConfig, rephraseFacts } from "@/lib/coach/server";
  * only ever talks to this same-origin route — the strict CSP
  * (connect-src 'self') stays intact and the external endpoint is reached from
  * the server. See docs/adr/0008-optional-coach.md.
+ *
+ * Responses never carry upstream error text: a failure tells the client which
+ * *kind* of failure it was, so it can fall back, and nothing about the
+ * operator's network. Details are logged server-side only.
  */
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
+function configured(): { ok: true; config: ReturnType<typeof coachConfig> } | { ok: false } {
+  try {
+    return { ok: true, config: coachConfig() };
+  } catch (err) {
+    if (err instanceof CoachConfigError) {
+      console.error(`[coach] misconfigured: ${err.message}`);
+      return { ok: false };
+    }
+    throw err;
+  }
+}
+
 /** Lets the UI hide the feature entirely when no endpoint is configured. */
 export async function GET() {
-  return NextResponse.json({ configured: coachConfig() !== null });
+  const result = configured();
+  return NextResponse.json({ configured: result.ok && result.config !== null });
 }
 
 export async function POST(request: NextRequest) {
-  const config = coachConfig();
-  if (!config) return NextResponse.json({ error: "not configured" }, { status: 503 });
+  const result = configured();
+  if (!result.ok || !result.config) {
+    return NextResponse.json({ error: "not configured" }, { status: 503 });
+  }
+  const config = result.config;
+
+  // Spend limiter: this route consumes the operator's compute or credit.
+  const clientKey =
+    request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown-client";
+  const limit = checkRateLimit(clientKey);
+  if (!limit.allowed) {
+    return NextResponse.json(
+      { error: "rate limited" },
+      { status: 429, headers: { "Retry-After": String(limit.retryAfter) } },
+    );
+  }
 
   let body: unknown;
   try {
@@ -35,10 +67,12 @@ export async function POST(request: NextRequest) {
 
   const outcome = await rephraseFacts(config, parsed.facts, parsed.locale);
   if (outcome.status === "ok") return NextResponse.json({ lines: outcome.lines });
+
   // The client already holds the deterministic wording; a failure here just
-  // means it keeps using it. The reason is returned for the status display.
+  // means it keeps using it.
+  console.warn(`[coach] ${outcome.failure}: ${outcome.detail}`);
   return NextResponse.json(
-    { error: outcome.status, reason: outcome.reason },
-    { status: outcome.status === "rejected" ? 422 : 502 },
+    { error: outcome.failure },
+    { status: outcome.failure === "rejected" || outcome.failure === "unparseable" ? 422 : 502 },
   );
 }

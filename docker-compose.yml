@@ -11,6 +11,13 @@ services:
       - "${PORT:-3000}:3000"
     environment:
       - NODE_ENV=production
+    # Optional AI phrasing of insights: uncomment and point at a model you run
+    # yourself. Without these the feature does not exist. See PRIVACY.md.
+    #   - COACH_API_BASE=http://host.docker.internal:11434/v1
+    #   - COACH_MODEL=llama3.2
+    # Keep any key out of this file — put it in .env and reference it here:
+    # env_file:
+    #   - .env
     volumes:
       - cortex-sync:/app/data
     # Resource-conscious defaults suitable for a Raspberry Pi 5.
