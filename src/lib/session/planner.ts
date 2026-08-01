@@ -1,5 +1,4 @@
 import {
-  ALL_EXERCISE_IDS,
   EXERCISES,
   type ExerciseId,
   type Modality,
@@ -7,6 +6,7 @@ import {
   type SessionRecord,
 } from "@/lib/domain/types";
 import { recentAccuracy } from "@/lib/adaptive/engine";
+import { availableExerciseIds } from "@/lib/exercises/availability";
 import { DUAL_NBACK_GATE_LEVEL } from "@/lib/exercises/dualNBack";
 import { createRng, shuffle, type Rng } from "@/lib/engine/rng";
 
@@ -100,9 +100,10 @@ function rankExercises(input: PlanInput, rng: Rng): ExerciseId[] {
     }
   });
 
-  // Dual n-back is only recommended once single n-back has reached 2-back;
-  // it stays playable from the library at any time.
-  const candidates = ALL_EXERCISE_IDS.filter(
+  // Start from what this profile can actually play (accessibility filter),
+  // then hold dual n-back back until single n-back has reached 2-back; it
+  // stays playable from the library at any time.
+  const candidates = availableExerciseIds(input.profile).filter(
     (id) =>
       id !== "dual-n-back" || (input.profile.skills["n-back"]?.level ?? 1) >= DUAL_NBACK_GATE_LEVEL,
   );

@@ -395,6 +395,13 @@ export const SV: Record<string, string> = {
   "Reduce motion": "Minska rörelse",
   "Minimise animations (also follows your system setting)":
     "Minimera animationer (följer även systeminställningen)",
+  "Skip exercises that need sight": "Hoppa över övningar som kräver syn",
+  "Leave grid, position and signal exercises out of recommendations and the library. The remaining exercises are played entirely by ear.":
+    "Utelämna rutnäts-, positions- och signalövningar från rekommendationer och biblioteket. Övriga övningar spelas helt med hörseln.",
+  "Needs sight": "Kräver syn",
+  "Needs sound": "Kräver ljud",
+  "Needs sight and sound": "Kräver syn och ljud",
+  "Show {n} exercises that need sight": "Visa {n} övningar som kräver syn",
   "Daily goal in minutes": "Dagligt mål i minuter",
   Language: "Språk",
   Automatic: "Automatiskt",

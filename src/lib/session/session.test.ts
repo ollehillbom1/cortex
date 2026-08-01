@@ -40,6 +40,20 @@ describe("session planner", () => {
     }
   });
 
+  it("plans only non-visual exercises when the profile excludes vision", () => {
+    const profile = createProfile({ id: "p1", name: "Test" });
+    profile.preferences.excludeVisionRequired = true;
+    for (const seed of [1, 2, 42, 777]) {
+      const plan = planSession({ profile, recentSessions: [], seed });
+      expect(plan.items.length).toBeGreaterThan(0);
+      for (const item of plan.items) {
+        expect(EXERCISES[item.exerciseId].requiresVision).toBe(false);
+      }
+      // The remaining exercises still cover more than a single modality.
+      expect(plan.modalities.length).toBeGreaterThanOrEqual(3);
+    }
+  });
+
   it("respects the daily-goal time budget approximately", () => {
     const profile = createProfile({ id: "p1", name: "Test" });
     const plan = planSession({ profile, recentSessions: [], seed: 7, targetMinutes: 8 });

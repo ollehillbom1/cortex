@@ -46,7 +46,9 @@ band with smooth, capped steps — see [docs/adaptive-difficulty.md](docs/adapti
 - **Accessibility**: keyboard play for core exercises, visible focus, ARIA labels
   and live regions, focus-trapped dialogs, large-text and reduce-motion settings,
   ≥44 px touch targets, no colour-only outcomes — enforced by an axe-core audit
-  in the e2e suite.
+  in the e2e suite. Every exercise declares whether it needs sight or sound, and
+  a preference filters the vision-only ones out of recommendations and the
+  library — see [docs/accessibility.md](docs/accessibility.md).
 - **Data safety**: gentle backup reminders when progress is unexported, and
   persistent-storage protection (`navigator.storage.persist()`) requested on
   profile creation with status shown in the app.

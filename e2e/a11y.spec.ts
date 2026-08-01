@@ -51,6 +51,35 @@ test.describe("axe accessibility audit", () => {
     await expectNoSeriousViolations(page, "quit dialog");
   });
 
+  test("vision-only exercises can be filtered out of the library and plans", async ({ page }) => {
+    await createProfile(page, "Ears");
+    await page.goto("/exercises");
+    await expect(page.getByRole("heading", { name: "Pattern Recall" })).toBeVisible();
+
+    await page.goto("/profile");
+    // Operate the switch from the keyboard — it is a visually-hidden input
+    // behind a styled track, so this is also the assistive-tech path.
+    const skipVisual = page.getByRole("checkbox", { name: /skip exercises that need sight/i });
+    await skipVisual.focus();
+    await page.keyboard.press("Space");
+    await expect(skipVisual).toBeChecked();
+
+    await page.goto("/exercises");
+    // Vision-only exercises are gone; the auditory ones remain playable.
+    await expect(page.getByRole("heading", { name: "Pattern Recall" })).toHaveCount(0);
+    await expect(page.getByRole("heading", { name: "Tone Pattern" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Rhythm Recall" })).toBeVisible();
+
+    // They stay reachable behind an explicit toggle — nothing is removed.
+    await page.getByRole("button", { name: /exercises that need sight/i }).click();
+    await expect(page.getByRole("heading", { name: "Pattern Recall" })).toBeVisible();
+
+    // The recommended plan only draws from the non-visual set.
+    await page.goto("/");
+    const plan = page.getByRole("main");
+    await expect(plan.getByText(/Pattern Recall|Sequence Memory|N-Back|Reaction/)).toHaveCount(0);
+  });
+
   test("quit dialog traps focus and closes on Escape", async ({ page }) => {
     await createProfile(page, "Trap");
     await page.goto("/session?exercise=reaction-time");

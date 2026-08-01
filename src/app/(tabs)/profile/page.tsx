@@ -337,6 +337,14 @@ export default function ProfilePage() {
             checked={profile.preferences.reduceMotion}
             onChange={(v) => setPref("reduceMotion", v)}
           />
+          <Toggle
+            label={t("Skip exercises that need sight")}
+            description={t(
+              "Leave grid, position and signal exercises out of recommendations and the library. The remaining exercises are played entirely by ear.",
+            )}
+            checked={profile.preferences.excludeVisionRequired}
+            onChange={(v) => setPref("excludeVisionRequired", v)}
+          />
           <label className="block">
             <span className="flex justify-between text-sm">
               <span>{t("Daily goal")}</span>

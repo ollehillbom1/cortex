@@ -13,7 +13,7 @@ import { initialStreak } from "@/lib/progression/streak";
  * db.ts via the idb `upgrade` callback.
  */
 
-export const CURRENT_DATA_VERSION = 6;
+export const CURRENT_DATA_VERSION = 7;
 
 export type StoredProfile = Profile & { dataVersion?: number };
 
@@ -52,6 +52,11 @@ const MIGRATIONS: Migration[] = [
   },
   // v5 -> v6: profiles carry updatedAt for last-write-wins sync.
   (p) => ({ updatedAt: p.createdAt ?? new Date(0).toISOString(), ...p }),
+  // v6 -> v7: accessibility preference to leave out vision-only exercises.
+  (p) => {
+    const preferences = (p.preferences ?? {}) as Record<string, unknown>;
+    return { ...p, preferences: { excludeVisionRequired: false, ...preferences } };
+  },
 ];
 
 export function migrateProfile(raw: Record<string, unknown>): StoredProfile {
