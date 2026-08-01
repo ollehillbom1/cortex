@@ -22,7 +22,15 @@ export function NumberSpanGame({ level, roundIndex, seed, onRoundComplete }: Gam
   const [shownIndex, setShownIndex] = useState(0);
   const [entered, setEntered] = useState<number[]>([]);
   const done = useRef(false);
+  const cancelled = useRef(false);
   const inputStart = useRef<number | null>(null);
+
+  useEffect(
+    () => () => {
+      cancelled.current = true;
+    },
+    [],
+  );
 
   useEffect(() => {
     if (phase === "input") inputStart.current = performance.now();
@@ -48,7 +56,9 @@ export function NumberSpanGame({ level, roundIndex, seed, onRoundComplete }: Gam
 
   const submit = useCallback(
     (response: number[]) => {
-      if (done.current) return;
+      // cancelled: the 150 ms auto-submit timer may fire after unmount (user
+      // quit mid-round); a dead round must not report itself.
+      if (done.current || cancelled.current) return;
       done.current = true;
       const expected = expectedAnswer(digits, params.direction);
       const score = scoreSpanResponse(expected, response);
