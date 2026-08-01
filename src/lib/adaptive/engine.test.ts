@@ -132,6 +132,38 @@ describe("adaptive engine", () => {
     expect(medianInputMs({ ...s, recentInputMs: [3000, 1000, 2000] })).toBe(2000);
   });
 
+  it("a hot streak accelerates: the third perfect round in a row steps a full level", () => {
+    // Past calibration, at a level far below true skill.
+    let s = { ...initialSkill(NOW), attempts: 10, level: 5 };
+    s = updateSkill(s, { accuracy: 1 }, NOW); // +0.6
+    s = updateSkill(s, { accuracy: 1 }, NOW); // +0.6
+    const before = s.level;
+    s = updateSkill(s, { accuracy: 1 }, NOW); // third in a row: full step
+    expect(s.level - before).toBeCloseTo(1, 5);
+    // And it keeps stepping fully while the streak holds.
+    const prev = s.level;
+    s = updateSkill(s, { accuracy: 1 }, NOW);
+    expect(s.level - prev).toBeCloseTo(1, 5);
+  });
+
+  it("a hot streak breaks on the first round that is not near-perfect", () => {
+    let s = { ...initialSkill(NOW), attempts: 10, level: 5 };
+    for (let i = 0; i < 3; i++) s = updateSkill(s, { accuracy: 1 }, NOW);
+    s = updateSkill(s, { accuracy: 0.8 }, NOW); // in-band round resets the run
+    const before = s.level;
+    s = updateSkill(s, { accuracy: 1 }, NOW); // first perfect again: normal step
+    expect(s.level - before).toBeCloseTo(0.6, 5);
+  });
+
+  it("hot streak still respects the kid-mode damping", () => {
+    let s = { ...initialSkill(NOW), attempts: 10, level: 5 };
+    for (let i = 0; i < 2; i++) s = updateSkill(s, { accuracy: 1 }, NOW, { gentle: true });
+    const before = s.level;
+    s = updateSkill(s, { accuracy: 1 }, NOW, { gentle: true });
+    // Full step damped by 25%, same as every other upward step in kid mode.
+    expect(s.level - before).toBeCloseTo(0.75, 5);
+  });
+
   it("kid mode ramps up more gently without changing downward relief", () => {
     // Calibration phase: gentler multiplier.
     const fresh = initialSkill(NOW);

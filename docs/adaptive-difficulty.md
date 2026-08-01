@@ -38,12 +38,19 @@ After each round with accuracy `a` (0..1):
 
 Modifiers, applied in order:
 
-1. **Calibration**: first 3 attempts multiply Δ by 1.8 to find the user's level
+1. **Hot streak**: from the third near-perfect (`a ≥ 0.95`) round in a row,
+   the base step becomes a full +1 — the ceiling. Clearing round after round
+   is direct evidence the estimate sits far below the player, and at +0.60 a
+   skilled newcomer needed ~19 rounds (3–4 sessions) to climb from level 1
+   to level 8. The run ends on the first round below 0.95, so acceleration
+   stops exactly where challenge begins; the one-level-per-round ceiling and
+   the kid-mode damping both still apply.
+2. **Calibration**: first 3 attempts multiply Δ by 1.8 to find the user's level
    fast.
-2. **Fatigue**: the runner passes `fatigue ∈ [0,1]` (minutes into session / 15).
+3. **Fatigue**: the runner passes `fatigue ∈ [0,1]` (minutes into session / 15).
    Downward steps are discounted by up to 50 % — late-session misses are more
    likely tiredness than a wrong skill estimate.
-3. **Latency strain** ("correct but laboured"): each skill keeps a ring buffer
+4. **Latency strain** ("correct but laboured"): each skill keeps a ring buffer
    of the last 10 answer times (`recentInputMs`, input-phase start →
    submission). Once ≥3 samples exist, an _upward_ step is halved when the
    round took more than 1.35× the user's own rolling median. Latency
@@ -51,9 +58,9 @@ Modifiers, applied in order:
    it is skipped for reaction-style exercises whose accuracy is already
    speed-derived. The baseline is per-user per-exercise (a rolling median), so
    naturally deliberate users are not penalised.
-4. **Safety valve**: from the 3rd consecutive sub-band round, an extra −0.25
+5. **Safety valve**: from the 3rd consecutive sub-band round, an extra −0.25
    prevents a slow, demoralising grind at a too-high level.
-5. **Clamp**: net Δ ∈ [−1, +1]; level ∈ [1, 40].
+6. **Clamp**: net Δ ∈ [−1, +1]; level ∈ [1, 40].
 
 Reaction-style exercises map speed onto the same 0..1 scale
 (`scoreReaction`: ≤220 ms ≈ 1.0 → ≥600 ms ≈ 0.3, −0.1 per false start) so one
