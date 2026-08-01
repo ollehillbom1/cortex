@@ -30,11 +30,16 @@ export function ReactionGame({
   const [resultMs, setResultMs] = useState<number | null>(null);
   const goAt = useRef<number>(0);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // The 900 ms result interstitials, tracked separately from the GO timer so
+  // unmounting mid-interstitial (quitting the session) cannot let a dead
+  // round call onRoundComplete into whatever state the session is in by then.
+  const finishTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const done = useRef(false);
 
   useEffect(
     () => () => {
       if (timer.current) clearTimeout(timer.current);
+      if (finishTimer.current) clearTimeout(finishTimer.current);
     },
     [],
   );
@@ -71,13 +76,13 @@ export function ReactionGame({
       if (timer.current) clearTimeout(timer.current);
       setPhase("false-start");
       if (soundOn) audio.playError();
-      setTimeout(() => finish({ kind: "false-start" }), 900);
+      finishTimer.current = setTimeout(() => finish({ kind: "false-start" }), 900);
     } else if (phase === "go") {
       const ms = Math.round(performance.now() - goAt.current);
       setResultMs(ms);
       setPhase("result");
       if (soundOn) audio.playSuccess();
-      setTimeout(() => finish({ kind: "ok", ms }), 900);
+      finishTimer.current = setTimeout(() => finish({ kind: "ok", ms }), 900);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [phase, soundOn, finish]);

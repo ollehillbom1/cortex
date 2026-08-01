@@ -70,7 +70,9 @@ export function TonePatternGame({ level, seed, audio, onRoundComplete }: GamePro
 
   const submit = useCallback(
     (response: number[]) => {
-      if (done.current) return;
+      // cancelled: the auto-submit timer may fire after unmount (user quit
+      // during the 150-200 ms grace); a dead round must not report itself.
+      if (done.current || cancelled.current) return;
       done.current = true;
       const score = scoreMelodyResponse(melody, response);
       onRoundComplete({

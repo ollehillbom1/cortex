@@ -92,7 +92,9 @@ export function AuditoryGame({ level, roundIndex, seed, audio, onRoundComplete }
 
   const submit = useCallback(
     (response: number[]) => {
-      if (done.current) return;
+      // cancelled: the auto-submit timer may fire after unmount (user quit
+      // during the 150-200 ms grace); a dead round must not report itself.
+      if (done.current || cancelled.current) return;
       done.current = true;
       const expected = speechMode ? expectedAnswer(items, params.direction) : items;
       const score = scoreSpanResponse(expected, response);
