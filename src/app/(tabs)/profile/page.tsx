@@ -522,9 +522,7 @@ export default function ProfilePage() {
       </section>
 
       <p className="pb-2 text-center text-xs text-[var(--color-ink-faint)]">
-        {t(
-          "Cortex · self-hosted cognitive training · results reflect in-app performance, not clinical cognition.",
-        )}
+        {t("Cortex · brain training · results reflect in-app performance, not clinical cognition.")}
       </p>
 
       {/* PIN-gated profile switch */}

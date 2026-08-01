@@ -6,11 +6,18 @@ import { ServiceWorkerManager } from "@/components/app/ServiceWorkerManager";
 
 export const metadata: Metadata = {
   title: {
-    default: "Cortex",
+    default: "Cortex — Brain Training for Memory, Attention & Speed",
     template: "%s · Cortex",
   },
   description:
-    "Cortex is a self-hosted cognitive training app: short daily sessions for memory, attention and speed, with adaptive difficulty and private local storage.",
+    "Free brain training in your browser: short daily sessions for memory, attention and speed. Nine exercises that adapt to your level, work offline, and keep your data private on your device.",
+  openGraph: {
+    title: "Cortex — Brain Training for Memory, Attention & Speed",
+    description:
+      "Short daily sessions for memory, attention and speed. Nine adaptive exercises, offline-capable, no account needed.",
+    siteName: "Cortex",
+    type: "website",
+  },
   applicationName: "Cortex",
   manifest: "/manifest.webmanifest",
   appleWebApp: {
