@@ -151,6 +151,11 @@ export const SV: Record<string, string> = {
     "Cortex är en personlig tränare för minne, uppmärksamhet och snabbhet: korta, fokuserade övningar för dagliga pass på 5–20 minuter.",
   "It measures your in-app performance — accuracy, span, reaction time — and shows how it develops. It does not measure IQ, and it makes no medical claims.":
     "Den mäter din prestation i appen — träffsäkerhet, spann, reaktionstid — och visar hur den utvecklas. Den mäter inte IQ och gör inga medicinska anspråk.",
+  "Why train working memory?": "Varför träna arbetsminnet?",
+  "Working memory is what holds a phone number while you dial, a recipe step while you stir, the thread of a conversation while you listen. Like most skills, the abilities you practise are the ones that grow.":
+    "Arbetsminnet är det som håller ett telefonnummer medan du slår det, ett receptsteg medan du rör i grytan, tråden i ett samtal medan du lyssnar. Som med de flesta färdigheter är det förmågorna du övar som växer.",
+  "Short daily sessions beat rare long ones: a focused streak builds span, sharpens attention and speeds up recall — and Cortex shows you that progress, session by session.":
+    "Korta dagliga pass slår sällsynta långa: en fokuserad svit bygger spann, skärper uppmärksamheten och snabbar upp minnet — och Cortex visar dig framstegen, pass för pass.",
   "Always the right challenge": "Alltid rätt utmaning",
   "Every exercise adapts to you. Do well and the difficulty rises gently; struggle and it eases off.":
     "Varje övning anpassar sig efter dig. Går det bra höjs svårigheten varsamt; går det trögt backar den.",
@@ -435,8 +440,8 @@ export const SV: Record<string, string> = {
   "Install on your phone": "Installera på din telefon",
   "On iPhone: open Cortex in Safari, tap the Share button, then Add to Home Screen. Cortex then runs full-screen and works offline. On Android, choose Install app from the browser menu.":
     "På iPhone: öppna Cortex i Safari, tryck på Dela-knappen och sedan Lägg till på hemskärmen. Cortex körs då i helskärm och fungerar offline. På Android väljer du Installera app i webbläsarens meny.",
-  "Cortex · self-hosted cognitive training · results reflect in-app performance, not clinical cognition.":
-    "Cortex · självhostad kognitiv träning · resultaten speglar prestation i appen, inte klinisk kognition.",
+  "Cortex · brain training · results reflect in-app performance, not clinical cognition.":
+    "Cortex · hjärnträning · resultaten speglar prestation i appen, inte klinisk kognition.",
   "Reset progression?": "Nollställa framstegen?",
   "Delete profile?": "Radera profilen?",
   "Delete {name}?": "Radera {name}?",

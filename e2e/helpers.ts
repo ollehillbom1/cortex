@@ -1,15 +1,24 @@
 import { expect, type Page } from "@playwright/test";
 
-/** Walk the onboarding intro screens until the profile form is showing. */
+/**
+ * Walk the onboarding intro screens until the profile form is showing.
+ * Counts steps from the indicator instead of hardcoding them, so adding or
+ * removing an intro screen does not silently break every test.
+ */
 export async function advanceToProfileForm(page: Page) {
   await page.goto("/");
   await page.waitForURL("**/welcome");
-  for (let i = 0; i < 3; i++) {
+  const label = await page
+    .getByRole("group", { name: /step 1 of \d+/i })
+    .getAttribute("aria-label");
+  const total = Number(/of (\d+)/.exec(label ?? "")?.[1]);
+  expect(total).toBeGreaterThan(1);
+  for (let i = 0; i < total - 1; i++) {
     // Retry the click until the step indicator advances — a click that lands
     // before React hydration would otherwise be silently swallowed.
     await expect(async () => {
       await page.getByRole("button", { name: /get started|continue/i }).click();
-      await expect(page.getByLabel(`Step ${i + 2} of 4`)).toBeVisible({ timeout: 1_000 });
+      await expect(page.getByLabel(`Step ${i + 2} of ${total}`)).toBeVisible({ timeout: 1_000 });
     }).toPass({ timeout: 15_000 });
   }
 }

@@ -11,7 +11,7 @@ import { useT } from "@/lib/i18n/useT";
 import { useProfiles } from "@/components/app/ProfileProvider";
 import { Button } from "@/components/ui/Button";
 import { Dialog } from "@/components/ui/Dialog";
-import { BoltIcon, CheckIcon, StatsIcon, TrainIcon } from "@/components/ui/icons";
+import { BoltIcon, CheckIcon, FlameIcon, StatsIcon, TrainIcon } from "@/components/ui/icons";
 
 const STEPS = [
   {
@@ -20,6 +20,14 @@ const STEPS = [
     body: [
       "Cortex is a personal trainer for memory, attention and speed: short, focused exercises designed for daily 5–20 minute sessions.",
       "It measures your in-app performance — accuracy, span, reaction time — and shows how it develops. It does not measure IQ, and it makes no medical claims.",
+    ],
+  },
+  {
+    title: "Why train working memory?",
+    icon: FlameIcon,
+    body: [
+      "Working memory is what holds a phone number while you dial, a recipe step while you stir, the thread of a conversation while you listen. Like most skills, the abilities you practise are the ones that grow.",
+      "Short daily sessions beat rare long ones: a focused streak builds span, sharpens attention and speeds up recall — and Cortex shows you that progress, session by session.",
     ],
   },
   {
