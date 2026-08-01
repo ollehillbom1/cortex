@@ -17,8 +17,13 @@ export function Dialog({
   children: ReactNode;
 }) {
   const panelRef = useRef<HTMLDivElement>(null);
+  // Kept in a ref so the key handler below always calls the latest onClose
+  // without re-registering the listener. Updated in an effect rather than
+  // during render, which React forbids.
   const onCloseRef = useRef(onClose);
-  onCloseRef.current = onClose;
+  useEffect(() => {
+    onCloseRef.current = onClose;
+  });
 
   useEffect(() => {
     const previouslyFocused = document.activeElement as HTMLElement | null;

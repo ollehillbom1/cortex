@@ -28,7 +28,14 @@ export function SyncSection() {
   const reload = async () => setStatus(await getSyncStatus(getStorage()));
 
   useEffect(() => {
-    void reload();
+    let cancelled = false;
+    void (async () => {
+      const initial = await getSyncStatus(getStorage());
+      if (!cancelled) setStatus(initial);
+    })();
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   const doEnable = async () => {

@@ -18,7 +18,8 @@ export function NumberSpanGame({ level, roundIndex, seed, onRoundComplete }: Gam
   const params = numberSpanParams(level, roundIndex);
   const [digits] = useState(() => generateDigits(createRng(seed), params.span));
   const [phase, setPhase] = useState<Phase>("show");
-  const [shownIndex, setShownIndex] = useState(-1);
+  // Starts at the first digit: the presentation effect below only advances it.
+  const [shownIndex, setShownIndex] = useState(0);
   const [entered, setEntered] = useState<number[]>([]);
   const done = useRef(false);
   const inputStart = useRef<number | null>(null);
@@ -30,7 +31,6 @@ export function NumberSpanGame({ level, roundIndex, seed, onRoundComplete }: Gam
   // Present digits one at a time, then switch to input.
   useEffect(() => {
     let i = 0;
-    setShownIndex(0);
     const timers: ReturnType<typeof setTimeout>[] = [];
     const tick = () => {
       i += 1;

@@ -8,6 +8,14 @@ import { createProfile } from "./helpers";
  */
 
 async function expectNoSeriousViolations(page: Page, context: string) {
+  // Surfaces fade in via the `rise-in` keyframes. Axe reads the *current*
+  // computed colour, so auditing mid-animation measures a part-way blend
+  // against the background and reports contrast failures that do not exist
+  // once the text has settled (e.g. --color-ink-faint lands at 5.6:1, but was
+  // being sampled at 3.3:1). Wait for animations to finish before auditing.
+  await page.waitForFunction(() =>
+    document.getAnimations().every((a) => a.playState === "finished"),
+  );
   const results = await new AxeBuilder({ page }).analyze();
   const serious = results.violations.filter(
     (v) => v.impact === "serious" || v.impact === "critical",

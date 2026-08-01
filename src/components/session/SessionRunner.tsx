@@ -81,20 +81,24 @@ export function SessionRunner() {
   const [quitPrompt, setQuitPrompt] = useState(false);
 
   const blockRounds = useRef<{ result: RoundResult; level: number; xp: number }[]>([]);
-  const seedBase = useRef(timeSeed());
+  // State, not a ref: the per-round seed below is derived during render, and
+  // refs may not be read there. Lazy init keeps it stable for the session.
+  const [seedBase] = useState(timeSeed);
   const startedAt = useRef<string>("");
   const persisted = useRef(false);
   // Guards against the feedback auto-advance timer and the Continue button
   // both firing advance() for the same round.
   const advancing = useRef(false);
 
-  // Volume/mute follow the profile.
+  // Volume/mute follow the profile. The engine is a module-level singleton, so
+  // it is re-fetched here rather than mutated through the render-scope `audio`
+  // binding, which React treats as a local variable escaping render.
   useEffect(() => {
-    if (profile) {
-      audio.volume = profile.preferences.volume;
-      audio.muted = !profile.preferences.audioEnabled;
-    }
-  }, [profile, audio]);
+    if (!profile) return;
+    const engine = getAudioEngine();
+    engine.volume = profile.preferences.volume;
+    engine.muted = !profile.preferences.audioEnabled;
+  }, [profile]);
 
   // Build the plan once the profile is available.
   useEffect(() => {
@@ -118,7 +122,7 @@ export function SessionRunner() {
       } else {
         const recent = await getStorage().listSessions(profile.id, 10);
         if (cancelled) return;
-        const plan = planSession({ profile, recentSessions: recent, seed: seedBase.current });
+        const plan = planSession({ profile, recentSessions: recent, seed: seedBase });
         setItems(plan.items);
         setEstimatedMinutes(plan.estimatedMinutes);
         setPhase("overview");
@@ -132,7 +136,7 @@ export function SessionRunner() {
     return () => {
       cancelled = true;
     };
-  }, [ready, profile, single, router, items.length]);
+  }, [ready, profile, single, router, items.length, seedBase]);
 
   const currentItem = items[itemIndex];
   const currentDef = currentItem ? EXERCISES[currentItem.exerciseId] : null;
@@ -284,7 +288,7 @@ export function SessionRunner() {
     router.push("/");
   };
 
-  const seed = seedBase.current + itemIndex * 1009 + roundIndex * 37;
+  const seed = seedBase + itemIndex * 1009 + roundIndex * 37;
   const totalRounds = useMemo(() => items.reduce((a, i) => a + i.rounds, 0), [items]);
   const doneRounds =
     items.slice(0, itemIndex).reduce((a, i) => a + i.rounds, 0) +
