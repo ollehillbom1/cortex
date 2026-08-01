@@ -72,6 +72,9 @@ instead of degrading into a visual exercise.
 - A **haptic** channel for Reaction (vibration as the GO signal) would give
   that exercise a non-visual pathway; `navigator.vibrate` is unavailable on
   iOS Safari, so this needs a device-specific evaluation before promising it.
+  A native wrapper would provide it — see
+  [`adr/0009-native-packaging.md`](adr/0009-native-packaging.md), where this
+  is one of the four conditions that would reopen that question.
 
 ## Reporting
 

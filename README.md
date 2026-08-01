@@ -171,11 +171,12 @@ the critical flows on an iPhone viewport, including offline startup. See
 
 ## Roadmap
 
-Tracked as GitHub issues — device sync, dual n-back, auditory training,
-Swedish localisation and automated accessibility audits have all landed;
-remaining highlights include on-device VoiceOver verification and a native
-packaging evaluation. See the issue list for motivation and acceptance
-criteria.
+Tracked as GitHub issues. Device sync, dual n-back, auditory training, Swedish
+localisation, automated accessibility audits and optional AI phrasing have all
+landed. Native packaging was evaluated and deliberately declined for now
+([ADR 0009](docs/adr/0009-native-packaging.md) records what would reopen it).
+What remains needs a physical iPhone: the scripted
+[VoiceOver walkthrough](docs/voiceover-protocol.md).
 
 ## Contributing
 
