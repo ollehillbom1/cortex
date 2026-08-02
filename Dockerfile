@@ -14,7 +14,7 @@
 # image codec. npm fetches the target's prebuilt binaries directly with
 # --os/--cpu/--libc, so that stage is not emulated either.
 
-ARG NODE_IMAGE=node:22-alpine
+ARG NODE_IMAGE=node:22-alpine@sha256:c610fcdfb1d5b4740dd70c284ed3cb16bb857e0f7166196e36a5501df7a3aa32
 
 # --- deps: build-platform dependencies, used to compile --------------------
 FROM --platform=$BUILDPLATFORM ${NODE_IMAGE} AS deps
