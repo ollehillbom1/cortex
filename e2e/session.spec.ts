@@ -26,7 +26,6 @@ test.describe("training sessions", () => {
     await expect(page.getByText(/round paused/i)).toBeHidden();
   });
 
-
   test("completing a reaction block persists results, XP and streak", async ({ page }) => {
     await createProfile(page, "Runner");
 
