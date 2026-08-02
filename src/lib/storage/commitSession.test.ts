@@ -41,14 +41,31 @@ describe("commitSession", () => {
     expect((await storage.getProfile("p"))?.xp).toBe(42);
   });
 
-  it("writes neither when the transaction fails", async () => {
+  it("writes neither when the SECOND write fails", async () => {
+    // The load-bearing case, and the one the first version of this test got
+    // wrong. A session with no key path makes `put` throw synchronously
+    // BEFORE the profile put is ever issued — so a non-atomic implementation
+    // passes, because the profile was never written in the first place.
+    // Failing on the second write is what actually distinguishes the two:
+    // the session put has already been issued, and only a rollback undoes it.
     const storage = new IndexedDBAdapter();
     const profile = createProfile({ id: "p", name: "P" });
     await storage.putProfile(profile);
 
-    // A session whose key path is missing aborts the transaction: IndexedDB
-    // rolls the whole thing back, so the profile write must not survive it.
-    const broken = { ...session("s2", "p"), id: undefined } as unknown as SessionRecord;
+    // A function cannot be structured-cloned: `put` rejects it synchronously.
+    const uncloneable = { ...profile, xp: 999, boom: () => "boom" } as unknown as typeof profile;
+    await expect(storage.commitSession(session("s2", "p"), uncloneable)).rejects.toBeTruthy();
+
+    expect(await storage.listSessions("p")).toEqual([]);
+    expect((await storage.getProfile("p"))?.xp).toBe(0);
+  });
+
+  it("writes neither when the FIRST write fails", async () => {
+    const storage = new IndexedDBAdapter();
+    const profile = createProfile({ id: "p", name: "P" });
+    await storage.putProfile(profile);
+
+    const broken = { ...session("s3", "p"), id: undefined } as unknown as SessionRecord;
     await expect(storage.commitSession(broken, { ...profile, xp: 999 })).rejects.toBeTruthy();
 
     expect(await storage.listSessions("p")).toEqual([]);

@@ -98,11 +98,28 @@ export class IndexedDBAdapter implements StorageAdapter {
         `Profile was saved by a newer version of Cortex (data version ${existing.dataVersion}). Update the app to continue.`,
       );
     }
-    await Promise.all([
-      tx.objectStore("sessions").put(session),
-      profiles.put({ ...profile, dataVersion: CURRENT_DATA_VERSION }),
-      tx.done,
-    ]);
+    try {
+      // Both puts inside the try: `put` validates its argument and can throw
+      // SYNCHRONOUSLY (a missing key path, a value that cannot be structured-
+      // cloned). Without this, the first put had already been issued to the
+      // transaction, the second threw before being issued, nothing aborted,
+      // and the transaction committed the half it had — a session written
+      // with no profile, which is exactly the split this method exists to
+      // prevent.
+      await Promise.all([
+        tx.objectStore("sessions").put(session),
+        profiles.put({ ...profile, dataVersion: CURRENT_DATA_VERSION }),
+      ]);
+      await tx.done;
+    } catch (err) {
+      try {
+        tx.abort();
+      } catch {
+        /* Already aborted or finished; the rollback is what matters. */
+      }
+      await tx.done.catch(() => {});
+      throw err;
+    }
   }
 
   async addSession(session: SessionRecord): Promise<void> {

@@ -97,6 +97,8 @@ export function SessionRunner() {
   const startedAt = useRef<string>("");
   const persisted = useRef(false);
   const sessionId = useRef<string>("");
+  // A commit is in flight. Distinct from `persisted`, which means one succeeded.
+  const saving = useRef(false);
   // Guards against the feedback auto-advance timer and the Continue button
   // both firing advance() for the same round.
   const advancing = useRef(false);
@@ -235,7 +237,13 @@ export function SessionRunner() {
 
   const persistSession = useCallback(
     async (exercises: ExerciseResult[]) => {
-      if (!profile || persisted.current || exercises.length === 0) return null;
+      // Two facts, two flags: `saving` is "a commit is in flight" and is set
+      // SYNCHRONOUSLY, `persisted` is "a commit succeeded". Moving the second
+      // one after the write (so a failure stays retryable) removed the mutual
+      // exclusion the single flag used to provide, and both the auto-advance
+      // timer and the quit button can enter here at once.
+      if (!profile || persisted.current || saving.current || exercises.length === 0) return null;
+      saving.current = true;
       const now = new Date();
       const started = startedAt.current || now.toISOString();
       const xpEarned = exercises.reduce((a, e) => a + e.xp, 0);
@@ -277,6 +285,8 @@ export function SessionRunner() {
         // the failure instead of silently claiming the session was saved.
         setSaveError(err instanceof Error ? err.message : "Could not save this session.");
         return null;
+      } finally {
+        saving.current = false;
       }
       persisted.current = true;
       setSaveError(null);
@@ -334,7 +344,19 @@ export function SessionRunner() {
   }, [phase, advance]);
 
   const quit = async (save: boolean) => {
-    if (save && !practice && completed.length > 0) await persistSession(completed);
+    if (save && !practice && completed.length > 0) {
+      const applied = await persistSession(completed);
+      if (!applied) {
+        // Navigating away here threw the session on the floor: the error and
+        // its retry button only exist on the summary screen, and the session
+        // id lives in a ref that dies with the component. Show the summary
+        // instead, where the failure is visible and retryable.
+        setQuitPrompt(false);
+        setSummaryData(null);
+        setPhase("summary");
+        return;
+      }
+    }
     router.push("/");
   };
 
