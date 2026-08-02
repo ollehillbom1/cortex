@@ -26,6 +26,46 @@ test.describe("training sessions", () => {
     await expect(page.getByText(/round paused/i)).toBeHidden();
   });
 
+  test("backgrounding during the feedback screen pauses too, instead of scoring an unseen round", async ({
+    page,
+  }) => {
+    // The in-round guard alone left one gap per round: the feedback
+    // interstitial auto-advances after 1.8 s whether the page is visible or
+    // not, so a phone locked between rounds came back to a round already
+    // running whose stimulus was never shown — and it scored.
+    await createProfile(page, "Mellanrum");
+    await page.goto("/session?exercise=reaction-time");
+    await page.getByRole("button", { name: /start reaction/i }).click();
+    // Play one round to land on the feedback interstitial.
+    const arm = page.getByRole("button", { name: /tap to arm/i });
+    await arm.waitFor({ state: "visible", timeout: 15_000 });
+    await arm.click();
+    const go = page.getByRole("button", { name: "GO!" });
+    await go.waitFor({ state: "visible", timeout: 10_000 });
+    await go.click();
+    await page.getByRole("button", { name: /^continue$/i }).waitFor({ timeout: 5_000 });
+
+    await page.evaluate(() => {
+      Object.defineProperty(document, "visibilityState", {
+        configurable: true,
+        get: () => "hidden",
+      });
+      document.dispatchEvent(new Event("visibilitychange"));
+    });
+
+    // The auto-advance window passes; the interstitial must hold. Before the
+    // fix the 1.8 s timer fired regardless and the next round ran unseen.
+    await page.waitForTimeout(2_500);
+    await expect(page.getByRole("button", { name: /^continue$/i })).toBeVisible();
+
+    // Continuing lands on the pause screen, not in a silently-armed round:
+    // restarting stays a deliberate tap, which also re-unlocks audio.
+    await page.getByRole("button", { name: /^continue$/i }).click();
+    await expect(page.getByText(/round paused/i)).toBeVisible({ timeout: 10_000 });
+    await page.getByRole("button", { name: /play this round again/i }).click();
+    await expect(page.getByText(/round paused/i)).toBeHidden();
+  });
+
   test("completing a reaction block persists results, XP and streak", async ({ page }) => {
     await createProfile(page, "Runner");
 

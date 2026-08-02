@@ -408,7 +408,11 @@ export function SessionRunner() {
   // audio that was scheduled. Restarting takes a deliberate tap, which also
   // re-unlocks audio.
   useEffect(() => {
-    if (phase !== "playing") return;
+    // Feedback counts: the interstitial auto-advances after 1.8 s whether the
+    // page is visible or not, so a phone locked between rounds came back to a
+    // round already running whose stimulus was never seen — and it scored.
+    // Guarding only the in-round window left one such gap per round.
+    if (phase !== "playing" && phase !== "feedback") return;
     const onVisibility = () => {
       if (document.visibilityState !== "hidden") return;
       getAudioEngine().stopAll();
@@ -420,10 +424,10 @@ export function SessionRunner() {
 
   // Auto-advance the feedback interstitial (a Continue button remains).
   useEffect(() => {
-    if (phase !== "feedback") return;
+    if (phase !== "feedback" || interrupted) return;
     const t = setTimeout(() => void advance(), 1800);
     return () => clearTimeout(t);
-  }, [phase, advance]);
+  }, [phase, advance, interrupted]);
 
   const quit = async (save: boolean) => {
     if (save && !practice && completed.length > 0) {
@@ -442,7 +446,12 @@ export function SessionRunner() {
     router.push("/");
   };
 
-  const seed = seedBase + itemIndex * 1009 + roundIndex * 37;
+  // `attempt` is part of the seed, not just the remount key: without it a
+  // replayed round presented the SAME digits, so backgrounding the app while
+  // the stimulus was on screen and tapping replay was a one-tap route to a
+  // perfect score — in the change whose whole purpose is protecting the
+  // measurement.
+  const seed = seedBase + itemIndex * 1009 + roundIndex * 37 + attempt * 7919;
   const totalRounds = useMemo(() => items.reduce((a, i) => a + i.rounds, 0), [items]);
 
   // The plan may repeat an exercise as several blocks to fill the time
