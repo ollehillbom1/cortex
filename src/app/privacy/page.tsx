@@ -37,8 +37,14 @@ export default function PrivacyPage() {
         <p>
           Everything lives in your browser, in IndexedDB (database <code>cortex</code>): profiles
           (name, avatar, preferences, XP, streak, per-exercise levels, personal records,
-          achievements), completed sessions (times, exercises, accuracy, response times, XP), and
-          the id of the active profile.
+          achievements) and completed sessions (times, exercises, accuracy, response times, XP).
+        </p>
+        <p>
+          Alongside them sits app state: the active profile id, and — when sync is on — the group id
+          and <strong>the sync key itself</strong>, stored so the app can decrypt without asking for
+          your passphrase every time. Anyone with access to this browser profile can therefore read
+          the synced data without knowing the passphrase. That is the same trust boundary as the
+          training data itself, but it is worth saying plainly.
         </p>
         <p>
           There is no account, no analytics, no tracking and no third-party script. Clearing your
