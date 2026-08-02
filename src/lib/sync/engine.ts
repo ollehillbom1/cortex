@@ -12,6 +12,7 @@ import {
   type EncryptedBlob,
 } from "./crypto";
 import { emptyTombstones, mergeStates, type SyncState, type SyncTombstones } from "./merge";
+import { sanitizeSyncState } from "./validateState";
 
 /**
  * Client sync engine (issue #2): pull → merge → apply locally → push, with
@@ -152,7 +153,13 @@ export async function syncNow(storage: StorageAdapter): Promise<boolean> {
       const remote = await fetchRemote(groupId);
       let remoteState: SyncState | null = null;
       if (remote.payload) {
-        remoteState = await decryptJson<SyncState>(key, remote.payload);
+        // Decrypting proves the payload came from someone holding the group
+        // key. It proves nothing about its shape: the server stores whatever
+        // was pushed, and an older or modified client can push anything that
+        // encrypts. This used to be cast straight to SyncState and written
+        // to IndexedDB.
+        remoteState = sanitizeSyncState(await decryptJson<unknown>(key, remote.payload));
+        if (!remoteState) throw new Error("remote sync data is malformed");
       }
 
       // 2. Merge with the full local state.
