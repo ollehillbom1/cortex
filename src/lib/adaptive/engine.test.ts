@@ -86,10 +86,12 @@ describe("adaptive engine", () => {
       ...initialSkill(NOW),
       attempts: 10,
       level: 8,
-      recentInputMs: [2000, 2000, 2000],
+      recentInputMs: [500, 500, 500],
     };
-    const fast = updateSkill(base, { accuracy: 0.9, inputMs: 2000 }, NOW);
-    const slow = updateSkill(base, { accuracy: 0.9, inputMs: 3500 }, NOW);
+    // Baseline is ms PER ITEM, so the round must say how many items it asked
+    // for; 4 items at 500 ms each matches a 500 ms/item baseline.
+    const fast = updateSkill(base, { accuracy: 0.9, inputMs: 2000, responseUnits: 4 }, NOW);
+    const slow = updateSkill(base, { accuracy: 0.9, inputMs: 3500, responseUnits: 4 }, NOW);
     expect(fast.level - base.level).toBeCloseTo(0.4, 5);
     expect(slow.level - base.level).toBeCloseTo(0.2, 5);
     expect(fast.level).toBeGreaterThan(slow.level);
@@ -100,13 +102,13 @@ describe("adaptive engine", () => {
       ...initialSkill(NOW),
       attempts: 10,
       level: 8,
-      recentInputMs: [2000, 2000, 2000],
+      recentInputMs: [500, 500, 500],
     };
-    const slowFail = updateSkill(base, { accuracy: 0.4, inputMs: 5000 }, NOW);
+    const slowFail = updateSkill(base, { accuracy: 0.4, inputMs: 5000, responseUnits: 4 }, NOW);
     const plainFail = updateSkill(base, { accuracy: 0.4 }, NOW);
     expect(slowFail.level).toBeCloseTo(plainFail.level, 5);
     // A slow success still moves up, never down.
-    const slowSuccess = updateSkill(base, { accuracy: 0.9, inputMs: 9000 }, NOW);
+    const slowSuccess = updateSkill(base, { accuracy: 0.9, inputMs: 9000, responseUnits: 4 }, NOW);
     expect(slowSuccess.level).toBeGreaterThan(base.level);
   });
 
@@ -118,14 +120,30 @@ describe("adaptive engine", () => {
       recentInputMs: [2000, 2000].slice(0, LATENCY_MIN_SAMPLES - 1),
     };
     expect(medianInputMs(base)).toBeNull();
-    const slow = updateSkill(base, { accuracy: 0.9, inputMs: 9000 }, NOW);
+    const slow = updateSkill(base, { accuracy: 0.9, inputMs: 9000, responseUnits: 4 }, NOW);
     expect(slow.level - base.level).toBeCloseTo(0.4, 5);
+  });
+
+  it("ignores latency entirely when the round does not say how many items it asked for", () => {
+    // Raw milliseconds are not comparable across levels: a six-digit answer
+    // takes longer than a three-digit one at the same effort. Without the
+    // item count there is nothing to normalise by, and a confounded signal
+    // is worse than none.
+    const base = {
+      ...initialSkill(NOW),
+      attempts: 10,
+      level: 8,
+      recentInputMs: [500, 500, 500],
+    };
+    const unlabelled = updateSkill(base, { accuracy: 0.9, inputMs: 99_000 }, NOW);
+    expect(unlabelled.level - base.level).toBeCloseTo(0.4, 5);
+    expect(unlabelled.recentInputMs).toEqual(base.recentInputMs);
   });
 
   it("keeps a bounded latency window and computes the median", () => {
     let s = { ...initialSkill(NOW), attempts: 10 };
     for (const ms of [1000, 2000, 3000, 4000, 5000, 6000, 7000, 8000, 9000, 10000, 11000]) {
-      s = updateSkill(s, { accuracy: 0.75, inputMs: ms }, NOW);
+      s = updateSkill(s, { accuracy: 0.75, inputMs: ms, responseUnits: 1 }, NOW);
     }
     expect(s.recentInputMs).toHaveLength(10);
     expect(s.recentInputMs[0]).toBe(2000);

@@ -94,6 +94,8 @@ export function SessionRunner() {
   const [seedBase] = useState(timeSeed);
   const startedAt = useRef<string>("");
   const persisted = useRef(false);
+  // Milliseconds actually spent answering, which is what fatigue should mean.
+  const activePlayMs = useRef(0);
   // Guards against the feedback auto-advance timer and the Continue button
   // both firing advance() for the same round.
   const advancing = useRef(false);
@@ -170,10 +172,11 @@ export function SessionRunner() {
       const id = currentItem.exerciseId;
       const skill = skills[id] ?? initialSkill();
       const level = practice ? practice.level : effectiveLevel(skill);
-      const elapsedMin = startedAt.current
-        ? (Date.now() - new Date(startedAt.current).getTime()) / 60_000
-        : 0;
-      const fatigue = Math.min(1, elapsedMin / 15);
+      // Active play time, not wall clock: the old measure counted instruction
+      // screens, interruptions and time spent away as fatigue, so a session
+      // read as exhausting because the user paused to read.
+      activePlayMs.current += result.responseMs ?? 0;
+      const fatigue = Math.min(1, activePlayMs.current / (15 * 60_000));
       const nextSkill = updateSkill(
         skill,
         {
@@ -181,6 +184,7 @@ export function SessionRunner() {
           fatigue,
           // Reaction accuracy is already speed-derived; don't double-count.
           inputMs: id === "reaction-time" ? undefined : result.responseMs,
+          responseUnits: id === "reaction-time" ? undefined : result.responseUnits,
         },
         new Date(),
         { gentle: profile?.preferences.kidMode ?? false },

@@ -61,3 +61,16 @@ export function scoreReaction(rounds: ReactionRound[]): ReactionScore {
 
   return { validRounds: valid.length, falseStarts, averageMs, bestMs, accuracy };
 }
+
+/**
+ * Longest a GO signal waits for an answer. The scoring had a state for "no
+ * answer" and nothing ever entered it, so an unanswered round hung for ever.
+ */
+export const REACTION_DEADLINE_MS = 3000;
+
+/**
+ * Below this, a press is anticipation rather than perception: simple visual
+ * reaction times do not go under ~150 ms in adults, and a lucky guess timed
+ * to the delay would otherwise land in the personal-best record.
+ */
+export const MIN_PLAUSIBLE_MS = 120;

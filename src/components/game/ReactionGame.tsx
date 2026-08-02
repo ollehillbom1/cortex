@@ -2,11 +2,17 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { createRng } from "@/lib/engine/rng";
-import { generateDelay, reactionParams, scoreReaction } from "@/lib/exercises/reaction";
+import {
+  MIN_PLAUSIBLE_MS,
+  REACTION_DEADLINE_MS,
+  generateDelay,
+  reactionParams,
+  scoreReaction,
+} from "@/lib/exercises/reaction";
 import { useT } from "@/lib/i18n/useT";
 import { PhaseHint, type GameProps } from "./shared";
 
-type Phase = "ready" | "waiting" | "go" | "false-start" | "result";
+type Phase = "ready" | "waiting" | "go" | "false-start" | "result" | "timeout";
 
 /**
  * One reaction round: arm -> random wait -> GO -> tap. Timing uses
@@ -35,25 +41,32 @@ export function ReactionGame({
   // round call onRoundComplete into whatever state the session is in by then.
   const finishTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const done = useRef(false);
+  const frame = useRef<number | null>(null);
 
   useEffect(
     () => () => {
       if (timer.current) clearTimeout(timer.current);
       if (finishTimer.current) clearTimeout(finishTimer.current);
+      if (frame.current) cancelAnimationFrame(frame.current);
     },
     [],
   );
 
   const finish = useCallback(
-    (round: { kind: "ok"; ms: number } | { kind: "false-start" }) => {
+    (round: { kind: "ok"; ms: number } | { kind: "false-start" } | { kind: "timeout" }) => {
       if (done.current) return;
       done.current = true;
-      const score = scoreReaction([round]);
+      const score = round.kind === "timeout" ? { accuracy: 0 } : scoreReaction([round]);
       onRoundComplete({
         accuracy: score.accuracy,
         perfect: round.kind === "ok" && round.ms < 250,
         responseMs: round.kind === "ok" ? round.ms : undefined,
-        detail: round.kind === "ok" ? `${round.ms} ms` : t("False start"),
+        detail:
+          round.kind === "ok"
+            ? `${round.ms} ms`
+            : round.kind === "timeout"
+              ? t("No answer")
+              : t("False start"),
         extras: round.kind === "false-start" ? { falseStarts: 1 } : {},
       });
     },
@@ -62,12 +75,48 @@ export function ReactionGame({
 
   const arm = () => {
     setPhase("waiting");
-    timer.current = setTimeout(() => {
-      goAt.current = performance.now();
-      setPhase("go");
-      if (soundOn) void audio.playTone(880, 120);
-    }, delayMs);
+    timer.current = setTimeout(() => setPhase("go"), delayMs);
   };
+
+  /**
+   * Start the clock once the GO frame has actually been painted.
+   *
+   * Stamping it inside the timeout put React's render and the browser's paint
+   * inside the measured time, and put a slow device's rendering into the
+   * user's personal best. Two nested animation frames is the usual
+   * approximation of "the frame the user could see".
+   *
+   * The GO tone is gone on purpose: with sound on, users reacted to the tone
+   * (which fires before paint) and with sound off to the panel, so the same
+   * record mixed two different stimuli. The exercise is declared visual, so
+   * the stimulus is the panel. Success and false-start sounds are unchanged.
+   */
+  useEffect(() => {
+    if (phase !== "go") return;
+    let cancelled = false;
+    const outer = requestAnimationFrame(() => {
+      const inner = requestAnimationFrame(() => {
+        if (!cancelled) goAt.current = performance.now();
+      });
+      frame.current = inner;
+    });
+    frame.current = outer;
+    return () => {
+      cancelled = true;
+      if (frame.current) cancelAnimationFrame(frame.current);
+    };
+  }, [phase]);
+
+  // A round with no answer used to hang for ever; the phase existed, nothing
+  // ever entered it.
+  useEffect(() => {
+    if (phase !== "go") return;
+    const deadline = setTimeout(() => {
+      setPhase("timeout");
+      finishTimer.current = setTimeout(() => finish({ kind: "timeout" }), 900);
+    }, REACTION_DEADLINE_MS);
+    return () => clearTimeout(deadline);
+  }, [phase, finish]);
 
   const press = useCallback(() => {
     if (phase === "ready") {
@@ -78,7 +127,15 @@ export function ReactionGame({
       if (soundOn) audio.playError();
       finishTimer.current = setTimeout(() => finish({ kind: "false-start" }), 900);
     } else if (phase === "go") {
-      const ms = Math.round(performance.now() - goAt.current);
+      // goAt is 0 until the GO frame is painted; a press before that is
+      // anticipation, not perception, and so is anything under the floor.
+      const ms = goAt.current === 0 ? 0 : Math.round(performance.now() - goAt.current);
+      if (ms < MIN_PLAUSIBLE_MS) {
+        setPhase("false-start");
+        if (soundOn) audio.playError();
+        finishTimer.current = setTimeout(() => finish({ kind: "false-start" }), 900);
+        return;
+      }
       setResultMs(ms);
       setPhase("result");
       if (soundOn) audio.playSuccess();
@@ -107,6 +164,7 @@ export function ReactionGame({
     },
     "false-start": { text: t("Too early!"), cls: "bg-[#3a1a1a] border-[var(--color-bad)]/60" },
     result: { text: `${resultMs} ms`, cls: "bg-white/8 border-[var(--color-good)]/50" },
+    timeout: { text: t("No answer"), cls: "bg-[#3a1a1a] border-[var(--color-warn)]/60" },
   };
 
   return (

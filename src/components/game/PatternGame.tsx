@@ -69,6 +69,7 @@ export function PatternGame({ level, seed, onRoundComplete }: GameProps) {
     onRoundComplete({
       accuracy: score.accuracy,
       perfect: score.perfect,
+      responseUnits: pattern.length,
       responseMs:
         inputStart.current !== null
           ? Math.round(performance.now() - inputStart.current)

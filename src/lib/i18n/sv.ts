@@ -50,6 +50,7 @@ export const SV: Record<string, string> = {
     "Inga pass ännu. Ditt första pass tar cirka {goal} minuter.",
   Session: "Pass",
   "Training insight": "Träningsinsikt",
+  "No answer": "Inget svar",
   "Dismiss insight for today": "Dölj insikten för idag",
 
   // Backup reminder
