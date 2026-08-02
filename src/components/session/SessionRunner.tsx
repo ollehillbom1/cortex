@@ -23,6 +23,7 @@ import {
   dailyPlanSeed,
   planSession,
   PLAN_HISTORY_WINDOW,
+  sessionTargetMinutes,
   type PlannedItem,
 } from "@/lib/session/planner";
 import { dayKey } from "@/lib/progression/streak";
@@ -151,15 +152,20 @@ export function SessionRunner() {
           setPhase("instructions");
         }
       } else {
-        const recent = await getStorage().listSessions(profile.id, PLAN_HISTORY_WINDOW);
+        const all = await getStorage().listSessions(profile.id);
         if (cancelled) return;
         // The daily seed, not the session seed: this must rebuild exactly the
         // plan the home screen previewed. Round seeds below stay time-based so
         // two sessions on the same day do not repeat the same digits.
+        const today = dayKey(new Date());
+        const minutesDone = all
+          .filter((s) => dayKey(new Date(s.startedAt)) === today)
+          .reduce((a, s) => a + s.durationMs / 60_000, 0);
         const plan = planSession({
           profile,
-          recentSessions: recent,
-          seed: dailyPlanSeed(dayKey(new Date())),
+          recentSessions: all.slice(0, PLAN_HISTORY_WINDOW),
+          seed: dailyPlanSeed(today),
+          targetMinutes: sessionTargetMinutes(profile.preferences.dailyGoalMinutes, minutesDone),
         });
         setItems(plan.items);
         setEstimatedMinutes(plan.estimatedMinutes);

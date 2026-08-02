@@ -5,7 +5,12 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { EXERCISES, MODALITY_LABELS, type SessionRecord } from "@/lib/domain/types";
 import { getStorage } from "@/lib/storage/db";
-import { dailyPlanSeed, planSession, PLAN_HISTORY_WINDOW } from "@/lib/session/planner";
+import {
+  dailyPlanSeed,
+  planSession,
+  PLAN_HISTORY_WINDOW,
+  sessionTargetMinutes,
+} from "@/lib/session/planner";
 import { levelProgress } from "@/lib/progression/xp";
 import { dayKey, displayedStreak, streakAtRisk } from "@/lib/progression/streak";
 import { strengthsAndFocus } from "@/lib/stats/aggregate";
@@ -94,12 +99,16 @@ export default function HomePage() {
 
   const plan = useMemo(() => {
     if (!profile || sessions === null) return null;
-    // Same seed and history window as the runner, so this preview is the
-    // session that actually starts.
+    // Same seed, history window and target as the runner, so this preview is
+    // the session that actually starts.
+    const minutesDone = sessions
+      .filter((s) => dayKey(new Date(s.startedAt)) === today)
+      .reduce((a, s) => a + s.durationMs / 60_000, 0);
     return planSession({
       profile,
       recentSessions: sessions.slice(0, PLAN_HISTORY_WINDOW),
       seed: dailyPlanSeed(today),
+      targetMinutes: sessionTargetMinutes(profile.preferences.dailyGoalMinutes, minutesDone),
     });
   }, [profile, sessions, today]);
 
