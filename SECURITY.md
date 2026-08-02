@@ -65,9 +65,17 @@ Measures in place:
   code, passphrase or key, only the group id, ciphertext, IV and a revision
   counter. Input is strictly validated (hex id, base64 payload, size caps)
   and writes use optimistic concurrency, so a stale device cannot silently
-  overwrite newer data. Holding a sync code grants read/write to that group
-  — that is the model (a shared household secret), so treat the code like a
-  key and ideally do not expose the server beyond your LAN/VPN.
+  overwrite newer data. The group id is a **locator, not a credential**: it
+  sits in URLs and therefore in access logs, so writes and deletion require
+  a separate **write capability** — derived alongside the key, sent only in
+  a header, stored server-side as a hash bound when the group is created. A
+  leaked group id can fetch ciphertext but can never change or delete a
+  bound group (403). Groups created before capabilities existed stay
+  writable without one — binding late would lock out a household's older
+  devices — and gain the protection when they upgrade to v3. Holding a sync
+  code grants read/write to that group — that is the model (a shared
+  household secret), so treat the code like a key and ideally do not expose
+  the server beyond your LAN/VPN.
 
 ## Deployment recommendations
 

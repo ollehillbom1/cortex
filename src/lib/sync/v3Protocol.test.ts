@@ -108,6 +108,17 @@ describe("v3 sync protocol", () => {
 
     const code = await createSyncGroup(storage);
 
+    // The push carried the write capability in a header (SEC-02): the group
+    // binds it at creation, and the id in the URL stops being a credential.
+    const fetchMock = fetch as unknown as ReturnType<typeof vi.fn>;
+    const putCall = fetchMock.mock.calls.find(
+      (c) => (c[1] as RequestInit | undefined)?.method === "PUT",
+    );
+    expect(putCall).toBeDefined();
+    const headers = (putCall![1] as RequestInit).headers as Record<string, string>;
+    expect(headers["x-sync-write-token"]).toMatch(/^[0-9a-f]{64}$/);
+    expect(String(putCall![0])).not.toContain(headers["x-sync-write-token"]);
+
     expect(code).toMatch(/^C3-/);
     expect(records.size).toBe(1);
     const status = await getSyncStatus(storage);
