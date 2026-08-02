@@ -17,7 +17,12 @@ export function sequenceParams(level: number): SequenceParams {
   const gridSize = level < 7 ? 3 : 4;
   const length = 3 + Math.floor((level - 1) / 2);
   const litMs = Math.max(280, 600 - (level - 1) * 20);
-  const gapMs = Math.max(120, 250 - (level - 1) * 8);
+  // Both timings bottomed out around level 17, after which every other
+  // level changed nothing (length only moves on odd levels). The gap keeps
+  // descending past that point at a gentler slope, with a floor that binds
+  // exactly at the ceiling (39): every exposed step changes something.
+  const gapMs =
+    level <= 17 ? Math.max(120, 250 - (level - 1) * 8) : Math.max(76, 120 - (level - 17) * 2);
   return { gridSize, length, litMs, gapMs };
 }
 

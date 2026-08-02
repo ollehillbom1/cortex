@@ -221,7 +221,10 @@ describe("level ceilings", () => {
   // setting dual-n-back's to 37 left the whole suite green.
   const PARAMS: Record<string, (level: number) => unknown> = {
     "number-span": (l) => [0, 1].map((r) => numberSpanParams(l, r)),
-    "auditory-digits": (l) => [0, 1].map((r) => numberSpanParams(l, r)),
+    // The auditory VARIANT, not a copy of the visual one: its timings have
+    // their own slopes and floors, so measuring the visual mapping here
+    // would certify a ceiling the sound version does not have.
+    "auditory-digits": (l) => [0, 1].map((r) => numberSpanParams(l, r, "auditory")),
     "sequence-memory": (l) => sequenceParams(l),
     "visual-pattern": (l) => patternParams(l),
     "n-back": (l) => nBackParams(l),
@@ -276,35 +279,22 @@ describe("level ceilings", () => {
     expect(effectiveLevel(inflated, EXERCISES["n-back"].maxLevel)).toBe(18);
   });
 
-  it("records the plateaus that remain inside the usable range", () => {
-    // Honest ceiling, not an honest ramp: span-style exercises grow every
-    // OTHER level by construction, so roughly half the steps below the
-    // ceiling still change nothing. Pinned rather than papered over, so the
-    // next change to the ramp shows up here.
-    const inert: Record<string, number> = {};
+  it("changes at least one parameter on every exposed step", () => {
+    // The in-range cousin of the ceiling rule above. Span-style exercises
+    // used to grow every other level while their timings sat on a floor, so
+    // roughly half the steps below the ceiling changed nothing: a "level up"
+    // the user could not feel and the stats still rewarded. The gap timings
+    // now carry the ramp past the point where the primary timing bottoms
+    // out, so an inert step anywhere below the ceiling is a regression.
     for (const [id, params] of Object.entries(PARAMS)) {
       const cap = EXERCISES[id as keyof typeof EXERCISES].maxLevel;
       let previous = JSON.stringify(params(1));
-      let count = 0;
       for (let level = 2; level <= cap; level++) {
         const current = JSON.stringify(params(level));
-        if (current === previous) count += 1;
+        expect(current, `${id} level ${level} changes nothing`).not.toBe(previous);
         previous = current;
       }
-      inert[id] = count;
     }
-    // auditory-digits shares numberSpanParams, so it carries the same 12.
-    expect(inert).toEqual({
-      "number-span": 12,
-      "auditory-digits": 12,
-      "sequence-memory": 10,
-      "visual-pattern": 3,
-      "n-back": 0,
-      "dual-n-back": 0,
-      "tone-pattern": 0,
-      "rhythm-recall": 0,
-      "reaction-time": 0,
-    });
   });
 });
 
