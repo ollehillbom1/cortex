@@ -1,0 +1,25 @@
+# Dependency update PRs land through the same required gates as everything
+# else (verify + e2e incl. WebKit + docker), so a bad bump cannot reach main
+# on its own. Actions and the Docker base are SHA/digest-pinned; Dependabot
+# is what moves the pins, so pinning stays practical instead of rotting.
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 5
+    groups:
+      minor-and-patch:
+        update-types: ["minor", "patch"]
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+  - package-ecosystem: docker
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday

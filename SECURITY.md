@@ -77,8 +77,25 @@ Measures in place:
 - If exposing beyond your LAN, put standard reverse-proxy rate limiting in
   front; the app itself has no login to brute-force.
 
-## Dependency review
+## Dependency review and supply chain
 
 Dependencies are intentionally few (`next`, `react`, `react-dom`, `idb` at
 runtime). `npm ci` is enforced in CI from the lockfile. Run `npm audit` before
 upgrades and prefer minor pins over broad ranges.
+
+Since 2026-08-03:
+
+- **`main` is protected**: every change lands via a PR with all three CI
+  jobs (verify, e2e incl. WebKit, Docker build) required and green; admins
+  included, no force pushes or deletions.
+- **Everything third-party is content-pinned**: GitHub Actions by full
+  commit SHA, the Node base image by digest. A tag is a moving target owned
+  by whoever controls it. `supplyChain.test.ts` fails the build on any
+  unpinned `uses:` or `FROM`.
+- **Dependabot** keeps the pins moving (npm, github-actions, docker —
+  weekly), with alerts and automated security fixes enabled; its PRs go
+  through the same required gates as everything else.
+- Deliberately not in place: GitHub secret scanning (not available on this
+  repo's plan — no secrets are committed, and `.env` is gitignored) and
+  SBOM/registry scanning (images are built and run on the same host and
+  never pushed to a registry).
