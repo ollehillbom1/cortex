@@ -6,7 +6,7 @@
 npm run test          # or npm run test:watch
 ```
 
-192 tests cover the pure core and the component layer — every module in `src/lib` that contains logic:
+274 tests cover the pure core and the component layer — every module in `src/lib` that contains logic:
 
 | Area                       | File                                  | Highlights                                                                                                                                                                      |
 | -------------------------- | ------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -56,6 +56,33 @@ suite at a system Chromium:
 ```bash
 PLAYWRIGHT_CHROMIUM_EXECUTABLE=/path/to/chromium npm run e2e
 ```
+
+## Browsers
+
+The default e2e run is `mobile-chromium` — Chromium at iPhone dimensions.
+That is a **viewport**, not an engine: it shares nothing with Safari, which is
+what the primary target actually runs.
+
+`webkit-mobile` runs the same specs on WebKit:
+
+```bash
+E2E_WEBKIT=1 npx playwright test --project=webkit-mobile
+```
+
+CI runs it as a separate, **non-blocking** step. WebKit has never run against
+this app; the step exists to find out what it says, not to fail every PR until
+someone looks at it. Promote it to required once it has a green run.
+
+Running it locally needs three system packages that this host does not have:
+
+```bash
+sudo apt-get install libevent-2.1-7t64 libavif16 libmanette-0.2-0
+npx playwright install webkit
+```
+
+Until then, WebKit results come from CI only — and no automated browser
+replaces the manual VoiceOver pass in `docs/voiceover-protocol.md`, which is
+the only thing that exercises a real screen reader.
 
 ## CI
 

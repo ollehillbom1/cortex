@@ -58,6 +58,7 @@ export function SequenceGame({ level, seed, audio, soundOn, onRoundComplete }: G
       onRoundComplete({
         accuracy: score.accuracy,
         perfect: score.perfect,
+        responseUnits: sequence.length,
         responseMs:
           inputStart.current !== null
             ? Math.round(performance.now() - inputStart.current)

@@ -38,6 +38,8 @@ export const SV: Record<string, string> = {
   "Train again": "Träna igen",
   "Start session": "Starta pass",
   "Daily goal": "Dagligt mål",
+  "A session runs up to {max} minutes — train twice to reach a longer goal.":
+    "Ett pass är upp till {max} minuter — träna två gånger för att nå ett längre mål.",
   "Daily goal progress": "Framsteg mot dagligt mål",
   Strengths: "Styrkor",
   "Strengths and focus areas": "Styrkor och fokusområden",
@@ -57,6 +59,39 @@ export const SV: Record<string, string> = {
   "How Cortex handles your data": "Så hanterar Cortex dina data",
   "Ask for a 4-digit PIN when switching to this profile. It is a courtesy barrier between household profiles, not encryption.":
     "Fråga efter en fyrsiffrig PIN när man byter till den här profilen. Det är en hövlighetsspärr mellan hushållsprofiler, inte kryptering.",
+  "Generate a passphrase": "Skapa en lösenfras",
+  "Starting a new group? Generate a passphrase and write it down.":
+    "Startar du en ny grupp? Skapa en lösenfras och skriv ned den.",
+  "Starting a new group? Keep the generated passphrase and write it down.":
+    "Startar du en ny grupp? Behåll den genererade lösenfrasen och skriv ner den.",
+  "Generate another": "Generera en ny",
+  "Reinstalled the app, or setting up a new device? Enter the passphrase you already use and this device rejoins that group — your profiles and history come back.":
+    "Har du installerat om appen eller skaffat en ny enhet? Ange lösenfrasen du redan använder så återansluter den här enheten till gruppen — dina profiler och din historik kommer tillbaka.",
+  "Set up sync, or rejoin with your passphrase":
+    "Ställ in synk, eller återanslut med din lösenfras",
+  "Set up sync": "Ställ in synk",
+  "A passphrase you already use on another device joins that group and brings its data here. A new passphrase starts a new group from this device's data.":
+    "En lösenfras du redan använder på en annan enhet ansluter till den gruppen och hämtar hit dess data. En ny lösenfras startar en ny grupp utifrån den här enhetens data.",
+  "At least {n} characters. It is the only key to your data: anyone who knows it can read and change the synced data, and it cannot be recovered if lost.":
+    "Minst {n} tecken. Den är den enda nyckeln till dina data: den som kan frasen kan läsa och ändra den synkade datan, och den går inte att återskapa om den tappas bort.",
+  "Sync is on. Restored {n} profile(s) from your other devices.":
+    "Synk är på. Återställde {n} profil(er) från dina andra enheter.",
+  "No answer — tap to try again": "Inget svar — tryck för att försöka igen",
+  "Round paused": "Rundan pausad",
+  "The app was in the background, so this round was not scored — timings there are not comparable. Play it again when you are ready.":
+    "Appen var i bakgrunden, så rundan poängsattes inte — tidtagning där går inte att jämföra. Spela den igen när du är redo.",
+  "Play this round again": "Spela rundan igen",
+  "This session could not be saved.": "Passet kunde inte sparas.",
+  "Try saving again": "Försök spara igen",
+  "Saving…": "Sparar…",
+  "Nothing was recorded": "Ingenting registrerades",
+  "This session had nothing that could be played, so no result was saved and your levels are unchanged.":
+    "Passet innehöll inget som gick att spela, så inget resultat sparades och dina nivåer är oförändrade.",
+  "Back to Today": "Tillbaka till Idag",
+  "Nothing to play right now": "Inget att spela just nu",
+  "No exercises can be played with your current settings: sound is off and exercises that need sight are left out. Turn sound on, or allow exercises that need sight, in Profile.":
+    "Inga övningar kan spelas med dina nuvarande inställningar: ljudet är av och övningar som kräver syn är bortvalda. Slå på ljudet, eller tillåt övningar som kräver syn, under Profil.",
+  "Open Profile": "Öppna Profil",
   "Dismiss insight for today": "Dölj insikten för idag",
 
   // Backup reminder
@@ -199,7 +234,7 @@ export const SV: Record<string, string> = {
   // Session runner
   "Today's session": "Dagens pass",
   "Session progress": "Passets förlopp",
-  "Exercise {i} of {total}": "Övning {i} av {total}",
+  "Block {i} of {total}": "Block {i} av {total}",
   "How it works": "Så fungerar det",
   "Scoring:": "Poäng:",
   "Start {name}": "Starta {name}",
@@ -316,7 +351,8 @@ export const SV: Record<string, string> = {
     "Tryck på panelen och håll dig sedan stilla tills den blir grön.",
   "Steady… wait for GO.": "Lugnt … vänta på GO.",
   "Now!": "Nu!",
-  "That was before the signal — it will not count.": "Det var före signalen — det räknas inte.",
+  "Too fast to be a reaction — that round does not count.":
+    "För snabbt för att vara en reaktion — den rundan räknas inte.",
   "Nice. Next round coming up.": "Snyggt. Nästa runda kommer strax.",
   "False start": "Tjuvstart",
 
@@ -326,8 +362,8 @@ export const SV: Record<string, string> = {
   "When the digits disappear, enter them with the keypad — in the same order, or in reverse when the round asks for it.":
     "När siffrorna försvinner anger du dem med knappsatsen — i samma ordning, eller baklänges när rundan ber om det.",
   "The sequence grows as you improve.": "Sekvensen växer i takt med att du blir bättre.",
-  "Each digit in the right position counts. A full sequence is a perfect round.":
-    "Varje siffra på rätt plats räknas. En hel sekvens är en perfekt runda.",
+  "Your run of correct digits from the start counts — the first mistake ends the round's score. The whole sequence is a perfect round.":
+    "Din svit av rätta siffror från början räknas — första felet avslutar rundans poäng. Hela sekvensen är en perfekt runda.",
   "You can use your physical keyboard: digits, Backspace and Enter.":
     "Du kan använda ditt fysiska tangentbord: siffror, Backsteg och Enter.",
   "Watch the tiles light up in order.": "Titta när rutorna tänds i ordning.",
@@ -349,8 +385,8 @@ export const SV: Record<string, string> = {
     "Tryck Träff när positionen är samma som för N steg sedan. Gör inget när den inte är det.",
   "You start at 1-back (same as the previous step). Higher levels move to 2-back and 3-back.":
     "Du börjar med 1-back (samma som föregående steg). Högre nivåer går till 2-back och 3-back.",
-  "Correct matches and correct passes both count. Tapping Match when there is no match (a false alarm) costs accuracy.":
-    "Rätta träffar och rätta pass räknas båda. Att trycka Träff utan träff (falsklarm) kostar träffsäkerhet.",
+  "Catching the matches and leaving the non-matches alone count equally. Missing matches and false alarms cost the same, so never tapping scores no better than tapping every time.":
+    "Att fånga träffarna och att låta icke-träffarna passera väger lika tungt. Missade träffar och falsklarm kostar lika mycket, så att aldrig trycka ger inte bättre resultat än att trycka varje gång.",
   "You can press the space bar instead of tapping Match.":
     "Du kan trycka på mellanslag i stället för att trycka Träff.",
   "Listen: digits are spoken aloud, one at a time. There is nothing to read.":
@@ -359,8 +395,8 @@ export const SV: Record<string, string> = {
     "När rösten tystnar anger du siffrorna du hörde i samma ordning.",
   "If speech is not available, the exercise switches to tone sequences: listen to the melody and replay it on the four sound pads.":
     "Om uppläsning inte är tillgänglig växlar övningen till tonsekvenser: lyssna på melodin och spela upp den på de fyra ljudplattorna.",
-  "Each digit (or tone) in the right position counts.":
-    "Varje siffra (eller ton) på rätt plats räknas.",
+  "Your run of correct digits (or tones) from the start counts — the first mistake ends the round's score.":
+    "Din svit av rätta siffror (eller toner) från början räknas — första felet avslutar rundans poäng.",
   "This exercise needs sound. Check your volume and silent-mode switch before starting — you can adjust volume in Profile.":
     "Den här övningen kräver ljud. Kontrollera volymen och ljudlös-läget innan du börjar — volymen justeras under Profil.",
   "Hold steady while the panel is dim — the wait is random on purpose.":
@@ -369,8 +405,8 @@ export const SV: Record<string, string> = {
     "I samma ögonblick som den lyser upp och visar GO trycker du (eller trycker mellanslag).",
   "Tapping early is a false start and does not count.":
     "Att trycka för tidigt är en tjuvstart och räknas inte.",
-  "Your reaction time in milliseconds. Lower is better; your average and best are tracked.":
-    "Din reaktionstid i millisekunder. Lägre är bättre; snitt och bästa sparas.",
+  "Your reaction time in milliseconds, measured from the moment the panel actually changes. Lower is better. A tap too fast to be a reaction does not count, and a round left unanswered for three seconds is dropped rather than scored.":
+    "Din reaktionstid i millisekunder, mätt från när panelen faktiskt ändras. Lägre är bättre. En tryckning som är för snabb för att vara en reaktion räknas inte, och en runda som lämnas obesvarad i tre sekunder kastas i stället för att poängsättas.",
 
   // Achievements
   "First Steps": "Första stegen",
@@ -428,7 +464,7 @@ export const SV: Record<string, string> = {
   "Needs sight": "Kräver syn",
   "Needs sound": "Kräver ljud",
   "Needs sight and sound": "Kräver syn och ljud",
-  "Show {n} exercises that need sight": "Visa {n} övningar som kräver syn",
+  "Show {n} hidden exercises": "Visa {n} dolda övningar",
   "Daily goal in minutes": "Dagligt mål i minuter",
   Language: "Språk",
   Automatic: "Automatiskt",
@@ -531,8 +567,8 @@ export const SV: Record<string, string> = {
     "Tryck Position (eller A) när positionen matchar N steg tillbaka. Tryck Ljud (eller L) när ljudet matchar N steg tillbaka.",
   "Both, one, or neither can match on any step. Start calm — dual n-back is hard for everyone.":
     "Båda, en eller ingen kan matcha i varje steg. Ta det lugnt — dubbel n-back är svårt för alla.",
-  "Each stream is scored separately (matches and false alarms); your result is the average of the two.":
-    "Varje ström poängsätts separat (träffar och falsklarm); ditt resultat är snittet av de två.",
+  "Each stream is scored separately — catching its matches counts as much as leaving its non-matches alone — and your result is the average of the two.":
+    "Varje ström poängsätts separat — att fånga dess träffar väger lika tungt som att låta dess icke-träffar passera — och ditt resultat är snittet av de två.",
   "This exercise needs sound for the spoken letters. Keyboard: A for position, L for sound.":
     "Övningen kräver ljud för de upplästa bokstäverna. Tangentbord: A för position, L för ljud.",
   "A short melody plays on the numbered sound pads.":
@@ -541,8 +577,8 @@ export const SV: Record<string, string> = {
     "När den är slut spelar du upp den igen: tryck på plattorna i samma ordning, på gehör.",
   "More pads and longer melodies unlock as you improve.":
     "Fler plattor och längre melodier låses upp när du blir bättre.",
-  "Each note in the right position counts. The whole melody is a perfect round.":
-    "Varje ton på rätt plats räknas. Hela melodin är en perfekt runda.",
+  "Your run of correct notes from the start counts — the first wrong pad ends the round's score. The whole melody is a perfect round.":
+    "Din svit av rätta toner från början räknas — första fel-plattan avslutar rundans poäng. Hela melodin är en perfekt runda.",
   "This exercise needs sound. Check your volume before starting.":
     "Övningen kräver ljud. Kontrollera volymen innan du börjar.",
   "Listen to a short rhythm — the pad pulses with every beat.":

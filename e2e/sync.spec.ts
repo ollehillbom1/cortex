@@ -8,13 +8,46 @@ import { advanceToProfileForm, createProfile } from "./helpers";
  * repeated runs never share a sync group.
  */
 test.describe("device sync", () => {
+  test("a reinstalled device can restore from the first screen, without creating a profile first", async ({
+    page,
+    browser,
+  }) => {
+    // Reported from real use: after deleting and re-adding the app, there was
+    // no obvious way to sync again. The restore entry existed only on the
+    // LAST onboarding step, below "Start training" — so the obvious path
+    // created an empty profile and left the history apparently gone.
+    const passphrase = `e2e rejoin ${Date.now()}`;
+
+    await createProfile(page, "Dagny");
+    await page.getByRole("link", { name: "Profile", exact: true }).click();
+    await page.getByRole("button", { name: /set up sync/i }).click();
+    const enableDialog = page.getByRole("dialog");
+    await enableDialog.getByLabel("Sync passphrase").fill(passphrase);
+    await enableDialog.getByRole("button", { name: "Enable sync", exact: true }).click();
+    await expect(page.getByText(/sync is on/i)).toBeVisible({ timeout: 20_000 });
+
+    // A freshly installed device: the very first screen must offer it.
+    const fresh = await browser.newContext({ ...devices["iPhone 13"] });
+    const freshPage = await fresh.newPage();
+    await freshPage.goto("/welcome");
+    await freshPage.getByRole("button", { name: /restore from sync/i }).click();
+    const restoreDialog = freshPage.getByRole("dialog");
+    await restoreDialog.getByLabel("Sync passphrase").fill(passphrase);
+    await restoreDialog.getByRole("button", { name: "Restore", exact: true }).click();
+    await freshPage.waitForURL(/\/$/, { timeout: 20_000 });
+
+    await freshPage.getByRole("link", { name: "Profile", exact: true }).click();
+    await expect(freshPage.getByRole("heading", { name: "Dagny" })).toBeVisible();
+    await fresh.close();
+  });
+
   test("restores on a second device and merges changes both ways", async ({ page, browser }) => {
     const passphrase = `e2e sync ${Date.now()}`;
 
     // Device A: onboard and enable sync from the profile page.
     await createProfile(page, "Anna");
     await page.getByRole("link", { name: "Profile", exact: true }).click();
-    await page.getByRole("button", { name: "Enable sync", exact: true }).click();
+    await page.getByRole("button", { name: /set up sync/i }).click();
     const enableDialog = page.getByRole("dialog");
     await enableDialog.getByLabel("Sync passphrase").fill(passphrase);
     await enableDialog.getByRole("button", { name: "Enable sync", exact: true }).click();

@@ -1,10 +1,22 @@
 import { describe, expect, it } from "vitest";
 import { createRng } from "@/lib/engine/rng";
+import { EXERCISES } from "@/lib/domain/types";
+import {
+  MAX_LEVEL,
+  MIN_LEVEL,
+  TARGET_LOW,
+  effectiveLevel,
+  initialSkill,
+  updateSkill,
+} from "@/lib/adaptive/engine";
 import { expectedAnswer, generateDigits, numberSpanParams, scoreSpanResponse } from "./numberSpan";
 import { generateSequence, scoreSequenceResponse, sequenceParams } from "./sequenceMemory";
 import { generatePattern, patternParams, scorePatternResponse } from "./visualPattern";
 import { generateNBackStream, nBackParams, scoreNBack } from "./nback";
 import { generateDelay, reactionParams, scoreReaction } from "./reaction";
+import { dualNBackParams } from "./dualNBack";
+import { tonePatternParams } from "./tonePattern";
+import { rhythmParams } from "./rhythm";
 
 describe("number span", () => {
   it("generates the requested span deterministically without immediate repeats", () => {
@@ -130,8 +142,68 @@ describe("n-back", () => {
     const responses = [false, false, true, true, false];
     const score = scoreNBack(stream, responses, 2);
     expect(score).toMatchObject({ hits: 1, falseAlarms: 1, misses: 1, correctRejections: 0 });
-    expect(score.accuracy).toBeCloseTo(1 / 3);
+    // Balanced: hitRate 1/2, specificity 0/1 -> 0.25 (plain accuracy said 1/3).
+    expect(score.hitRate).toBeCloseTo(0.5);
+    expect(score.specificity).toBe(0);
+    expect(score.accuracy).toBeCloseTo(0.25);
     expect(score.perfect).toBe(false);
+  });
+
+  it("scores every one-sided strategy at chance, never inside the target band", () => {
+    // The bug this pins: with ~30% matches, plain accuracy paid a
+    // non-responder ~70%, which sits in the adaptive band [0.70, 0.85] and
+    // levelled them up for doing nothing.
+    for (const level of [1, 2, 3, 5, 10, 20]) {
+      const params = nBackParams(level);
+      for (const seed of [1, 7, 42]) {
+        const stream = generateNBackStream(createRng(seed), params);
+        const alwaysNo = scoreNBack(
+          stream,
+          stream.map(() => false),
+          params.n,
+        );
+        const alwaysYes = scoreNBack(
+          stream,
+          stream.map(() => true),
+          params.n,
+        );
+        expect(alwaysNo.accuracy).toBeCloseTo(0.5);
+        expect(alwaysYes.accuracy).toBeCloseTo(0.5);
+        expect(alwaysNo.accuracy).toBeLessThan(TARGET_LOW);
+        expect(alwaysYes.accuracy).toBeLessThan(TARGET_LOW);
+      }
+    }
+  });
+
+  it("does not let a non-responder gain levels", () => {
+    const params = nBackParams(2);
+    const stream = generateNBackStream(createRng(3), params);
+    const accuracy = scoreNBack(
+      stream,
+      stream.map(() => false),
+      params.n,
+    ).accuracy;
+    let skill = initialSkill();
+    for (let i = 0; i < 10; i++) skill = updateSkill(skill, { accuracy });
+    expect(skill.level).toBe(MIN_LEVEL);
+  });
+
+  it("still scores genuine discrimination above the band", () => {
+    const params = nBackParams(4);
+    const stream = generateNBackStream(createRng(11), params);
+    // Miss one match, otherwise flawless.
+    let missed = false;
+    const responses = stream.map((s) => {
+      if (s.isMatch && !missed) {
+        missed = true;
+        return false;
+      }
+      return s.isMatch;
+    });
+    const score = scoreNBack(stream, responses, params.n);
+    expect(score.specificity).toBe(1);
+    expect(score.accuracy).toBeGreaterThan(0.85);
+    expect(score.accuracy).toBeLessThan(1);
   });
 
   it("marks a clean run perfect", () => {
@@ -139,6 +211,96 @@ describe("n-back", () => {
     const stream = generateNBackStream(createRng(5), params);
     const responses = stream.map((s) => s.isMatch);
     expect(scoreNBack(stream, responses, params.n).perfect).toBe(true);
+  });
+});
+
+describe("level ceilings", () => {
+  // All nine, called as their game components call them. Four of nine were
+  // covered before, so five ceilings were hand-pinned and checked by nothing:
+  // setting dual-n-back's to 37 left the whole suite green.
+  const PARAMS: Record<string, (level: number) => unknown> = {
+    "number-span": (l) => [0, 1].map((r) => numberSpanParams(l, r)),
+    "auditory-digits": (l) => [0, 1].map((r) => numberSpanParams(l, r)),
+    "sequence-memory": (l) => sequenceParams(l),
+    "visual-pattern": (l) => patternParams(l),
+    "n-back": (l) => nBackParams(l),
+    "dual-n-back": (l) => dualNBackParams(l),
+    "tone-pattern": (l) => tonePatternParams(l),
+    "rhythm-recall": (l) => rhythmParams(l),
+    "reaction-time": (l) => reactionParams(l),
+  };
+
+  it("stops each exercise where its parameters stop changing", () => {
+    // The shared scale runs to 40, but n-back's parameters are identical from
+    // 18 up: every level above was the same round with a bigger number and a
+    // bigger XP bonus. maxLevel is measured here so it cannot drift from the
+    // code that defines the difficulty.
+    for (const [id, params] of Object.entries(PARAMS)) {
+      let lastChange = 1;
+      let previous = "";
+      for (let level = 1; level <= MAX_LEVEL; level++) {
+        const current = JSON.stringify(params(level));
+        if (current !== previous) lastChange = level;
+        previous = current;
+      }
+      expect(EXERCISES[id as keyof typeof EXERCISES].maxLevel).toBe(lastChange);
+    }
+  });
+
+  it("never reports a level above the exercise's ceiling", () => {
+    const skill = { ...initialSkill(), level: 40 };
+    expect(effectiveLevel(skill, EXERCISES["n-back"].maxLevel)).toBe(18);
+    expect(effectiveLevel(skill, EXERCISES["visual-pattern"].maxLevel)).toBe(30);
+    // ...and the estimate itself stops climbing, so XP cannot inflate either.
+    let state = { ...initialSkill(), level: 17.9 };
+    for (let i = 0; i < 20; i++) {
+      state = updateSkill(state, { accuracy: 1 }, new Date(), { maxLevel: 18 });
+    }
+    expect(state.level).toBe(18);
+  });
+
+  it("clamps every displayed level, not just the one XP uses", () => {
+    // An estimate above a new ceiling — which existing n-back profiles have —
+    // was shown unclamped everywhere except the XP calculation, and #52 then
+    // ranked on it, producing a "141% progress" strength on a level the
+    // exercise can no longer produce.
+    const inflated = { ...initialSkill(), level: 25, attempts: 10 };
+    for (const id of Object.keys(EXERCISES) as (keyof typeof EXERCISES)[]) {
+      const cap = EXERCISES[id].maxLevel;
+      expect(effectiveLevel(inflated, cap)).toBeLessThanOrEqual(cap);
+    }
+    expect(effectiveLevel(inflated, EXERCISES["n-back"].maxLevel)).toBe(18);
+  });
+
+  it("records the plateaus that remain inside the usable range", () => {
+    // Honest ceiling, not an honest ramp: span-style exercises grow every
+    // OTHER level by construction, so roughly half the steps below the
+    // ceiling still change nothing. Pinned rather than papered over, so the
+    // next change to the ramp shows up here.
+    const inert: Record<string, number> = {};
+    for (const [id, params] of Object.entries(PARAMS)) {
+      const cap = EXERCISES[id as keyof typeof EXERCISES].maxLevel;
+      let previous = JSON.stringify(params(1));
+      let count = 0;
+      for (let level = 2; level <= cap; level++) {
+        const current = JSON.stringify(params(level));
+        if (current === previous) count += 1;
+        previous = current;
+      }
+      inert[id] = count;
+    }
+    // auditory-digits shares numberSpanParams, so it carries the same 12.
+    expect(inert).toEqual({
+      "number-span": 12,
+      "auditory-digits": 12,
+      "sequence-memory": 10,
+      "visual-pattern": 3,
+      "n-back": 0,
+      "dual-n-back": 0,
+      "tone-pattern": 0,
+      "rhythm-recall": 0,
+      "reaction-time": 0,
+    });
   });
 });
 
