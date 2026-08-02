@@ -164,41 +164,6 @@ export function SessionRunner() {
     setPhase("playing");
   };
 
-  const handleRoundComplete = useCallback(
-    (result: RoundResult) => {
-      if (!currentItem) return;
-      const id = currentItem.exerciseId;
-      const skill = skills[id] ?? initialSkill();
-      const level = practice ? practice.level : effectiveLevel(skill);
-      const elapsedMin = startedAt.current
-        ? (Date.now() - new Date(startedAt.current).getTime()) / 60_000
-        : 0;
-      const fatigue = Math.min(1, elapsedMin / 15);
-      const nextSkill = updateSkill(
-        skill,
-        {
-          accuracy: result.accuracy,
-          fatigue,
-          // Reaction accuracy is already speed-derived; don't double-count.
-          inputMs: id === "reaction-time" ? undefined : result.responseMs,
-        },
-        new Date(),
-        { gentle: profile?.preferences.kidMode ?? false },
-      );
-      // Practice stays outside progression: the skill estimate is not fed and
-      // no XP accrues — a chosen difficulty must not farm or wreck either.
-      const xp = practice
-        ? 0
-        : xpForRound({ accuracy: result.accuracy, level, perfect: result.perfect });
-      blockRounds.current.push({ result, level, xp });
-      if (!practice) setSkills((s) => ({ ...s, [id]: nextSkill }));
-      setLastRound(result);
-      advancing.current = false;
-      setPhase("feedback");
-    },
-    [currentItem, skills, practice, profile?.preferences.kidMode],
-  );
-
   const finalizeBlock = useCallback((): ExerciseResult | null => {
     if (!currentItem || blockRounds.current.length === 0) return null;
     const id = currentItem.exerciseId;
@@ -264,6 +229,65 @@ export function SessionRunner() {
       return applied;
     },
     [profile, single, skills, saveProfile],
+  );
+
+  /**
+   * Leave the current exercise without recording it. Used when the stimulus
+   * turned out to be unavailable: there is nothing to score, so the block is
+   * dropped rather than saved as a failed one.
+   */
+  const skipBlock = useCallback(async () => {
+    advancing.current = true;
+    blockRounds.current = [];
+    if (itemIndex + 1 < items.length) {
+      setItemIndex((i) => i + 1);
+      setPhase("instructions");
+    } else {
+      const applied = practice ? null : await persistSession(completed);
+      setSummaryData(applied);
+      setPhase("summary");
+    }
+  }, [itemIndex, items.length, practice, persistSession, completed]);
+
+  const handleRoundComplete = useCallback(
+    (result: RoundResult) => {
+      if (!currentItem) return;
+      // An unperceivable exercise is missing data, not a failed attempt:
+      // no skill update, no XP, no session record, no streak.
+      if (result.unavailable) {
+        void skipBlock();
+        return;
+      }
+      const id = currentItem.exerciseId;
+      const skill = skills[id] ?? initialSkill();
+      const level = practice ? practice.level : effectiveLevel(skill);
+      const elapsedMin = startedAt.current
+        ? (Date.now() - new Date(startedAt.current).getTime()) / 60_000
+        : 0;
+      const fatigue = Math.min(1, elapsedMin / 15);
+      const nextSkill = updateSkill(
+        skill,
+        {
+          accuracy: result.accuracy,
+          fatigue,
+          // Reaction accuracy is already speed-derived; don't double-count.
+          inputMs: id === "reaction-time" ? undefined : result.responseMs,
+        },
+        new Date(),
+        { gentle: profile?.preferences.kidMode ?? false },
+      );
+      // Practice stays outside progression: the skill estimate is not fed and
+      // no XP accrues — a chosen difficulty must not farm or wreck either.
+      const xp = practice
+        ? 0
+        : xpForRound({ accuracy: result.accuracy, level, perfect: result.perfect });
+      blockRounds.current.push({ result, level, xp });
+      if (!practice) setSkills((s) => ({ ...s, [id]: nextSkill }));
+      setLastRound(result);
+      advancing.current = false;
+      setPhase("feedback");
+    },
+    [currentItem, skills, practice, profile?.preferences.kidMode, skipBlock],
   );
 
   const advance = useCallback(async () => {

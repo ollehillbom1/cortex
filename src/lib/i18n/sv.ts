@@ -50,6 +50,9 @@ export const SV: Record<string, string> = {
     "Inga pass ännu. Ditt första pass tar cirka {goal} minuter.",
   Session: "Pass",
   "Training insight": "Träningsinsikt",
+  "No exercises can be played with your current settings: sound is off and exercises that need sight are left out. Turn sound on, or allow exercises that need sight, in Profile.":
+    "Inga övningar kan spelas med dina nuvarande inställningar: ljudet är av och övningar som kräver syn är bortvalda. Slå på ljudet, eller tillåt övningar som kräver syn, under Profil.",
+  "Open Profile": "Öppna Profil",
   "Dismiss insight for today": "Dölj insikten för idag",
 
   // Backup reminder
