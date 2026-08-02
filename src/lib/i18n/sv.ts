@@ -52,6 +52,17 @@ export const SV: Record<string, string> = {
     "Inga pass ännu. Ditt första pass tar cirka {goal} minuter.",
   Session: "Pass",
   "Training insight": "Träningsinsikt",
+  "Reinstalled the app, or setting up a new device? Enter the passphrase you already use and this device rejoins that group — your profiles and history come back.":
+    "Har du installerat om appen eller skaffat en ny enhet? Ange lösenfrasen du redan använder så återansluter den här enheten till gruppen — dina profiler och din historik kommer tillbaka.",
+  "Set up sync, or rejoin with your passphrase":
+    "Ställ in synk, eller återanslut med din lösenfras",
+  "Set up sync": "Ställ in synk",
+  "A passphrase you already use on another device joins that group and brings its data here. A new passphrase starts a new group from this device's data.":
+    "En lösenfras du redan använder på en annan enhet ansluter till den gruppen och hämtar hit dess data. En ny lösenfras startar en ny grupp utifrån den här enhetens data.",
+  "At least {n} characters. It is the only key to your data: anyone who knows it can read and change the synced data, and it cannot be recovered if lost.":
+    "Minst {n} tecken. Den är den enda nyckeln till dina data: den som kan frasen kan läsa och ändra den synkade datan, och den går inte att återskapa om den tappas bort.",
+  "Sync is on. Restored {n} profile(s) from your other devices.":
+    "Synk är på. Återställde {n} profil(er) från dina andra enheter.",
   "No answer — tap to try again": "Inget svar — tryck för att försöka igen",
   "Round paused": "Rundan pausad",
   "The app was in the background, so this round was not scored — timings there are not comparable. Play it again when you are ready.":

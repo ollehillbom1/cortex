@@ -65,10 +65,17 @@ export default function WelcomePage() {
     setBusy(true);
     setRestoreError(null);
     try {
+      // Judge success by what ARRIVED, not by how many profiles this device
+      // happens to hold. Counting local profiles meant a mistyped passphrase
+      // on a device that already had data looked like a success: it created a
+      // brand-new group on the server and pushed this device's profiles into
+      // it, silently, with the undo below never running.
+      const before = new Set((await getStorage().listProfiles()).map((p) => p.id));
       await enableSync(getStorage(), passphrase);
       const status = await getSyncStatus(getStorage());
       const profiles = await getStorage().listProfiles();
-      if (profiles.length > 0) {
+      const arrived = profiles.filter((p) => !before.has(p.id));
+      if (arrived.length > 0) {
         await refresh();
         router.replace("/");
         return;
@@ -194,6 +201,15 @@ export default function WelcomePage() {
             <Button onClick={() => setStep((s) => s + 1)} className="w-full">
               {step === 0 ? t("Get started") : t("Continue")}
             </Button>
+            {/* A returning device — reinstalled, or a new phone — needs this
+                on the FIRST screen. Offering it only on the last step meant
+                walking the whole intro and then tapping past it: the obvious
+                primary action there creates an empty profile instead. */}
+            {step === 0 && (
+              <Button variant="subtle" onClick={() => setShowRestore(true)}>
+                {t("Already use Cortex? Restore from sync")}
+              </Button>
+            )}
             {step > 0 && (
               <Button variant="subtle" onClick={() => setStep((s) => s - 1)}>
                 {t("Back")}

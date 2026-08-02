@@ -42,12 +42,20 @@ export function SyncSection() {
     if (busy || passphrase.length < MIN_PASSPHRASE_LENGTH) return;
     setBusy(true);
     try {
+      const before = (await getStorage().listProfiles()).length;
       await enableSync(getStorage(), passphrase);
+      const after = (await getStorage().listProfiles()).length;
       await refresh();
       setShowEnable(false);
       setPassphrase("");
+      // Say whether anything actually arrived: "sync is on" alone left a
+      // returning user unsure whether their history was coming back.
       setMessage(
-        t("Sync is on. This device now shares data with everyone using the same passphrase."),
+        after > before
+          ? t("Sync is on. Restored {n} profile(s) from your other devices.", {
+              n: after - before,
+            })
+          : t("Sync is on. This device now shares data with everyone using the same passphrase."),
       );
     } finally {
       setBusy(false);
@@ -90,8 +98,13 @@ export function SyncSection() {
               "Optional: sync profiles and history between devices via your own server. Data is end-to-end encrypted with a passphrase — the server only ever stores ciphertext.",
             )}
           </p>
+          <p className="mt-2 text-sm text-[var(--color-ink-dim)]">
+            {t(
+              "Reinstalled the app, or setting up a new device? Enter the passphrase you already use and this device rejoins that group — your profiles and history come back.",
+            )}
+          </p>
           <Button variant="ghost" onClick={() => setShowEnable(true)} className="mt-3 w-full">
-            {t("Enable sync")}
+            {t("Set up sync, or rejoin with your passphrase")}
           </Button>
         </>
       ) : (
@@ -143,11 +156,16 @@ export function SyncSection() {
       )}
 
       {showEnable && (
-        <Dialog label={t("Enable sync")} onClose={() => setShowEnable(false)}>
-          <p className="text-lg font-bold">{t("Enable sync")}</p>
+        <Dialog label={t("Set up sync")} onClose={() => setShowEnable(false)}>
+          <p className="text-lg font-bold">{t("Set up sync")}</p>
           <p className="mt-1 text-sm text-[var(--color-ink-dim)]">
             {t(
-              "Choose a strong passphrase (at least {n} characters). It is the only key to your data: anyone who knows it can read and change the synced data, and it cannot be recovered if lost.",
+              "A passphrase you already use on another device joins that group and brings its data here. A new passphrase starts a new group from this device's data.",
+            )}
+          </p>
+          <p className="mt-1 text-sm text-[var(--color-ink-dim)]">
+            {t(
+              "At least {n} characters. It is the only key to your data: anyone who knows it can read and change the synced data, and it cannot be recovered if lost.",
               { n: MIN_PASSPHRASE_LENGTH },
             )}
           </p>
