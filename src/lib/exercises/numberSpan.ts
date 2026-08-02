@@ -21,11 +21,16 @@ export interface NumberSpanParams {
  * rounds; reversed spans are one digit shorter (reverse is harder).
  *
  * Every level must change at least one parameter (the in-range cousin of
- * GAME-05's ceiling rule). The span grows every OTHER level by design —
- * that pace is deliberate — and digitMs bottoms out mid-range, so the gap
- * carries the ramp from there: it shrinks per level from the point where
- * digitMs stops, and its floor is chosen to bind exactly at the level
- * ceiling (39), so the ladder ends where the contract test says it does.
+ * GAME-05's ceiling rule), and the parameter that changes must be one the
+ * UI actually paces by. The span grows every OTHER level by design — that
+ * pace is deliberate — so a timing carries the remaining ramp, with its
+ * floor chosen to bind exactly at the level ceiling (39) so the ladder
+ * ends where the contract test says it does. The VISUAL variant shows a
+ * digit for digitMs then pauses gapMs, and the gap takes over once digitMs
+ * bottoms out mid-range. The AUDITORY variant paces solely by digitMs (the
+ * pause after each spoken digit or tone), so its whole ramp lives there at
+ * a gentler slope — a ramp in a parameter the sound UI ignored would be a
+ * level-up the user cannot hear.
  */
 export function numberSpanParams(
   level: number,
@@ -38,12 +43,9 @@ export function numberSpanParams(
   const span = Math.max(2, direction === "reverse" ? baseSpan - 1 : baseSpan);
   const digitMs =
     variant === "auditory"
-      ? Math.max(650, 1000 - (level - 1) * 25)
+      ? Math.max(582, 1000 - (level - 1) * 11)
       : Math.max(450, 900 - (level - 1) * 35);
-  const gapMs =
-    variant === "auditory"
-      ? Math.max(54, 150 - Math.max(0, level - 15) * 4)
-      : Math.max(96, 200 - Math.max(0, level - 13) * 4);
+  const gapMs = variant === "auditory" ? 150 : Math.max(96, 200 - Math.max(0, level - 13) * 4);
   return { span, direction, digitMs, gapMs };
 }
 

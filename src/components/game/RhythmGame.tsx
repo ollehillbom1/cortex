@@ -16,6 +16,10 @@ import { PhaseHint, type GameProps } from "./shared";
 type Phase = "arm" | "listen" | "tap" | "unavailable";
 
 const RHYTHM_FREQ = 660;
+/** Submit a started answer after this much tap silence. */
+export const RHYTHM_IDLE_SUBMIT_MS = 5_000;
+/** With no taps at all, re-offer the sequence instead of scoring silence. */
+export const RHYTHM_NO_ANSWER_MS = 10_000;
 
 /**
  * Rhythm Recall: playback is scheduled on the Web Audio clock (sub-ms
@@ -85,6 +89,22 @@ export function RhythmGame({ level, seed, audio, onRoundComplete }: GameProps) {
       timers.current.push(setTimeout(submit, 350));
     }
   };
+
+  // The round used to complete only at the exact tap count, so tapping too
+  // few and stopping hung it for ever (review: stuck rounds). Silence now
+  // ends it: a started answer is submitted as it stands — missing taps
+  // already subtract from the score — and a round with no taps at all goes
+  // back to the play button, because there is nothing to score and the
+  // likeliest story is a distracted listener who needs to hear it again.
+  useEffect(() => {
+    if (phase !== "tap") return;
+    const empty = taps.current.length === 0;
+    const t = setTimeout(
+      () => (empty ? setPhase("arm") : submit()),
+      empty ? RHYTHM_NO_ANSWER_MS : RHYTHM_IDLE_SUBMIT_MS,
+    );
+    return () => clearTimeout(t);
+  }, [phase, tapCount, submit]);
 
   if (phase === "unavailable") {
     return (
