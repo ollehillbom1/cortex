@@ -16,8 +16,15 @@ const V2_SALT = "cortex-sync:v2";
 const V2_ID_INFO = "cortex-sync-id:v2";
 const V2_KEY_INFO = "cortex-sync-key:v2";
 
+/** v3: id and key come from a random seed (the sync code), not a passphrase. */
+const V3_SALT = "cortex-sync:v3";
+const V3_ID_INFO = "cortex-sync-id:v3";
+const V3_KEY_INFO = "cortex-sync-key:v3";
+
 /** Schema version of the credentials a device currently holds. */
-export const CURRENT_SYNC_SCHEMA = 2;
+export const CURRENT_SYNC_SCHEMA = 3;
+/** The last passphrase-derived schema; credentials at or below it should upgrade. */
+export const LEGACY_SYNC_SCHEMA = 2;
 
 export const MIN_PASSPHRASE_LENGTH = 8;
 
@@ -69,15 +76,38 @@ export async function deriveCredentials(passphrase: string): Promise<SyncCredent
   // HKDF is cheap; the PBKDF2 work above is what an attacker must repeat per
   // guess. Separate info strings keep the id and the key independent, so
   // publishing the id says nothing about the key.
+  return hkdfCredentials(master, new Uint8Array(0), V2_ID_INFO, V2_KEY_INFO);
+}
+
+/**
+ * Derive v3 credentials from a random 128-bit seed (the sync code).
+ *
+ * No PBKDF2 stretch: stretching defends low-entropy secrets, and this one is
+ * full-entropy by construction — the seed is generated, never chosen. What
+ * matters is what v2 could not have: no two households can collide, and the
+ * public endpoint cannot be used to test guesses against 2^128.
+ */
+export async function deriveCodeCredentials(seed: Uint8Array): Promise<SyncCredentials> {
+  const copy = new Uint8Array(seed).buffer as ArrayBuffer;
+  return hkdfCredentials(copy, new TextEncoder().encode(V3_SALT), V3_ID_INFO, V3_KEY_INFO);
+}
+
+async function hkdfCredentials(
+  master: ArrayBuffer,
+  salt: Uint8Array,
+  idInfo: string,
+  keyInfo: string,
+): Promise<SyncCredentials> {
+  const encoder = new TextEncoder();
   const prk = await crypto.subtle.importKey("raw", master, "HKDF", false, ["deriveBits"]);
   const expand = (info: string) =>
     crypto.subtle.deriveBits(
-      { name: "HKDF", hash: "SHA-256", salt: new Uint8Array(0), info: encoder.encode(info) },
+      { name: "HKDF", hash: "SHA-256", salt: salt as BufferSource, info: encoder.encode(info) },
       prk,
       256,
     );
 
-  const [idBits, keyBits] = await Promise.all([expand(V2_ID_INFO), expand(V2_KEY_INFO)]);
+  const [idBits, keyBits] = await Promise.all([expand(idInfo), expand(keyInfo)]);
   const key = await crypto.subtle.importKey("raw", keyBits, { name: "AES-GCM" }, true, [
     "encrypt",
     "decrypt",

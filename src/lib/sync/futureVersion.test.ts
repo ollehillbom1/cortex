@@ -6,7 +6,14 @@ import { createProfile } from "@/lib/storage/profileFactory";
 import { CURRENT_DATA_VERSION } from "@/lib/storage/migrations";
 import { decryptJson, deriveCredentials, encryptJson } from "./crypto";
 import { emptyTombstones, type SyncState } from "./merge";
-import { enableSync, META_SYNC_LAST_ERROR, syncNow } from "./engine";
+import {
+  enableSync,
+  META_SYNC_GROUP_ID,
+  META_SYNC_KEY_JWK,
+  META_SYNC_LAST_ERROR,
+  META_SYNC_SCHEMA,
+  syncNow,
+} from "./engine";
 
 /**
  * A household updates one device before another. The updated device pushes a
@@ -40,6 +47,21 @@ function mockServer() {
   });
   vi.stubGlobal("fetch", fetchMock);
   return records;
+}
+
+/**
+ * Wire credentials directly: these tests are about syncNow, and enableSync
+ * is join-only since v3 — it refuses when no group exists yet, which is
+ * exactly the empty-server situation these tests start from.
+ */
+async function wireCredentials(storage: IndexedDBAdapter) {
+  const creds = await deriveCredentials(PASSPHRASE);
+  await storage.setMeta(META_SYNC_GROUP_ID, creds.groupId);
+  await storage.setMeta(
+    META_SYNC_KEY_JWK,
+    JSON.stringify(await crypto.subtle.exportKey("jwk", creds.key)),
+  );
+  await storage.setMeta(META_SYNC_SCHEMA, "2");
 }
 
 function futureState(): SyncState {
@@ -107,7 +129,7 @@ describe("sync against a newer build", () => {
       dataVersion: CURRENT_DATA_VERSION + 1,
     });
 
-    await enableSync(storage, PASSPHRASE);
+    await wireCredentials(storage);
     await syncNow(storage);
 
     const pushed = records.get(creds.groupId);
@@ -125,7 +147,7 @@ describe("sync against a newer build", () => {
     mockServer();
     const storage = new IndexedDBAdapter();
     await storage.putProfile(createProfile({ id: "local", name: "Lokal" }));
-    await enableSync(storage, PASSPHRASE);
+    await wireCredentials(storage);
 
     expect(await syncNow(storage)).toBe(true);
     expect(await storage.getMeta(META_SYNC_LAST_ERROR)).toBe("");

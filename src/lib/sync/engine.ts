@@ -7,14 +7,18 @@ import {
 import { withLocalConsent } from "@/lib/storage/exportImport";
 import {
   CURRENT_SYNC_SCHEMA,
+  LEGACY_SYNC_SCHEMA,
   decryptJson,
+  deriveCodeCredentials,
   deriveCredentials,
   deriveLegacyCredentials,
   encryptJson,
   exportKeyJwk,
   importKeyJwk,
+  type SyncCredentials,
   type EncryptedBlob,
 } from "./crypto";
+import { formatSyncCode, generateSyncSeed, parseSyncCode } from "./syncCode";
 import { emptyTombstones, mergeStates, type SyncState, type SyncTombstones } from "./merge";
 import { sanitizeSyncState } from "./validateState";
 
@@ -32,56 +36,146 @@ export const META_SYNC_LAST_AT = "syncLastAt";
 export const META_SYNC_LAST_ERROR = "syncLastError";
 /** Which key-derivation schema the stored credentials came from. */
 export const META_SYNC_SCHEMA = "syncSchema";
+/** The v3 sync code, kept so the user can show it again and invite devices. */
+export const META_SYNC_CODE = "syncCode";
 
 const MAX_PUSH_ATTEMPTS = 3;
+
+/** Joining failed because nothing is stored under the derived identity. */
+export class SyncGroupNotFoundError extends Error {
+  constructor() {
+    super("no sync group found");
+    this.name = "SyncGroupNotFoundError";
+  }
+}
 
 export interface SyncStatus {
   enabled: boolean;
   lastSyncAt: string | null;
   lastError: string | null;
   /**
-   * True when sync is on but the credentials predate the v2 derivation. The
-   * passphrase is never stored, so only the user can re-derive: the UI asks
-   * for it. Until then this device keeps syncing against its old group and
-   * will not see devices that have moved to v2.
+   * True when sync is on but the credentials are passphrase-derived (v1/v2).
+   * Those identities are guessable in a way the v3 random seed is not, so
+   * the UI offers moving the household to a v3 group.
    */
   needsUpgrade: boolean;
+  /** The v3 sync code, for showing again and inviting devices. Null pre-v3. */
+  syncCode: string | null;
 }
 
 export async function getSyncStatus(storage: StorageAdapter): Promise<SyncStatus> {
-  const [groupId, lastSyncAt, lastError, schema] = await Promise.all([
+  const [groupId, lastSyncAt, lastError, schema, code] = await Promise.all([
     storage.getMeta(META_SYNC_GROUP_ID),
     storage.getMeta(META_SYNC_LAST_AT),
     storage.getMeta(META_SYNC_LAST_ERROR),
     storage.getMeta(META_SYNC_SCHEMA),
+    storage.getMeta(META_SYNC_CODE),
   ]);
   const enabled = !!groupId;
   return {
     enabled,
     lastSyncAt: lastSyncAt ?? null,
     lastError: lastError ?? null,
-    // Credentials stored before this field existed are v1 by definition.
+    // Credentials stored before the schema field existed are v1 by definition.
     needsUpgrade: enabled && Number(schema ?? 1) < CURRENT_SYNC_SCHEMA,
+    syncCode: code || null,
   };
 }
 
 /**
- * Derive and persist credentials, then run a first sync.
+ * Start a brand-new v3 sync group from this device's data.
  *
- * Also the upgrade path off the v1 derivation. This is the only moment the
- * passphrase exists in memory, so it is the only moment an old group can be
- * found: if nothing is stored under the v2 id but a v1 group exists, its
- * contents are re-encrypted under the v2 key before we switch over. Without
- * that, entering the same passphrase after the schema change would silently
- * land the device in an empty group and split the household.
+ * Returns the sync code — the group's whole identity. The caller must put it
+ * in front of the user and insist it is saved: it is both the invite for the
+ * next device and the only recovery if every device is lost.
+ */
+export async function createSyncGroup(storage: StorageAdapter): Promise<string> {
+  const seed = generateSyncSeed();
+  const code = formatSyncCode(seed);
+  await persistCredentials(storage, await deriveCodeCredentials(seed), code);
+  await syncNow(storage);
+  return code;
+}
+
+/**
+ * Join the group a sync code denotes. Throws SyncCodeFormatError on a
+ * malformed or mistyped code and SyncGroupNotFoundError when the code is
+ * well-formed but nothing is stored under it. Requiring the group to exist
+ * closes the residual typo hole: a wrong code that happens to pass its
+ * checksum lands on 2^128-sized nothing, not in a silently-created group
+ * that splits the household.
+ */
+export async function joinSyncGroup(storage: StorageAdapter, code: string): Promise<void> {
+  const seed = parseSyncCode(code);
+  const credentials = await deriveCodeCredentials(seed);
+  const existing = await fetchRemote(credentials.groupId);
+  if (!existing.payload) throw new SyncGroupNotFoundError();
+  await persistCredentials(storage, credentials, formatSyncCode(seed));
+  await syncNow(storage);
+}
+
+/**
+ * Move this device from its passphrase-derived (v1/v2) group to a fresh v3
+ * group, carrying all data. The old server record is left in place — other
+ * devices may still be reading it, and they follow by joining with the new
+ * code, not by upgrading themselves.
+ *
+ * The pre-switch sync is mandatory: it pulls whatever the old group holds
+ * that this device has not seen. Skipping it on failure would strand
+ * remote-only history under an identity this device is about to stop using.
+ */
+export async function upgradeSyncToV3(storage: StorageAdapter): Promise<string> {
+  const groupId = await storage.getMeta(META_SYNC_GROUP_ID);
+  if (!groupId) throw new Error("sync is not enabled");
+  if (!(await syncNow(storage))) {
+    const reason = await storage.getMeta(META_SYNC_LAST_ERROR);
+    throw new Error(reason || "could not reach the old sync group");
+  }
+  const seed = generateSyncSeed();
+  const code = formatSyncCode(seed);
+  await persistCredentials(storage, await deriveCodeCredentials(seed), code);
+  // Push into the new group. A failure here loses nothing — everything is
+  // local after the pull above — and the next sync retries; the status line
+  // carries the error meanwhile.
+  await syncNow(storage);
+  return code;
+}
+
+/**
+ * Join an existing passphrase-derived group (v2, migrating v1 on the way).
+ *
+ * This is the rejoin/restore path for households created before v3 — it
+ * never CREATES a group any more. A passphrase that matches nothing throws
+ * SyncGroupNotFoundError instead of silently minting a fresh deterministic
+ * group, because deterministic identities are exactly what SEC-01 retired:
+ * two households choosing the same phrase used to end up sharing a group
+ * and a key. New groups only come from createSyncGroup's random seed.
+ *
+ * Entering the passphrase is the only moment a v1 group can be found: if
+ * nothing is stored under the v2 id but a v1 group exists, its contents are
+ * re-encrypted under the v2 key before we switch over.
  */
 export async function enableSync(storage: StorageAdapter, passphrase: string): Promise<void> {
   const credentials = await deriveCredentials(passphrase);
   await migrateLegacyGroup(credentials, passphrase);
+  const existing = await fetchRemote(credentials.groupId);
+  if (!existing.payload) throw new SyncGroupNotFoundError();
+  // Deliberately NOT the current schema: these credentials are still
+  // passphrase-derived, so the device keeps advertising the v3 upgrade.
+  await persistCredentials(storage, credentials, "", LEGACY_SYNC_SCHEMA);
+  await syncNow(storage);
+}
+
+async function persistCredentials(
+  storage: StorageAdapter,
+  credentials: SyncCredentials,
+  code: string,
+  schema: number = CURRENT_SYNC_SCHEMA,
+): Promise<void> {
   await storage.setMeta(META_SYNC_GROUP_ID, credentials.groupId);
   await storage.setMeta(META_SYNC_KEY_JWK, await exportKeyJwk(credentials.key));
-  await storage.setMeta(META_SYNC_SCHEMA, String(CURRENT_SYNC_SCHEMA));
-  await syncNow(storage);
+  await storage.setMeta(META_SYNC_SCHEMA, String(schema));
+  await storage.setMeta(META_SYNC_CODE, code);
 }
 
 /**
@@ -123,6 +217,7 @@ export async function disableSync(storage: StorageAdapter): Promise<void> {
   await storage.setMeta(META_SYNC_LAST_AT, "");
   await storage.setMeta(META_SYNC_LAST_ERROR, "");
   await storage.setMeta(META_SYNC_SCHEMA, "");
+  await storage.setMeta(META_SYNC_CODE, "");
 }
 
 /** Record a profile deletion so it sticks across synced devices. */

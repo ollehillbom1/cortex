@@ -3,12 +3,16 @@
 import { useEffect, useState } from "react";
 import { getStorage } from "@/lib/storage/db";
 import { MIN_PASSPHRASE_LENGTH } from "@/lib/sync/crypto";
-import { generatePassphrase } from "@/lib/sync/passphrase";
+import { looksLikeSyncCode, SyncCodeFormatError } from "@/lib/sync/syncCode";
 import {
+  createSyncGroup,
   disableSync,
   enableSync,
   getSyncStatus,
+  joinSyncGroup,
+  SyncGroupNotFoundError,
   syncNow,
+  upgradeSyncToV3,
   type SyncStatus,
 } from "@/lib/sync/engine";
 import { useT } from "@/lib/i18n/useT";
@@ -16,14 +20,17 @@ import { useProfiles } from "@/components/app/ProfileProvider";
 import { Button } from "@/components/ui/Button";
 import { Dialog } from "@/components/ui/Dialog";
 
-/** Sync controls on the profile page (issue #2). */
+/** Sync controls on the profile page (issue #2; v3 protocol per SEC-01). */
 export function SyncSection() {
   const { t } = useT();
   const { refresh } = useProfiles();
   const [status, setStatus] = useState<SyncStatus | null>(null);
-  const [showEnable, setShowEnable] = useState(false);
-  const [revealPassphrase, setRevealPassphrase] = useState(false);
-  const [passphrase, setPassphrase] = useState("");
+  const [showJoin, setShowJoin] = useState(false);
+  const [joinInput, setJoinInput] = useState("");
+  const [joinError, setJoinError] = useState<string | null>(null);
+  /** Non-null while the save-your-code dialog is up. */
+  const [shownCode, setShownCode] = useState<{ code: string; afterUpgrade: boolean } | null>(null);
+  const [copied, setCopied] = useState(false);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
 
@@ -40,28 +47,71 @@ export function SyncSection() {
     };
   }, []);
 
-  const doEnable = async () => {
-    if (busy || passphrase.length < MIN_PASSPHRASE_LENGTH) return;
+  const doCreate = async () => {
+    if (busy) return;
     setBusy(true);
     try {
+      const code = await createSyncGroup(getStorage());
+      await refresh();
+      setMessage(t("Sync is on. This device's data is now backed up to your server."));
+      setShownCode({ code, afterUpgrade: false });
+    } finally {
+      setBusy(false);
+      await reload();
+    }
+  };
+
+  const doJoin = async () => {
+    const input = joinInput.trim();
+    if (busy || input.length < MIN_PASSPHRASE_LENGTH) return;
+    setBusy(true);
+    setJoinError(null);
+    try {
       const before = (await getStorage().listProfiles()).length;
-      await enableSync(getStorage(), passphrase);
+      if (looksLikeSyncCode(input)) {
+        await joinSyncGroup(getStorage(), input);
+      } else {
+        await enableSync(getStorage(), input);
+      }
       const after = (await getStorage().listProfiles()).length;
       await refresh();
-      setShowEnable(false);
-      setPassphrase("");
-      // Back to masked: one tap of Generate left the field in clear text for
-      // the component's lifetime, including the upgrade dialog where the user
-      // types their real existing passphrase.
-      setRevealPassphrase(false);
-      // Say whether anything actually arrived: "sync is on" alone left a
-      // returning user unsure whether their history was coming back.
+      setShowJoin(false);
+      setJoinInput("");
       setMessage(
         after > before
           ? t("Sync is on. Restored {n} profile(s) from your other devices.", {
               n: after - before,
             })
-          : t("Sync is on. This device now shares data with everyone using the same passphrase."),
+          : t("Sync is on. This device now shares data with the group."),
+      );
+    } catch (err) {
+      if (err instanceof SyncCodeFormatError) {
+        setJoinError(t("That is not a complete sync code — compare it with the other device."));
+      } else if (err instanceof SyncGroupNotFoundError) {
+        setJoinError(
+          t("No sync group found. Check the code or passphrase, or create a new group instead."),
+        );
+      } else {
+        setJoinError(err instanceof Error ? err.message : t("Sync failed — try again."));
+      }
+    } finally {
+      setBusy(false);
+      await reload();
+    }
+  };
+
+  const doUpgrade = async () => {
+    if (busy) return;
+    setBusy(true);
+    try {
+      const code = await upgradeSyncToV3(getStorage());
+      setMessage(t("Sync security upgraded."));
+      setShownCode({ code, afterUpgrade: true });
+    } catch (err) {
+      setMessage(
+        t("Upgrade failed: {error}", {
+          error: err instanceof Error ? err.message : "sync failed",
+        }),
       );
     } finally {
       setBusy(false);
@@ -85,6 +135,16 @@ export function SyncSection() {
     await reload();
   };
 
+  const copyCode = async (code: string) => {
+    try {
+      await navigator.clipboard.writeText(code);
+      setCopied(true);
+    } catch {
+      // Clipboard can be unavailable (permissions, non-secure context); the
+      // code is selectable text either way.
+    }
+  };
+
   if (!status) return null;
 
   return (
@@ -101,28 +161,27 @@ export function SyncSection() {
         <>
           <p className="mt-2 text-sm text-[var(--color-ink-dim)]">
             {t(
-              "Optional: sync profiles and history between devices via your own server. Data is end-to-end encrypted with a passphrase — the server only ever stores ciphertext.",
-            )}
-          </p>
-          <p className="mt-2 text-sm text-[var(--color-ink-dim)]">
-            {t(
-              "Reinstalled the app, or setting up a new device? Enter the passphrase you already use and this device rejoins that group — your profiles and history come back.",
+              "Optional: sync profiles and history between devices via your own server. Data is end-to-end encrypted — the server only ever stores ciphertext.",
             )}
           </p>
           <Button
             variant="ghost"
-            onClick={() => {
-              // Empty, not pre-filled. This button serves rejoining too, and a
-              // returning user who does not clear a generated phrase starts a
-              // NEW group instead — orphaning the data they came back for.
-              // Generating is one tap away inside the dialog.
-              setPassphrase("");
-              setRevealPassphrase(false);
-              setShowEnable(true);
-            }}
+            onClick={() => void doCreate()}
+            disabled={busy}
             className="mt-3 w-full"
           >
-            {t("Set up sync, or rejoin with your passphrase")}
+            {busy ? t("Syncing…") : t("Set up sync on this device")}
+          </Button>
+          <Button
+            variant="ghost"
+            onClick={() => {
+              setJoinInput("");
+              setJoinError(null);
+              setShowJoin(true);
+            }}
+            className="mt-2 w-full"
+          >
+            {t("Join with a sync code or passphrase")}
           </Button>
         </>
       ) : (
@@ -137,23 +196,30 @@ export function SyncSection() {
               </p>
               <p className="mt-1 text-xs text-[var(--color-ink-dim)]">
                 {t(
-                  "This device still uses the old key derivation, which made the passphrase easier to guess from the server's files. Enter your passphrase to upgrade — your synced data comes with you. Until you do, this device will not see devices that have already upgraded.",
+                  "This group's identity is still derived from its passphrase, which can be guessed. Upgrading moves your data to a group with a random identity and gives you a sync code. Do this on ONE device; every other device then joins with that code.",
                 )}
               </p>
               <Button
                 variant="ghost"
-                onClick={() => {
-                  // Never generated here: the upgrade re-derives the key for the
-                  // group this device is ALREADY in, so it needs the existing
-                  // passphrase. A generated one silently starts a new group and
-                  // orphans everything already synced.
-                  setPassphrase("");
-                  setRevealPassphrase(false);
-                  setShowEnable(true);
-                }}
+                onClick={() => void doUpgrade()}
+                disabled={busy}
                 className="mt-3 w-full"
               >
-                {t("Upgrade sync security")}
+                {busy ? t("Syncing…") : t("Upgrade sync security")}
+              </Button>
+              <Button
+                variant="ghost"
+                onClick={() => {
+                  // The second device's half of the upgrade: the first device
+                  // created the v3 group and holds the code.
+                  setJoinInput("");
+                  setJoinError(null);
+                  setShowJoin(true);
+                }}
+                disabled={busy}
+                className="mt-2 w-full"
+              >
+                {t("This household already has a code — join with it")}
               </Button>
             </div>
           )}
@@ -174,6 +240,15 @@ export function SyncSection() {
               </span>
             )}
           </p>
+          {status.syncCode && (
+            <Button
+              variant="ghost"
+              onClick={() => setShownCode({ code: status.syncCode!, afterUpgrade: false })}
+              className="mt-3 w-full"
+            >
+              {t("Show sync code")}
+            </Button>
+          )}
           <div className="mt-3 grid grid-cols-2 gap-2.5">
             <Button variant="ghost" onClick={() => void doSyncNow()} disabled={busy}>
               {t("Sync now")}
@@ -185,54 +260,89 @@ export function SyncSection() {
         </>
       )}
 
-      {showEnable && (
-        <Dialog label={t("Set up sync")} onClose={() => setShowEnable(false)}>
-          <p className="text-lg font-bold">{t("Set up sync")}</p>
+      {showJoin && (
+        <Dialog label={t("Join a sync group")} onClose={() => setShowJoin(false)}>
+          <p className="text-lg font-bold">{t("Join a sync group")}</p>
           <p className="mt-1 text-sm text-[var(--color-ink-dim)]">
             {t(
-              "A passphrase you already use on another device joins that group and brings its data here. A new passphrase starts a new group from this device's data.",
+              "Enter the sync code from another device (Profile → Show sync code), or the passphrase of a group created before sync codes existed.",
             )}
           </p>
-          <p className="mt-1 text-sm text-[var(--color-ink-dim)]">
-            {t(
-              "At least {n} characters. It is the only key to your data: anyone who knows it can read and change the synced data, and it cannot be recovered if lost.",
-              { n: MIN_PASSPHRASE_LENGTH },
-            )}
-          </p>
-          <div className="mt-3 flex items-center justify-between gap-2">
-            <p className="text-xs text-[var(--color-ink-dim)]">
-              {t("Starting a new group? Generate a passphrase and write it down.")}
-            </p>
-            <Button
-              variant="ghost"
-              onClick={() => {
-                setPassphrase(generatePassphrase());
-                setRevealPassphrase(true);
-              }}
-            >
-              {passphrase ? t("Generate another") : t("Generate a passphrase")}
-            </Button>
-          </div>
           <input
             autoFocus
-            type={revealPassphrase ? "text" : "password"}
-            value={passphrase}
-            onChange={(e) => setPassphrase(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && void doEnable()}
-            aria-label={t("Sync passphrase")}
-            placeholder={t("Sync passphrase")}
+            type="text"
+            autoComplete="off"
+            value={joinInput}
+            onChange={(e) => {
+              setJoinInput(e.target.value);
+              setJoinError(null);
+            }}
+            onKeyDown={(e) => e.key === "Enter" && void doJoin()}
+            aria-label={t("Sync code or passphrase")}
+            placeholder={t("Sync code or passphrase")}
             className="mt-3 w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 outline-none focus:border-[var(--color-accent-2)]"
           />
-          <div className="mt-4 flex gap-3">
-            <Button variant="ghost" onClick={() => setShowEnable(false)} className="flex-1">
+          <p role="alert" className="mt-1.5 min-h-5 text-sm text-[var(--color-bad)]">
+            {joinError ?? ""}
+          </p>
+          <div className="mt-3 flex gap-3">
+            <Button variant="ghost" onClick={() => setShowJoin(false)} className="flex-1">
               {t("Cancel")}
             </Button>
             <Button
-              onClick={() => void doEnable()}
-              disabled={passphrase.length < MIN_PASSPHRASE_LENGTH || busy}
+              onClick={() => void doJoin()}
+              disabled={joinInput.trim().length < MIN_PASSPHRASE_LENGTH || busy}
               className="flex-1"
             >
-              {busy ? t("Syncing…") : t("Enable sync")}
+              {busy ? t("Syncing…") : t("Join")}
+            </Button>
+          </div>
+        </Dialog>
+      )}
+
+      {shownCode && (
+        <Dialog
+          label={t("Your sync code")}
+          onClose={() => {
+            setShownCode(null);
+            setCopied(false);
+          }}
+        >
+          <p className="text-lg font-bold">{t("Your sync code")}</p>
+          <p
+            data-testid="sync-code"
+            className="mt-3 select-all break-all rounded-2xl border border-white/10 bg-white/5 p-4 text-center font-mono text-base tracking-wide"
+          >
+            {shownCode.code}
+          </p>
+          <p className="mt-3 text-sm text-[var(--color-ink-dim)]">
+            {t(
+              "Write this code down and keep it safe. It is the key to your synced data: another device joins with it, and if every device is lost it is the ONLY way to get your data back. It cannot be recovered for you.",
+            )}
+          </p>
+          {shownCode.afterUpgrade && (
+            <p className="mt-2 text-sm font-semibold text-[var(--color-warn)]">
+              {t(
+                "Other devices in your household must now join with this code — the old passphrase no longer finds this group.",
+              )}
+            </p>
+          )}
+          <div className="mt-4 flex gap-3">
+            <Button
+              variant="ghost"
+              onClick={() => void copyCode(shownCode.code)}
+              className="flex-1"
+            >
+              {copied ? t("Copied") : t("Copy")}
+            </Button>
+            <Button
+              onClick={() => {
+                setShownCode(null);
+                setCopied(false);
+              }}
+              className="flex-1"
+            >
+              {t("I have saved my sync code")}
             </Button>
           </div>
         </Dialog>
