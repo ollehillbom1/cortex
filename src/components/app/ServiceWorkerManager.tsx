@@ -20,8 +20,11 @@ export function ServiceWorkerManager() {
 
     let cancelled = false;
 
+    // The build id scopes the worker's caches, so a release cannot serve
+    // pages or chunks cached by the previous one. It also changes the
+    // registration URL, which is what makes the browser fetch the new worker.
     navigator.serviceWorker
-      .register("/sw.js")
+      .register(`/sw.js?v=${encodeURIComponent(process.env.NEXT_PUBLIC_BUILD_ID || "dev")}`)
       .then((registration) => {
         if (!cancelled && registration.waiting && navigator.serviceWorker.controller) {
           setWaiting(registration.waiting);

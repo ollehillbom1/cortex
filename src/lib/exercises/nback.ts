@@ -83,7 +83,20 @@ export interface NBackScore {
   misses: number;
   falseAlarms: number;
   correctRejections: number;
-  /** (hits + correctRejections) / scoreable trials. */
+  /** hits / (hits + misses), or null when the stream held no matches. */
+  hitRate: number | null;
+  /** correctRejections / (correctRejections + falseAlarms), or null when every trial matched. */
+  specificity: number | null;
+  /**
+   * Balanced accuracy: (hitRate + specificity) / 2.
+   *
+   * Plain accuracy is wrong for this task. Only ~30% of trials are matches,
+   * so never responding scores ~70% — inside the adaptive target band, which
+   * levels a non-responder up for doing nothing. Balanced accuracy puts every
+   * one-sided strategy at 0.5: never responding earns full specificity and
+   * zero hit rate, always responding the reverse, and chance guessing lands
+   * there too. Only genuine discrimination scores above the band.
+   */
   accuracy: number;
   perfect: boolean;
 }
@@ -108,12 +121,26 @@ export function scoreNBack(stream: NBackTrialItem[], responses: boolean[], n: nu
     }
   }
   const scoreable = stream.length - n;
-  const accuracy = scoreable === 0 ? 0 : (hits + correctRejections) / scoreable;
+  const matches = hits + misses;
+  const nonMatches = correctRejections + falseAlarms;
+  const hitRate = matches === 0 ? null : hits / matches;
+  const specificity = nonMatches === 0 ? null : correctRejections / nonMatches;
+
+  // With one class absent the balanced average is undefined; score the class
+  // that exists rather than inventing a value for the missing one.
+  let accuracy: number;
+  if (scoreable === 0) accuracy = 0;
+  else if (hitRate === null) accuracy = specificity ?? 0;
+  else if (specificity === null) accuracy = hitRate;
+  else accuracy = (hitRate + specificity) / 2;
+
   return {
     hits,
     misses,
     falseAlarms,
     correctRejections,
+    hitRate,
+    specificity,
     accuracy,
     perfect: misses === 0 && falseAlarms === 0 && scoreable > 0,
   };

@@ -75,9 +75,16 @@ export function initialSkill(now = new Date()): SkillState {
   };
 }
 
-/** Effective integer level used to parameterise an exercise. */
-export function effectiveLevel(state: SkillState): number {
-  return Math.min(MAX_LEVEL, Math.max(MIN_LEVEL, Math.floor(state.level)));
+/**
+ * Effective integer level used to parameterise an exercise.
+ *
+ * `maxLevel` is the exercise's own ceiling: past it the parameters stop
+ * changing, so a higher number would be difficulty theatre — the same round,
+ * a bigger label and a bigger XP bonus.
+ */
+export function effectiveLevel(state: SkillState, maxLevel: number = MAX_LEVEL): number {
+  const ceiling = Math.min(MAX_LEVEL, maxLevel);
+  return Math.min(ceiling, Math.max(MIN_LEVEL, Math.floor(state.level)));
 }
 
 /**
@@ -103,6 +110,8 @@ export function effectiveLevel(state: SkillState): number {
  * The net change per round is clamped to [-1, +1].
  */
 export interface UpdateOptions {
+  /** The exercise's own ceiling; the estimate never climbs past it. */
+  maxLevel?: number;
   /**
    * Kid mode: gentler ramp — calmer calibration (x1.4 instead of x1.8) and
    * upward steps damped by 25%, so difficulty rises noticeably slower while
@@ -168,7 +177,8 @@ export function updateSkill(
 
   delta = clamp(delta, -1, 1);
 
-  const level = clamp(state.level + delta, MIN_LEVEL, MAX_LEVEL);
+  const ceiling = Math.min(MAX_LEVEL, opts.maxLevel ?? MAX_LEVEL);
+  const level = clamp(state.level + delta, MIN_LEVEL, ceiling);
   const recent = [...state.recent, accuracy].slice(-10);
   const recentInputMs =
     perUnit !== undefined

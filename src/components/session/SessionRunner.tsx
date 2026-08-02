@@ -13,7 +13,13 @@ import {
 } from "@/lib/domain/types";
 import { FATIGUE_FULL_MS, effectiveLevel, initialSkill, updateSkill } from "@/lib/adaptive/engine";
 import { xpForRound } from "@/lib/progression/xp";
-import { planSession, type PlannedItem } from "@/lib/session/planner";
+import {
+  dailyPlanSeed,
+  planSession,
+  PLAN_HISTORY_WINDOW,
+  type PlannedItem,
+} from "@/lib/session/planner";
+import { dayKey } from "@/lib/progression/streak";
 import { parsePracticeParams } from "@/lib/session/practice";
 import { applySession } from "@/lib/session/apply";
 import { timeSeed } from "@/lib/engine/rng";
@@ -61,7 +67,7 @@ type Phase = "loading" | "overview" | "instructions" | "playing" | "feedback" | 
 export function SessionRunner() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { ready, profile, saveProfile } = useProfiles();
+  const { ready, profile, refresh: refreshProfiles } = useProfiles();
   const { t } = useT();
   const audio = getAudioEngine();
 
@@ -87,6 +93,13 @@ export function SessionRunner() {
   const [completed, setCompleted] = useState<ExerciseResult[]>([]);
   const [summaryData, setSummaryData] = useState<ReturnType<typeof applySession> | null>(null);
   const [quitPrompt, setQuitPrompt] = useState(false);
+  // The round in progress when the app went to the background. A hidden tab
+  // freezes timers, so the time away counts as reaction time and as fatigue:
+  // the round is discarded and replayed rather than scored.
+  const [interrupted, setInterrupted] = useState(false);
+  const [attempt, setAttempt] = useState(0);
+  const [saveError, setSaveError] = useState<string | null>(null);
+  const [retrying, setRetrying] = useState(false);
 
   const blockRounds = useRef<{ result: RoundResult; level: number; xp: number }[]>([]);
   // State, not a ref: the per-round seed below is derived during render, and
@@ -96,6 +109,9 @@ export function SessionRunner() {
   const persisted = useRef(false);
   // Milliseconds actually spent answering, which is what fatigue should mean.
   const activePlayMs = useRef(0);
+  const sessionId = useRef<string>("");
+  // A commit is in flight. Distinct from `persisted`, which means one succeeded.
+  const saving = useRef(false);
   // Guards against the feedback auto-advance timer and the Continue button
   // both firing advance() for the same round.
   const advancing = useRef(false);
@@ -129,9 +145,16 @@ export function SessionRunner() {
           setPhase("instructions");
         }
       } else {
-        const recent = await getStorage().listSessions(profile.id, 10);
+        const recent = await getStorage().listSessions(profile.id, PLAN_HISTORY_WINDOW);
         if (cancelled) return;
-        const plan = planSession({ profile, recentSessions: recent, seed: seedBase });
+        // The daily seed, not the session seed: this must rebuild exactly the
+        // plan the home screen previewed. Round seeds below stay time-based so
+        // two sessions on the same day do not repeat the same digits.
+        const plan = planSession({
+          profile,
+          recentSessions: recent,
+          seed: dailyPlanSeed(dayKey(new Date())),
+        });
         setItems(plan.items);
         setEstimatedMinutes(plan.estimatedMinutes);
         setPhase("overview");
@@ -166,12 +189,139 @@ export function SessionRunner() {
     setPhase("playing");
   };
 
+  const finalizeBlock = useCallback((): ExerciseResult | null => {
+    if (!currentItem || blockRounds.current.length === 0) return null;
+    const id = currentItem.exerciseId;
+    const rounds = blockRounds.current;
+    const accuracy = rounds.reduce((a, r) => a + r.result.accuracy, 0) / rounds.length;
+    const responseTimes = rounds
+      .map((r) => r.result.responseMs)
+      .filter((v): v is number => v !== undefined);
+    const details: Record<string, number> = {};
+    for (const r of rounds) {
+      for (const [k, v] of Object.entries(r.result.extras ?? {})) {
+        if (k === "falseAlarms" || k === "falseStarts") details[k] = (details[k] ?? 0) + v;
+        else details[k] = Math.max(details[k] ?? 0, v);
+      }
+    }
+    return {
+      exerciseId: id,
+      rounds: rounds.length,
+      accuracy,
+      levelBefore: rounds[0].level,
+      levelAfter: practice
+        ? practice.level
+        : effectiveLevel(skills[id] ?? initialSkill(), EXERCISES[id].maxLevel),
+      xp: rounds.reduce((a, r) => a + r.xp, 0),
+      avgResponseMs:
+        responseTimes.length > 0
+          ? Math.round(responseTimes.reduce((a, b) => a + b, 0) / responseTimes.length)
+          : undefined,
+      bestResponseMs: responseTimes.length > 0 ? Math.min(...responseTimes) : undefined,
+      details: Object.keys(details).length > 0 ? details : undefined,
+    };
+  }, [currentItem, skills, practice]);
+
+  const persistSession = useCallback(
+    async (exercises: ExerciseResult[]) => {
+      // Two facts, two flags: `saving` is "a commit is in flight" and is set
+      // SYNCHRONOUSLY, `persisted` is "a commit succeeded". Moving the second
+      // one after the write (so a failure stays retryable) removed the mutual
+      // exclusion the single flag used to provide, and both the auto-advance
+      // timer and the quit button can enter here at once.
+      if (!profile || persisted.current || saving.current || exercises.length === 0) return null;
+      saving.current = true;
+      const now = new Date();
+      const started = startedAt.current || now.toISOString();
+      const xpEarned = exercises.reduce((a, e) => a + e.xp, 0);
+      // Stable across retries: a second attempt must overwrite the same
+      // record, not add a duplicate session.
+      if (!sessionId.current) sessionId.current = newId();
+      const record: SessionRecord = {
+        id: sessionId.current,
+        profileId: profile.id,
+        type: single ? "single" : "recommended",
+        startedAt: started,
+        endedAt: now.toISOString(),
+        durationMs: now.getTime() - new Date(started).getTime(),
+        exercises,
+        xpEarned,
+        unlocked: [],
+      };
+      const priorSessions = await getStorage().listSessions(profile.id);
+      const playedSkills = { ...profile.skills };
+      for (const e of exercises) playedSkills[e.exerciseId] = skills[e.exerciseId];
+      const applied = applySession({
+        profile: { ...profile, skills: playedSkills },
+        session: record,
+        // Exclude this session: on a retry after a partial write it is
+        // already in storage, and counting it would shift achievements.
+        priorSessionCount: priorSessions.filter((s) => s.id !== record.id).length,
+        now,
+      });
+      // One transaction: the session and the progression it produced are a
+      // single fact. Written separately, a failure between them left history
+      // without XP (or XP without history) and nothing could tell which.
+      try {
+        await getStorage().commitSession(applied.session, {
+          ...applied.profile,
+          updatedAt: now.toISOString(),
+        });
+      } catch (err) {
+        // The guard stays down so the user can try again; the summary shows
+        // the failure instead of silently claiming the session was saved.
+        setSaveError(err instanceof Error ? err.message : "Could not save this session.");
+        return null;
+      } finally {
+        saving.current = false;
+      }
+      persisted.current = true;
+      setSaveError(null);
+      await refreshProfiles();
+      // Fire-and-forget: push the finished session to synced devices.
+      void import("@/lib/sync/engine").then(({ syncNow }) => syncNow(getStorage()));
+      return applied;
+    },
+    [profile, single, skills, refreshProfiles],
+  );
+
+  const retrySave = useCallback(async () => {
+    setRetrying(true);
+    const applied = await persistSession(completed);
+    setRetrying(false);
+    if (applied) setSummaryData(applied);
+  }, [persistSession, completed]);
+  /**
+   * Leave the current exercise without recording it. Used when the stimulus
+   * turned out to be unavailable: there is nothing to score, so the block is
+   * dropped rather than saved as a failed one.
+   */
+  const skipBlock = useCallback(async () => {
+    advancing.current = true;
+    blockRounds.current = [];
+    if (itemIndex + 1 < items.length) {
+      setItemIndex((i) => i + 1);
+      setPhase("instructions");
+    } else {
+      const applied = practice ? null : await persistSession(completed);
+      setSummaryData(applied);
+      setPhase("summary");
+    }
+  }, [itemIndex, items.length, practice, persistSession, completed]);
+
   const handleRoundComplete = useCallback(
     (result: RoundResult) => {
       if (!currentItem) return;
+      // An unperceivable exercise is missing data, not a failed attempt:
+      // no skill update, no XP, no session record, no streak.
+      if (result.unavailable) {
+        void skipBlock();
+        return;
+      }
       const id = currentItem.exerciseId;
       const skill = skills[id] ?? initialSkill();
-      const level = practice ? practice.level : effectiveLevel(skill);
+      const maxLevel = EXERCISES[id].maxLevel;
+      const level = practice ? practice.level : effectiveLevel(skill, maxLevel);
       // Active play time, not wall clock: the old measure counted instruction
       // screens, interruptions and time spent away as fatigue, so a session
       // read as exhausting because the user paused to read.
@@ -194,7 +344,7 @@ export function SessionRunner() {
           responseUnits: id === "reaction-time" ? undefined : result.responseUnits,
         },
         new Date(),
-        { gentle: profile?.preferences.kidMode ?? false },
+        { gentle: profile?.preferences.kidMode ?? false, maxLevel },
       );
       // Practice stays outside progression: the skill estimate is not fed and
       // no XP accrues — a chosen difficulty must not farm or wreck either.
@@ -207,74 +357,7 @@ export function SessionRunner() {
       advancing.current = false;
       setPhase("feedback");
     },
-    [currentItem, skills, practice, profile?.preferences.kidMode],
-  );
-
-  const finalizeBlock = useCallback((): ExerciseResult | null => {
-    if (!currentItem || blockRounds.current.length === 0) return null;
-    const id = currentItem.exerciseId;
-    const rounds = blockRounds.current;
-    const accuracy = rounds.reduce((a, r) => a + r.result.accuracy, 0) / rounds.length;
-    const responseTimes = rounds
-      .map((r) => r.result.responseMs)
-      .filter((v): v is number => v !== undefined);
-    const details: Record<string, number> = {};
-    for (const r of rounds) {
-      for (const [k, v] of Object.entries(r.result.extras ?? {})) {
-        if (k === "falseAlarms" || k === "falseStarts") details[k] = (details[k] ?? 0) + v;
-        else details[k] = Math.max(details[k] ?? 0, v);
-      }
-    }
-    return {
-      exerciseId: id,
-      rounds: rounds.length,
-      accuracy,
-      levelBefore: rounds[0].level,
-      levelAfter: practice ? practice.level : effectiveLevel(skills[id] ?? initialSkill()),
-      xp: rounds.reduce((a, r) => a + r.xp, 0),
-      avgResponseMs:
-        responseTimes.length > 0
-          ? Math.round(responseTimes.reduce((a, b) => a + b, 0) / responseTimes.length)
-          : undefined,
-      bestResponseMs: responseTimes.length > 0 ? Math.min(...responseTimes) : undefined,
-      details: Object.keys(details).length > 0 ? details : undefined,
-    };
-  }, [currentItem, skills, practice]);
-
-  const persistSession = useCallback(
-    async (exercises: ExerciseResult[]) => {
-      if (!profile || persisted.current || exercises.length === 0) return null;
-      persisted.current = true;
-      const now = new Date();
-      const started = startedAt.current || now.toISOString();
-      const xpEarned = exercises.reduce((a, e) => a + e.xp, 0);
-      const record: SessionRecord = {
-        id: newId(),
-        profileId: profile.id,
-        type: single ? "single" : "recommended",
-        startedAt: started,
-        endedAt: now.toISOString(),
-        durationMs: now.getTime() - new Date(started).getTime(),
-        exercises,
-        xpEarned,
-        unlocked: [],
-      };
-      const priorSessions = await getStorage().listSessions(profile.id);
-      const playedSkills = { ...profile.skills };
-      for (const e of exercises) playedSkills[e.exerciseId] = skills[e.exerciseId];
-      const applied = applySession({
-        profile: { ...profile, skills: playedSkills },
-        session: record,
-        priorSessionCount: priorSessions.length,
-        now,
-      });
-      await getStorage().addSession(applied.session);
-      await saveProfile(applied.profile);
-      // Fire-and-forget: push the finished session to synced devices.
-      void import("@/lib/sync/engine").then(({ syncNow }) => syncNow(getStorage()));
-      return applied;
-    },
-    [profile, single, skills, saveProfile],
+    [currentItem, skills, practice, profile?.preferences.kidMode, skipBlock],
   );
 
   const advance = useCallback(async () => {
@@ -308,6 +391,21 @@ export function SessionRunner() {
     practice,
   ]);
 
+  // One policy for every exercise: leaving the app abandons the current round
+  // instead of scoring whatever the frozen timers produced, and stops any
+  // audio that was scheduled. Restarting takes a deliberate tap, which also
+  // re-unlocks audio.
+  useEffect(() => {
+    if (phase !== "playing") return;
+    const onVisibility = () => {
+      if (document.visibilityState !== "hidden") return;
+      getAudioEngine().stopAll();
+      setInterrupted(true);
+    };
+    document.addEventListener("visibilitychange", onVisibility);
+    return () => document.removeEventListener("visibilitychange", onVisibility);
+  }, [phase]);
+
   // Auto-advance the feedback interstitial (a Continue button remains).
   useEffect(() => {
     if (phase !== "feedback") return;
@@ -316,12 +414,35 @@ export function SessionRunner() {
   }, [phase, advance]);
 
   const quit = async (save: boolean) => {
-    if (save && !practice && completed.length > 0) await persistSession(completed);
+    if (save && !practice && completed.length > 0) {
+      const applied = await persistSession(completed);
+      if (!applied) {
+        // Navigating away here threw the session on the floor: the error and
+        // its retry button only exist on the summary screen, and the session
+        // id lives in a ref that dies with the component. Show the summary
+        // instead, where the failure is visible and retryable.
+        setQuitPrompt(false);
+        setSummaryData(null);
+        setPhase("summary");
+        return;
+      }
+    }
     router.push("/");
   };
 
   const seed = seedBase + itemIndex * 1009 + roundIndex * 37;
   const totalRounds = useMemo(() => items.reduce((a, i) => a + i.rounds, 0), [items]);
+
+  // The plan may repeat an exercise as several blocks to fill the time
+  // budget; the overview shows one row per exercise with its total rounds,
+  // rather than the same name three times (and duplicate React keys).
+  const overview = useMemo(() => {
+    const byId = new Map<ExerciseId, number>();
+    for (const item of items) {
+      byId.set(item.exerciseId, (byId.get(item.exerciseId) ?? 0) + item.rounds);
+    }
+    return [...byId.entries()].map(([exerciseId, rounds]) => ({ exerciseId, rounds }));
+  }, [items]);
   const doneRounds =
     items.slice(0, itemIndex).reduce((a, i) => a + i.rounds, 0) +
     roundIndex +
@@ -331,14 +452,56 @@ export function SessionRunner() {
     return <div className="min-h-dvh" />;
   }
 
+  // An empty plan is reachable by URL, bookmark or PWA shortcut when the
+  // preferences leave nothing playable. Without this the overview offered a
+  // live "Start training" button leading to a blank screen — the same defect
+  // as planning a session of exercises the user cannot perceive, one layer
+  // down.
+  if (items.length === 0) {
+    return (
+      <div className="mx-auto flex min-h-dvh w-full max-w-md flex-col justify-center gap-4 px-6 text-center">
+        <h1 className="text-xl font-bold">{t("Nothing to play right now")}</h1>
+        <p className="text-sm text-[var(--color-ink-dim)]">
+          {t(
+            "No exercises can be played with your current settings: sound is off and exercises that need sight are left out. Turn sound on, or allow exercises that need sight, in Profile.",
+          )}
+        </p>
+        <Button onClick={() => router.push("/profile")}>{t("Open Profile")}</Button>
+        <Button variant="ghost" onClick={() => router.push("/")}>
+          {t("Back")}
+        </Button>
+      </div>
+    );
+  }
+
   if (phase === "summary") {
     return (
-      <SessionSummary
-        applied={summaryData}
-        completed={completed}
-        skills={skills}
-        practice={!!practice}
-      />
+      <>
+        {saveError && (
+          <div className="mx-auto w-full max-w-md px-4 pt-safe">
+            <p
+              role="alert"
+              className="card mt-4 border-[var(--color-warn)]/40 p-4 text-sm text-[var(--color-ink)]"
+            >
+              {t("This session could not be saved.")} {saveError}
+            </p>
+            <Button
+              variant="ghost"
+              className="mt-2 w-full"
+              onClick={() => void retrySave()}
+              disabled={retrying}
+            >
+              {retrying ? t("Saving…") : t("Try saving again")}
+            </Button>
+          </div>
+        )}
+        <SessionSummary
+          applied={summaryData}
+          completed={completed}
+          skills={skills}
+          practice={!!practice}
+        />
+      </>
     );
   }
 
@@ -394,20 +557,24 @@ export function SessionRunner() {
                 <ClockIcon className="h-4 w-4" />{" "}
                 {t("about {min} min · {count} exercises", {
                   min: estimatedMinutes,
-                  count: items.length,
+                  count: overview.length,
                 })}
               </p>
             </div>
             <ol className="card divide-y divide-white/6 px-5">
-              {items.map((item) => {
+              {overview.map((item) => {
                 const def = EXERCISES[item.exerciseId];
-                const level = effectiveLevel(skills[item.exerciseId] ?? initialSkill());
+                const level = effectiveLevel(
+                  skills[item.exerciseId] ?? initialSkill(),
+                  EXERCISES[item.exerciseId].maxLevel,
+                );
                 return (
                   <li key={item.exerciseId} className="flex items-center justify-between py-3.5">
                     <div>
                       <p className="font-semibold">{t(def.name)}</p>
                       <p className="text-xs text-[var(--color-ink-dim)]">
-                        {def.modalities.map((m) => t(MODALITY_LABELS[m])).join(" · ")}
+                        {def.modalities.map((m) => t(MODALITY_LABELS[m])).join(" · ")} ·{" "}
+                        {t("{n} rounds", { n: item.rounds })}
                       </p>
                     </div>
                     <span className="rounded-full bg-white/8 px-2.5 py-1 text-xs font-semibold text-[var(--color-ink-dim)]">
@@ -427,7 +594,7 @@ export function SessionRunner() {
           <div className="rise-in flex flex-col gap-5">
             <div className="text-center">
               <p className="text-xs font-semibold uppercase tracking-widest text-[var(--color-ink-faint)]">
-                {t("Exercise {i} of {total}", { i: itemIndex + 1, total: items.length })}
+                {t("Block {i} of {total}", { i: itemIndex + 1, total: items.length })}
               </p>
               <h1 className="mt-1 text-3xl font-bold">{t(currentDef.name)}</h1>
               <p className="mt-1 text-sm text-[var(--color-ink-dim)]">{t(currentDef.tagline)}</p>
@@ -440,7 +607,7 @@ export function SessionRunner() {
                 {t("Level {n}", {
                   n: practice
                     ? practice.level
-                    : effectiveLevel(skills[currentDef.id] ?? initialSkill()),
+                    : effectiveLevel(skills[currentDef.id] ?? initialSkill(), currentDef.maxLevel),
                 })}{" "}
                 ·{" "}
                 {t((currentItem?.rounds ?? 0) > 1 ? "{n} rounds" : "{n} round", {
@@ -476,8 +643,28 @@ export function SessionRunner() {
           </div>
         )}
 
-        {phase === "playing" && currentItem && currentDef && (
-          <div key={`${itemIndex}-${roundIndex}`}>
+        {phase === "playing" && interrupted && (
+          <div className="flex flex-col items-center gap-4 py-10 text-center">
+            <p className="text-lg font-semibold">{t("Round paused")}</p>
+            <p className="max-w-xs text-sm text-[var(--color-ink-dim)]">
+              {t(
+                "The app was in the background, so this round was not scored — timings there are not comparable. Play it again when you are ready.",
+              )}
+            </p>
+            <Button
+              onClick={async () => {
+                if (soundOn) await audio.unlock();
+                setAttempt((n) => n + 1);
+                setInterrupted(false);
+              }}
+            >
+              {t("Play this round again")}
+            </Button>
+          </div>
+        )}
+
+        {phase === "playing" && !interrupted && currentItem && currentDef && (
+          <div key={`${itemIndex}-${roundIndex}-${attempt}`}>
             <p className="mb-4 text-center text-xs font-semibold uppercase tracking-widest text-[var(--color-ink-faint)]">
               {t(currentDef.name)} ·{" "}
               {t("round {i}/{total}", { i: roundIndex + 1, total: currentItem.rounds })}
@@ -487,7 +674,10 @@ export function SessionRunner() {
               level={
                 practice
                   ? practice.level
-                  : effectiveLevel(skills[currentItem.exerciseId] ?? initialSkill())
+                  : effectiveLevel(
+                      skills[currentItem.exerciseId] ?? initialSkill(),
+                      EXERCISES[currentItem.exerciseId].maxLevel,
+                    )
               }
               roundIndex={roundIndex}
               seed={seed}
