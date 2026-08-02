@@ -212,7 +212,18 @@ async function applyLocally(storage: StorageAdapter, merged: SyncState): Promise
     }
   }
   for (const profile of merged.profiles) {
-    const known = new Set((await storage.listSessions(profile.id)).map((s) => s.id));
+    const local = await storage.listSessions(profile.id);
+    const known = new Set(local.map((s) => s.id));
+    const survives = new Set(
+      merged.sessions.filter((s) => s.profileId === profile.id).map((s) => s.id),
+    );
+    // Apply the merge in both directions. Adding only what was missing meant
+    // a progression reset on another device never reached this one: the
+    // merge dropped those sessions (they precede the reset watermark) but
+    // they stayed in local storage, and in local statistics, for ever.
+    for (const session of local) {
+      if (!survives.has(session.id)) await storage.deleteSession(session.id);
+    }
     for (const session of merged.sessions) {
       if (session.profileId === profile.id && !known.has(session.id)) {
         await storage.addSession(session);

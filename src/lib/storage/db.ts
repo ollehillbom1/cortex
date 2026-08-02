@@ -103,6 +103,11 @@ export class IndexedDBAdapter implements StorageAdapter {
     return out;
   }
 
+  async deleteSession(sessionId: string): Promise<void> {
+    const db = await this.db();
+    await db.delete("sessions", sessionId);
+  }
+
   async deleteSessions(profileId: string): Promise<void> {
     const db = await this.db();
     const range = IDBKeyRange.bound([profileId, ""], [profileId, "￿"]);
