@@ -90,8 +90,11 @@ test.describe("axe accessibility audit", () => {
     await expect(page.getByRole("heading", { name: "Tone Pattern" })).toBeVisible();
     await expect(page.getByRole("heading", { name: "Rhythm Recall" })).toBeVisible();
 
-    // They stay reachable behind an explicit toggle — nothing is removed.
-    await page.getByRole("button", { name: /exercises that need sight/i }).click();
+    // They stay reachable behind an explicit toggle — nothing is removed. The
+    // toggle counts what is hidden rather than naming a modality: sound being
+    // off hides exercises here too, so a sight-specific label would have been
+    // wrong half the time.
+    await page.getByRole("button", { name: /show \d+ hidden exercises/i }).click();
     await expect(page.getByRole("heading", { name: "Pattern Recall" })).toBeVisible();
 
     // The recommended plan only draws from the non-visual set.
