@@ -139,7 +139,7 @@ docker run -d -p 3000:3000 --restart unless-stopped cortex
 Training data is in each browser's IndexedDB; the compose file adds one small
 volume (`/app/data`) that only holds end-to-end-encrypted blobs for households
 that enable device sync. Works on x86_64 and ARM64 — a Raspberry Pi 5 runs it
-comfortably within the 512 MB compose memory limit.
+comfortably within the 512 MB limit `docker-compose.yml` declares — a limit that applies only when the container is started through Compose (see docs/deployment.md).
 
 ### Raspberry Pi 5 (ARM64)
 

@@ -55,6 +55,7 @@ export default function ProfilePage() {
   const [pinSetup, setPinSetup] = useState(false);
   const [pinRemove, setPinRemove] = useState(false);
   const [coachAvailable, setCoachAvailable] = useState(false);
+  const [syncEnabled, setSyncEnabled] = useState(false);
   const fileInput = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -74,6 +75,9 @@ export default function ProfilePage() {
       // endpoint; otherwise the setting would be a dead switch.
       const configured = await isCoachConfigured();
       if (!cancelled) setCoachAvailable(configured);
+      const { getSyncStatus } = await import("@/lib/sync/engine");
+      const syncStatus = await getSyncStatus(getStorage());
+      if (!cancelled) setSyncEnabled(syncStatus.enabled);
     })();
     return () => {
       cancelled = true;
@@ -392,7 +396,7 @@ export default function ProfilePage() {
                 {profile.pin
                   ? t("A PIN is required to switch to this profile.")
                   : t(
-                      "Ask for a 4-digit PIN when switching to this profile. Not a security feature — see PRIVACY.",
+                      "Ask for a 4-digit PIN when switching to this profile. It is a courtesy barrier between household profiles, not encryption.",
                     )}
               </span>
             </span>
@@ -442,10 +446,28 @@ export default function ProfilePage() {
         <h2 className="text-sm font-semibold uppercase tracking-wide text-[var(--color-ink-dim)]">
           {t("Your data")}
         </h2>
+        {/* State-aware: the flat claim was false whenever sync or the coach
+            was on, which is exactly when a user needs it to be accurate. */}
         <p className="mt-2 text-sm text-[var(--color-ink-dim)]">
-          {t(
-            "Everything is stored locally in this browser — nothing is sent anywhere. Export a backup before clearing browser data or moving devices.",
-          )}
+          {syncEnabled
+            ? t(
+                "Your training is stored in this browser and, because sync is on, also end-to-end encrypted on your sync server. The server stores ciphertext only — it cannot read your data.",
+              )
+            : t(
+                "Everything is stored locally in this browser — nothing is sent anywhere. Export a backup before clearing browser data or moving devices.",
+              )}
+        </p>
+        {profile.preferences.aiCoach && (
+          <p className="mt-2 text-sm text-[var(--color-ink-dim)]">
+            {t(
+              "AI phrasing is on, so a short set of numbers from your insights is sent to the language model your server is configured with. No names, and no session history.",
+            )}
+          </p>
+        )}
+        <p className="mt-2 text-xs text-[var(--color-ink-faint)]">
+          <a className="underline" href="/privacy">
+            {t("How Cortex handles your data")}
+          </a>
         </p>
         <p className="mt-2 text-xs text-[var(--color-ink-faint)]">
           {t("Last export:")}{" "}

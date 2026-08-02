@@ -1,6 +1,6 @@
 # Architecture
 
-Cortex is a Next.js 15 (App Router) PWA in strict TypeScript. The guiding rule:
+Cortex is a Next.js 16 (App Router) PWA in strict TypeScript. The guiding rule:
 **gameplay logic is pure and framework-free; React only orchestrates timing and
 rendering; persistence sits behind one interface.**
 

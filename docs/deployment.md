@@ -24,7 +24,21 @@ Identical commands — the multi-stage `Dockerfile` builds natively on arm64
 (about 5 minutes on a Pi 5; use `docker compose build --progress plain` to
 watch). Resource notes:
 
-- Idle memory use is well under the 512 MB compose limit.
+- Idle memory use is around 45 MiB, well under the 512 MB compose limit.
+
+> **The limit only applies if you start it with Compose.** The current public
+> deployment was started with `docker run`, which honours none of the
+> `deploy.resources` settings — verified with `docker inspect` (memory limit
+> `0`). Pass them explicitly when not using Compose:
+>
+> ```bash
+> docker run -d --name cortex --restart unless-stopped \
+>   --memory 512m --pids-limit 256 --read-only --tmpfs /tmp \
+>   --cap-drop ALL --security-opt no-new-privileges \
+>   --log-opt max-size=10m --log-opt max-file=3 \
+>   -p 127.0.0.1:9922:3000 -v cortex-sync:/app/data cortex:latest
+> ```
+
 - No GPU, CUDA or external services are required.
 - SD-card wear is negligible: the server only writes when a household with
   sync enabled finishes a session (one small file rewrite per sync).
