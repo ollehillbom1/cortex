@@ -49,7 +49,7 @@ export const INSTRUCTIONS: Record<ExerciseId, ExerciseInstructions> = {
       "You start at 1-back (same as the previous step). Higher levels move to 2-back and 3-back.",
     ],
     scoring:
-      "Correct matches and correct passes both count. Tapping Match when there is no match (a false alarm) costs accuracy.",
+      "Catching the matches and leaving the non-matches alone count equally. Missing matches and false alarms cost the same, so never tapping scores no better than tapping every time.",
     accessibility:
       "This exercise needs sight — the stimulus is a square's position. Dual N-Back adds a spoken stream, and Sound Span is fully auditory. Keyboard: space bar instead of tapping Match.",
   },
@@ -70,7 +70,7 @@ export const INSTRUCTIONS: Record<ExerciseId, ExerciseInstructions> = {
       "Both, one, or neither can match on any step. Start calm — dual n-back is hard for everyone.",
     ],
     scoring:
-      "Each stream is scored separately (matches and false alarms); your result is the average of the two.",
+      "Each stream is scored separately — catching its matches counts as much as leaving its non-matches alone — and your result is the average of the two.",
     accessibility:
       "This exercise needs sound for the spoken letters. Keyboard: A for position, L for sound.",
   },

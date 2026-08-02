@@ -1,7 +1,14 @@
 import { describe, expect, it } from "vitest";
 import { createRng } from "@/lib/engine/rng";
 import { EXERCISES } from "@/lib/domain/types";
-import { MAX_LEVEL, effectiveLevel, initialSkill, updateSkill } from "@/lib/adaptive/engine";
+import {
+  MAX_LEVEL,
+  MIN_LEVEL,
+  TARGET_LOW,
+  effectiveLevel,
+  initialSkill,
+  updateSkill,
+} from "@/lib/adaptive/engine";
 import { expectedAnswer, generateDigits, numberSpanParams, scoreSpanResponse } from "./numberSpan";
 import { generateSequence, scoreSequenceResponse, sequenceParams } from "./sequenceMemory";
 import { generatePattern, patternParams, scorePatternResponse } from "./visualPattern";
@@ -135,8 +142,68 @@ describe("n-back", () => {
     const responses = [false, false, true, true, false];
     const score = scoreNBack(stream, responses, 2);
     expect(score).toMatchObject({ hits: 1, falseAlarms: 1, misses: 1, correctRejections: 0 });
-    expect(score.accuracy).toBeCloseTo(1 / 3);
+    // Balanced: hitRate 1/2, specificity 0/1 -> 0.25 (plain accuracy said 1/3).
+    expect(score.hitRate).toBeCloseTo(0.5);
+    expect(score.specificity).toBe(0);
+    expect(score.accuracy).toBeCloseTo(0.25);
     expect(score.perfect).toBe(false);
+  });
+
+  it("scores every one-sided strategy at chance, never inside the target band", () => {
+    // The bug this pins: with ~30% matches, plain accuracy paid a
+    // non-responder ~70%, which sits in the adaptive band [0.70, 0.85] and
+    // levelled them up for doing nothing.
+    for (const level of [1, 2, 3, 5, 10, 20]) {
+      const params = nBackParams(level);
+      for (const seed of [1, 7, 42]) {
+        const stream = generateNBackStream(createRng(seed), params);
+        const alwaysNo = scoreNBack(
+          stream,
+          stream.map(() => false),
+          params.n,
+        );
+        const alwaysYes = scoreNBack(
+          stream,
+          stream.map(() => true),
+          params.n,
+        );
+        expect(alwaysNo.accuracy).toBeCloseTo(0.5);
+        expect(alwaysYes.accuracy).toBeCloseTo(0.5);
+        expect(alwaysNo.accuracy).toBeLessThan(TARGET_LOW);
+        expect(alwaysYes.accuracy).toBeLessThan(TARGET_LOW);
+      }
+    }
+  });
+
+  it("does not let a non-responder gain levels", () => {
+    const params = nBackParams(2);
+    const stream = generateNBackStream(createRng(3), params);
+    const accuracy = scoreNBack(
+      stream,
+      stream.map(() => false),
+      params.n,
+    ).accuracy;
+    let skill = initialSkill();
+    for (let i = 0; i < 10; i++) skill = updateSkill(skill, { accuracy });
+    expect(skill.level).toBe(MIN_LEVEL);
+  });
+
+  it("still scores genuine discrimination above the band", () => {
+    const params = nBackParams(4);
+    const stream = generateNBackStream(createRng(11), params);
+    // Miss one match, otherwise flawless.
+    let missed = false;
+    const responses = stream.map((s) => {
+      if (s.isMatch && !missed) {
+        missed = true;
+        return false;
+      }
+      return s.isMatch;
+    });
+    const score = scoreNBack(stream, responses, params.n);
+    expect(score.specificity).toBe(1);
+    expect(score.accuracy).toBeGreaterThan(0.85);
+    expect(score.accuracy).toBeLessThan(1);
   });
 
   it("marks a clean run perfect", () => {
