@@ -14,8 +14,21 @@ export interface RoundResult {
   /** 0..1, fed to the adaptive engine. */
   accuracy: number;
   perfect: boolean;
+  /**
+   * The round could not be played at all — the stimulus was unavailable
+   * (no speech synthesis, sound switched off mid-round). The runner skips
+   * the whole block: an unperceivable exercise is missing data, not a
+   * failed attempt, and must never touch skill, XP, records or stats.
+   */
+  unavailable?: boolean;
   /** Representative response time for this round (reaction-style games). */
   responseMs?: number;
+  /**
+   * How many things the round asked the user to produce — digits, tiles,
+   * notes. Answer time grows with this by construction, so comparing raw
+   * milliseconds across levels compares task length, not effort.
+   */
+  responseUnits?: number;
   /** Short human summary, e.g. "Span 5 · reverse". */
   detail?: string;
   /** Numeric extras aggregated into ExerciseResult.details (max is kept). */

@@ -24,9 +24,12 @@ Measures in place:
   `Referrer-Policy: no-referrer`, minimal `Permissions-Policy`.
 - **No third-party runtime dependencies in the browser** beyond React/Next and
   the ~1 kB `idb` wrapper; no CDNs, no external fonts.
-- **Validated import**: JSON imports are structurally validated, size-capped and
-  length-capped; unknown formats and future versions are rejected; imports are
-  additive and cannot overwrite existing records.
+- **Re-projected untrusted records**: JSON imports and decrypted sync payloads
+  are rebuilt from an allow-list of named fields with checked types and
+  bounds, so unknown keys, nested junk and out-of-range numbers do not reach
+  storage. Unknown formats and future data versions are rejected; imports are
+  additive and cannot overwrite existing records; the AI-coach opt-in is never
+  turned on by imported or synced data.
 - **Safe rendering**: user-controlled values (names) are rendered as React text
   nodes only, never as HTML.
 - **Service worker** caches same-origin GET requests only and never caches API

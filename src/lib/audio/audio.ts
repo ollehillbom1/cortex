@@ -91,6 +91,7 @@ export class AudioEngine {
     env.connect(this.gain);
     osc.start(now);
     osc.stop(now + dur);
+    this.trackVoice(osc);
     return delay(durationMs);
   }
 
@@ -116,6 +117,32 @@ export class AudioEngine {
     env.connect(this.gain);
     osc.start(at);
     osc.stop(at + dur);
+    this.trackVoice(osc);
+  }
+
+  /**
+   * Keep a reference to every voice we start, so playback can be stopped.
+   * Without one, a rhythm scheduled on the Web Audio clock kept playing
+   * after the view was left — the sound outlived the exercise.
+   */
+  private voices = new Set<OscillatorNode>();
+
+  private trackVoice(osc: OscillatorNode): void {
+    this.voices.add(osc);
+    osc.addEventListener("ended", () => this.voices.delete(osc));
+  }
+
+  /** Stop everything audible right now: scheduled tones and speech. */
+  stopAll(): void {
+    for (const osc of this.voices) {
+      try {
+        osc.stop();
+      } catch {
+        /* Already stopped or never started; nothing to do. */
+      }
+    }
+    this.voices.clear();
+    this.cancelSpeech();
   }
 
   /** Speak a short text (letter, digit). Resolves when speech ends. */

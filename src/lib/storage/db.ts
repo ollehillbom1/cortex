@@ -1,7 +1,14 @@
 import { openDB, type DBSchema, type IDBPDatabase } from "idb";
 import type { Profile, SessionRecord } from "@/lib/domain/types";
 import type { StorageAdapter } from "@/lib/storage/adapter";
-import { CURRENT_DATA_VERSION, migrateProfile, type StoredProfile } from "@/lib/storage/migrations";
+import {
+  CURRENT_DATA_VERSION,
+  FutureDataVersionError,
+  isFutureDataVersion,
+  migrateProfile,
+  storedDataVersion,
+  type StoredProfile,
+} from "@/lib/storage/migrations";
 
 /**
  * IndexedDB adapter (the only storage implementation in the MVP).
@@ -53,9 +60,11 @@ export class IndexedDBAdapter implements StorageAdapter {
     const db = await this.db();
     const raw = await db.getAll("profiles");
     const migrated = raw.map((p) => migrateProfile(p as unknown as Record<string, unknown>));
-    // Persist any migrations so they run once, not on every read.
+    // Persist migrations so they run once, not on every read. Only ever write
+    // a record we actually moved forward: a record from a newer build is
+    // returned as-is and never rewritten (see isFutureDataVersion).
     for (let i = 0; i < raw.length; i++) {
-      if ((raw[i].dataVersion ?? 1) !== CURRENT_DATA_VERSION) {
+      if (storedDataVersion(raw[i] as unknown as Record<string, unknown>) < CURRENT_DATA_VERSION) {
         await db.put("profiles", migrated[i]);
       }
     }
@@ -67,7 +76,7 @@ export class IndexedDBAdapter implements StorageAdapter {
     const raw = await db.get("profiles", id);
     if (!raw) return undefined;
     const migrated = migrateProfile(raw as unknown as Record<string, unknown>);
-    if ((raw.dataVersion ?? 1) !== CURRENT_DATA_VERSION) {
+    if (storedDataVersion(raw as unknown as Record<string, unknown>) < CURRENT_DATA_VERSION) {
       await db.put("profiles", migrated);
     }
     return migrated;
@@ -75,6 +84,14 @@ export class IndexedDBAdapter implements StorageAdapter {
 
   async putProfile(profile: Profile): Promise<void> {
     const db = await this.db();
+    // Refuse to overwrite a record written by a newer build: this build does
+    // not know what its fields mean, and saving would silently discard them.
+    const existing = await db.get("profiles", profile.id);
+    if (existing && isFutureDataVersion(existing as unknown as Record<string, unknown>)) {
+      throw new FutureDataVersionError(
+        storedDataVersion(existing as unknown as Record<string, unknown>),
+      );
+    }
     await db.put("profiles", { ...profile, dataVersion: CURRENT_DATA_VERSION });
   }
 
@@ -82,6 +99,55 @@ export class IndexedDBAdapter implements StorageAdapter {
     const db = await this.db();
     await this.deleteSessions(id);
     await db.delete("profiles", id);
+  }
+
+  async commitSession(session: SessionRecord, profile: Profile): Promise<void> {
+    const db = await this.db();
+    const tx = db.transaction(["sessions", "profiles"], "readwrite");
+    const profiles = tx.objectStore("profiles");
+    // Same guard as putProfile: never overwrite a record from a newer build.
+    const existing = await profiles.get(profile.id);
+    if (existing && (existing.dataVersion ?? 1) > CURRENT_DATA_VERSION) {
+      tx.abort();
+      // The abort rejects tx.done; that is the intent, not an unhandled error.
+      await tx.done.catch(() => {});
+      throw new Error(
+        `Profile was saved by a newer version of Cortex (data version ${existing.dataVersion}). Update the app to continue.`,
+      );
+    }
+    try {
+      // Both puts inside the try: `put` validates its argument and can throw
+      // SYNCHRONOUSLY (a missing key path, a value that cannot be structured-
+      // cloned). Without this, the first put had already been issued to the
+      // transaction, the second threw before being issued, nothing aborted,
+      // and the transaction committed the half it had — a session written
+      // with no profile, which is exactly the split this method exists to
+      // prevent.
+      // Every write gets a rejection handler the instant it is issued, not
+      // once the whole batch is built. Two reasons, and both bite:
+      // `Promise.all` short-circuits on the first failure, and `put` can
+      // throw SYNCHRONOUSLY — so building an array first leaves any earlier
+      // write orphaned when a later one throws. The abort below then rejects
+      // it with nobody listening, which is an unhandled rejection on every
+      // rolled-back commit.
+      const writes: Promise<unknown>[] = [];
+      const issue = (write: Promise<unknown>) => {
+        void write.catch(() => {});
+        writes.push(write);
+      };
+      issue(tx.objectStore("sessions").put(session));
+      issue(profiles.put({ ...profile, dataVersion: CURRENT_DATA_VERSION }));
+      await Promise.all(writes);
+      await tx.done;
+    } catch (err) {
+      try {
+        tx.abort();
+      } catch {
+        /* Already aborted or finished; the rollback is what matters. */
+      }
+      await tx.done.catch(() => {});
+      throw err;
+    }
   }
 
   async addSession(session: SessionRecord): Promise<void> {
@@ -101,6 +167,11 @@ export class IndexedDBAdapter implements StorageAdapter {
       cursor = await cursor.continue();
     }
     return out;
+  }
+
+  async deleteSession(sessionId: string): Promise<void> {
+    const db = await this.db();
+    await db.delete("sessions", sessionId);
   }
 
   async deleteSessions(profileId: string): Promise<void> {

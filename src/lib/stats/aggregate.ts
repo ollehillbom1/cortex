@@ -6,7 +6,7 @@ import {
   type Profile,
   type SessionRecord,
 } from "@/lib/domain/types";
-import { effectiveLevel } from "@/lib/adaptive/engine";
+import { effectiveLevel, MIN_LEVEL } from "@/lib/adaptive/engine";
 import { dayKey, daysBetween } from "@/lib/progression/streak";
 
 /**
@@ -84,7 +84,7 @@ export function exerciseLevels(profile: Profile): ExerciseLevelSummary[] {
     return {
       exerciseId: id,
       name: EXERCISES[id].name,
-      level: skill ? effectiveLevel(skill) : 1,
+      level: skill ? effectiveLevel(skill, EXERCISES[id].maxLevel) : 1,
       attempts: skill?.attempts ?? 0,
     };
   });
@@ -118,17 +118,38 @@ export function modalityBalance(sessions: SessionRecord[], limit = 20): Record<M
   return totals;
 }
 
-/** Strongest and weakest exercises by recent accuracy (needs >=3 attempts). */
+/**
+ * Strongest and weakest exercises, ranked by how far into each exercise's own
+ * scale the user has come (needs >=3 attempts).
+ *
+ * Raw level is not comparable between exercises: n-back tops out at 18 and
+ * number span at 39, so sorting by level ranked "which exercise has the
+ * longer ramp", not "which are you better at". Normalising to each
+ * exercise's own range does not make the comparison a claim about
+ * cognition — it makes it a claim about progress within Cortex, which is
+ * the only thing the data supports.
+ */
 export function strengthsAndFocus(profile: Profile): {
   strengths: ExerciseLevelSummary[];
   focus: ExerciseLevelSummary[];
 } {
   const played = exerciseLevels(profile).filter((e) => e.attempts >= 3);
-  const byLevel = [...played].sort((a, b) => b.level - a.level);
+  const byProgress = [...played].sort((a, b) => exerciseProgress(b) - exerciseProgress(a));
   return {
-    strengths: byLevel.slice(0, 2),
-    focus: byLevel.slice(-2).reverse(),
+    strengths: byProgress.slice(0, 2),
+    focus: byProgress.slice(-2).reverse(),
   };
+}
+
+/** 0..1: position in this exercise's own level range. */
+export function exerciseProgress(summary: ExerciseLevelSummary): number {
+  const ceiling = EXERCISES[summary.exerciseId].maxLevel;
+  if (ceiling <= MIN_LEVEL) return 0;
+  // Clamped: an estimate stored above the ceiling — which existing profiles
+  // carry until the exercise is played once — produced values over 100% and
+  // took the top "strength" slot on a level the exercise cannot produce.
+  const fraction = (summary.level - MIN_LEVEL) / (ceiling - MIN_LEVEL);
+  return Math.min(1, Math.max(0, fraction));
 }
 
 export const DAY_PARTS = ["morning", "afternoon", "evening", "night"] as const;

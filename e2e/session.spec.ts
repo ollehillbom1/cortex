@@ -2,6 +2,31 @@ import { expect, test } from "@playwright/test";
 import { createProfile, playReactionBlock } from "./helpers";
 
 test.describe("training sessions", () => {
+  test("backgrounding the app discards the round instead of scoring it", async ({ page }) => {
+    // A hidden tab freezes timers, so time spent away lands in the reaction
+    // time and in the fatigue estimate. Nothing used to notice: the round was
+    // scored as if the user had been looking at it the whole time.
+    await createProfile(page, "Bakgrund");
+    await page.goto("/session?exercise=reaction-time");
+    await page.getByRole("button", { name: /start reaction/i }).click();
+
+    await page.evaluate(() => {
+      Object.defineProperty(document, "visibilityState", {
+        configurable: true,
+        get: () => "hidden",
+      });
+      document.dispatchEvent(new Event("visibilitychange"));
+    });
+
+    await expect(page.getByText(/round paused/i)).toBeVisible({ timeout: 10_000 });
+    await expect(page.getByText(/was not scored/i)).toBeVisible();
+
+    // The round is replayable, and nothing was recorded in the meantime.
+    await page.getByRole("button", { name: /play this round again/i }).click();
+    await expect(page.getByText(/round paused/i)).toBeHidden();
+  });
+
+
   test("completing a reaction block persists results, XP and streak", async ({ page }) => {
     await createProfile(page, "Runner");
 
