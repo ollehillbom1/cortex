@@ -52,6 +52,12 @@ export const SV: Record<string, string> = {
     "Inga pass ännu. Ditt första pass tar cirka {goal} minuter.",
   Session: "Pass",
   "Training insight": "Träningsinsikt",
+  "Generate a passphrase": "Skapa en lösenfras",
+  "Starting a new group? Generate a passphrase and write it down.":
+    "Startar du en ny grupp? Skapa en lösenfras och skriv ned den.",
+  "Starting a new group? Keep the generated passphrase and write it down.":
+    "Startar du en ny grupp? Behåll den genererade lösenfrasen och skriv ner den.",
+  "Generate another": "Generera en ny",
   "Reinstalled the app, or setting up a new device? Enter the passphrase you already use and this device rejoins that group — your profiles and history come back.":
     "Har du installerat om appen eller skaffat en ny enhet? Ange lösenfrasen du redan använder så återansluter den här enheten till gruppen — dina profiler och din historik kommer tillbaka.",
   "Set up sync, or rejoin with your passphrase":

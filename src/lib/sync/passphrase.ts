@@ -1,0 +1,238 @@
+/**
+ * Sync passphrase generation.
+ *
+ * The passphrase is the whole identity: it derives both the group id and the
+ * encryption key, so two households that pick the same phrase land in the
+ * same group and can read each other's data — no cryptography stands between
+ * them, because they hold the same key. An eight-character phrase of a user's
+ * own choosing is not enough entropy for that to be safe, and the public
+ * endpoint's 404/200 answers let a guess be tested.
+ *
+ * A generated phrase fixes this without changing the protocol, and keeps the
+ * property that matters most in practice: a device that reinstalled the app
+ * can restore from the passphrase alone. An identity that lives only in an
+ * invite from another device would be stronger against an enumerating
+ * server, and unrecoverable for a household whose only device broke.
+ */
+
+/**
+ * Deliberately short, common, unambiguous words: this is meant to be written
+ * down and typed on a phone.
+ *
+ * 192 words, six of them, is 45.5 bits (measured, not estimated — see
+ * passphrase.test.ts, which fails if the list shrinks). Two households
+ * colliding by chance needs millions of them, and guessing one offline means
+ * redoing 310 000 PBKDF2 iterations per attempt. Compare a user-chosen
+ * eight-character phrase, which is what the review found in the field.
+ */
+const WORDS = [
+  "apple",
+  "anchor",
+  "autumn",
+  "arrow",
+  "amber",
+  "atlas",
+  "album",
+  "angle",
+  "basket",
+  "bridge",
+  "butter",
+  "branch",
+  "bright",
+  "bottle",
+  "banner",
+  "beacon",
+  "candle",
+  "cactus",
+  "canvas",
+  "castle",
+  "cherry",
+  "circle",
+  "copper",
+  "cotton",
+  "daisy",
+  "desert",
+  "dinner",
+  "dolphin",
+  "donkey",
+  "dragon",
+  "drawer",
+  "dust",
+  "eagle",
+  "early",
+  "earth",
+  "echo",
+  "elbow",
+  "engine",
+  "escape",
+  "evening",
+  "fabric",
+  "falcon",
+  "family",
+  "fenced",
+  "fiddle",
+  "finger",
+  "forest",
+  "fossil",
+  "garden",
+  "gentle",
+  "ginger",
+  "glacier",
+  "glass",
+  "golden",
+  "granite",
+  "guitar",
+  "hammer",
+  "harbour",
+  "harvest",
+  "hazel",
+  "helmet",
+  "hollow",
+  "honey",
+  "hunter",
+  "igloo",
+  "impact",
+  "indigo",
+  "insect",
+  "invite",
+  "iron",
+  "island",
+  "ivory",
+  "jacket",
+  "jaguar",
+  "jelly",
+  "jersey",
+  "jewel",
+  "jungle",
+  "junior",
+  "juniper",
+  "kettle",
+  "keyhole",
+  "kidney",
+  "kingdom",
+  "kitten",
+  "knight",
+  "koala",
+  "krypton",
+  "ladder",
+  "lagoon",
+  "lantern",
+  "laptop",
+  "laurel",
+  "lemon",
+  "lighthouse",
+  "lumber",
+  "magnet",
+  "mammoth",
+  "marble",
+  "meadow",
+  "melon",
+  "mirror",
+  "monkey",
+  "mountain",
+  "napkin",
+  "narrow",
+  "nectar",
+  "needle",
+  "nested",
+  "nickel",
+  "noodle",
+  "nurture",
+  "oasis",
+  "object",
+  "ocean",
+  "office",
+  "olive",
+  "onion",
+  "orbit",
+  "otter",
+  "packet",
+  "palace",
+  "panda",
+  "paper",
+  "parrot",
+  "pebble",
+  "pepper",
+  "pigeon",
+  "quarry",
+  "quartz",
+  "quiet",
+  "quilt",
+  "quiver",
+  "quota",
+  "quirk",
+  "quest",
+  "rabbit",
+  "radish",
+  "rally",
+  "ribbon",
+  "river",
+  "rocket",
+  "rubber",
+  "runner",
+  "saddle",
+  "salmon",
+  "sandal",
+  "scarf",
+  "school",
+  "silver",
+  "spider",
+  "summer",
+  "table",
+  "tandem",
+  "teapot",
+  "temple",
+  "thunder",
+  "tiger",
+  "timber",
+  "tunnel",
+  "umbrella",
+  "uncle",
+  "unicorn",
+  "uniform",
+  "unite",
+  "update",
+  "urban",
+  "useful",
+  "valley",
+  "vanilla",
+  "velvet",
+  "vessel",
+  "victory",
+  "village",
+  "violet",
+  "voyage",
+  "walnut",
+  "wander",
+  "waffle",
+  "weasel",
+  "whistle",
+  "willow",
+  "window",
+  "winter",
+  "yellow",
+  "yoghurt",
+  "yonder",
+  "young",
+  "zebra",
+  "zenith",
+  "zephyr",
+  "zigzag",
+];
+
+export const PASSPHRASE_WORDS = 6;
+
+/** A generated passphrase: six words, space separated. */
+export function generatePassphrase(random: (n: number) => number[] = cryptoRandom): string {
+  const picks = random(PASSPHRASE_WORDS).map((n) => WORDS[n % WORDS.length]);
+  return picks.join(" ");
+}
+
+function cryptoRandom(count: number): number[] {
+  const buffer = new Uint32Array(count);
+  crypto.getRandomValues(buffer);
+  return [...buffer];
+}
+
+/** Words available; exported so a test can pin the entropy claim. */
+export const PASSPHRASE_WORD_COUNT = WORDS.length;
