@@ -100,6 +100,50 @@ describe("progression reset across devices", () => {
     expect(await storage.listSessions(PROFILE_ID)).toEqual([]);
   });
 
+  it("never deletes a session that was finished while the sync was running", async () => {
+    // The runner fires syncNow at the end of every session, so a second
+    // session can land AFTER readLocalState took its snapshot and before
+    // applyLocally writes. It is absent from `merged` through timing alone —
+    // deleting it destroys a session the user just completed, with no reset
+    // anywhere in the picture.
+    const records = mockServer();
+    const creds = await deriveCredentials(PASSPHRASE);
+
+    const storage = new IndexedDBAdapter();
+    const profile = createProfile({ id: PROFILE_ID, name: "Delad" });
+    await storage.putProfile(profile);
+
+    const remote: SyncState = {
+      dataVersion: CURRENT_DATA_VERSION,
+      profiles: [profile],
+      sessions: [session("remote-1", "2026-07-09T10:00:00.000Z")],
+      tombstones: emptyTombstones(),
+    };
+    const payload = await encryptJson(creds.key, remote);
+    records.set(creds.groupId, { ...payload, rev: 1 });
+
+    await enableSync(storage, PASSPHRASE);
+
+    // Inject right after the snapshot read: the first listSessions call is
+    // the one inside readLocalState.
+    const realList = storage.listSessions.bind(storage);
+    let injected = false;
+    storage.listSessions = async (profileId: string, limit?: number) => {
+      const list = await realList(profileId, limit);
+      if (!injected) {
+        injected = true;
+        await storage.addSession(session("just-finished", "2026-07-11T10:00:00.000Z"));
+      }
+      return list;
+    };
+
+    expect(await syncNow(storage)).toBe(true);
+    storage.listSessions = realList;
+
+    const ids = (await storage.listSessions(PROFILE_ID)).map((s) => s.id).sort();
+    expect(ids).toContain("just-finished");
+  });
+
   it("keeps sessions the merge did not drop", async () => {
     // Guards the guard: deleting everything not in the remote list would
     // pass the test above while destroying sessions this device just
