@@ -84,7 +84,7 @@ export function exerciseLevels(profile: Profile): ExerciseLevelSummary[] {
     return {
       exerciseId: id,
       name: EXERCISES[id].name,
-      level: skill ? effectiveLevel(skill) : 1,
+      level: skill ? effectiveLevel(skill, EXERCISES[id].maxLevel) : 1,
       attempts: skill?.attempts ?? 0,
     };
   });
