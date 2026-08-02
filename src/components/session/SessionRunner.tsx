@@ -220,7 +220,9 @@ export function SessionRunner() {
       rounds: rounds.length,
       accuracy,
       levelBefore: rounds[0].level,
-      levelAfter: practice ? practice.level : effectiveLevel(skills[id] ?? initialSkill()),
+      levelAfter: practice
+        ? practice.level
+        : effectiveLevel(skills[id] ?? initialSkill(), EXERCISES[id].maxLevel),
       xp: rounds.reduce((a, r) => a + r.xp, 0),
       avgResponseMs:
         responseTimes.length > 0
@@ -391,7 +393,10 @@ export function SessionRunner() {
             <ol className="card divide-y divide-white/6 px-5">
               {items.map((item) => {
                 const def = EXERCISES[item.exerciseId];
-                const level = effectiveLevel(skills[item.exerciseId] ?? initialSkill());
+                const level = effectiveLevel(
+                  skills[item.exerciseId] ?? initialSkill(),
+                  EXERCISES[item.exerciseId].maxLevel,
+                );
                 return (
                   <li key={item.exerciseId} className="flex items-center justify-between py-3.5">
                     <div>
@@ -430,7 +435,7 @@ export function SessionRunner() {
                 {t("Level {n}", {
                   n: practice
                     ? practice.level
-                    : effectiveLevel(skills[currentDef.id] ?? initialSkill()),
+                    : effectiveLevel(skills[currentDef.id] ?? initialSkill(), currentDef.maxLevel),
                 })}{" "}
                 ·{" "}
                 {t((currentItem?.rounds ?? 0) > 1 ? "{n} rounds" : "{n} round", {
@@ -477,7 +482,10 @@ export function SessionRunner() {
               level={
                 practice
                   ? practice.level
-                  : effectiveLevel(skills[currentItem.exerciseId] ?? initialSkill())
+                  : effectiveLevel(
+                      skills[currentItem.exerciseId] ?? initialSkill(),
+                      EXERCISES[currentItem.exerciseId].maxLevel,
+                    )
               }
               roundIndex={roundIndex}
               seed={seed}

@@ -7,6 +7,9 @@ import { generateSequence, scoreSequenceResponse, sequenceParams } from "./seque
 import { generatePattern, patternParams, scorePatternResponse } from "./visualPattern";
 import { generateNBackStream, nBackParams, scoreNBack } from "./nback";
 import { generateDelay, reactionParams, scoreReaction } from "./reaction";
+import { dualNBackParams } from "./dualNBack";
+import { tonePatternParams } from "./tonePattern";
+import { rhythmParams } from "./rhythm";
 
 describe("number span", () => {
   it("generates the requested span deterministically without immediate repeats", () => {
@@ -145,11 +148,19 @@ describe("n-back", () => {
 });
 
 describe("level ceilings", () => {
+  // All nine, called as their game components call them. Four of nine were
+  // covered before, so five ceilings were hand-pinned and checked by nothing:
+  // setting dual-n-back's to 37 left the whole suite green.
   const PARAMS: Record<string, (level: number) => unknown> = {
-    "number-span": (l) => numberSpanParams(l, 0),
+    "number-span": (l) => [0, 1].map((r) => numberSpanParams(l, r)),
+    "auditory-digits": (l) => [0, 1].map((r) => numberSpanParams(l, r)),
     "sequence-memory": (l) => sequenceParams(l),
     "visual-pattern": (l) => patternParams(l),
     "n-back": (l) => nBackParams(l),
+    "dual-n-back": (l) => dualNBackParams(l),
+    "tone-pattern": (l) => tonePatternParams(l),
+    "rhythm-recall": (l) => rhythmParams(l),
+    "reaction-time": (l) => reactionParams(l),
   };
 
   it("stops each exercise where its parameters stop changing", () => {
@@ -181,6 +192,19 @@ describe("level ceilings", () => {
     expect(state.level).toBe(18);
   });
 
+  it("clamps every displayed level, not just the one XP uses", () => {
+    // An estimate above a new ceiling — which existing n-back profiles have —
+    // was shown unclamped everywhere except the XP calculation, and #52 then
+    // ranked on it, producing a "141% progress" strength on a level the
+    // exercise can no longer produce.
+    const inflated = { ...initialSkill(), level: 25, attempts: 10 };
+    for (const id of Object.keys(EXERCISES) as (keyof typeof EXERCISES)[]) {
+      const cap = EXERCISES[id].maxLevel;
+      expect(effectiveLevel(inflated, cap)).toBeLessThanOrEqual(cap);
+    }
+    expect(effectiveLevel(inflated, EXERCISES["n-back"].maxLevel)).toBe(18);
+  });
+
   it("records the plateaus that remain inside the usable range", () => {
     // Honest ceiling, not an honest ramp: span-style exercises grow every
     // OTHER level by construction, so roughly half the steps below the
@@ -198,11 +222,17 @@ describe("level ceilings", () => {
       }
       inert[id] = count;
     }
+    // auditory-digits shares numberSpanParams, so it carries the same 12.
     expect(inert).toEqual({
       "number-span": 12,
+      "auditory-digits": 12,
       "sequence-memory": 10,
       "visual-pattern": 3,
       "n-back": 0,
+      "dual-n-back": 0,
+      "tone-pattern": 0,
+      "rhythm-recall": 0,
+      "reaction-time": 0,
     });
   });
 });
