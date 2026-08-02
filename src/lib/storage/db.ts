@@ -123,10 +123,21 @@ export class IndexedDBAdapter implements StorageAdapter {
       // and the transaction committed the half it had — a session written
       // with no profile, which is exactly the split this method exists to
       // prevent.
-      await Promise.all([
-        tx.objectStore("sessions").put(session),
-        profiles.put({ ...profile, dataVersion: CURRENT_DATA_VERSION }),
-      ]);
+      // Every write gets a rejection handler the instant it is issued, not
+      // once the whole batch is built. Two reasons, and both bite:
+      // `Promise.all` short-circuits on the first failure, and `put` can
+      // throw SYNCHRONOUSLY — so building an array first leaves any earlier
+      // write orphaned when a later one throws. The abort below then rejects
+      // it with nobody listening, which is an unhandled rejection on every
+      // rolled-back commit.
+      const writes: Promise<unknown>[] = [];
+      const issue = (write: Promise<unknown>) => {
+        void write.catch(() => {});
+        writes.push(write);
+      };
+      issue(tx.objectStore("sessions").put(session));
+      issue(profiles.put({ ...profile, dataVersion: CURRENT_DATA_VERSION }));
+      await Promise.all(writes);
       await tx.done;
     } catch (err) {
       try {
