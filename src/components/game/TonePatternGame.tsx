@@ -78,6 +78,7 @@ export function TonePatternGame({ level, seed, audio, onRoundComplete }: GamePro
       onRoundComplete({
         accuracy: score.accuracy,
         perfect: score.perfect,
+        responseUnits: melody.length,
         responseMs:
           inputStart.current !== null
             ? Math.round(performance.now() - inputStart.current)

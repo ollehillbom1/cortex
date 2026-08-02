@@ -35,7 +35,26 @@ export interface RoundOutcome {
    * already speed-derived.
    */
   inputMs?: number;
+  /**
+   * How many items the round asked for (digits, tiles, notes). Latency is
+   * compared PER ITEM: a six-digit answer takes longer than a three-digit
+   * one at the same effort, so raw milliseconds across levels measured task
+   * length rather than strain. Without it, latency is not used at all —
+   * better no signal than a confounded one.
+   */
+  responseUnits?: number;
 }
+
+/**
+ * Answering time at which fatigue counts as full.
+ *
+ * Fatigue is time spent ANSWERING, not time in the session: instruction
+ * screens and interruptions are not effort. A whole session is at most about
+ * four minutes of answering, so the threshold sits below that — the old
+ * 15-minute constant belonged to the wall-clock measure and left fatigue near
+ * zero once the numerator changed.
+ */
+export const FATIGUE_FULL_MS = 4 * 60_000;
 
 /** Near-perfect rounds before this one needed to arm the hot streak. */
 export const HOT_STREAK_PRIOR_ROUNDS = 2;
@@ -135,12 +154,19 @@ export function updateSkill(
   if (delta > 0 && opts.gentle) delta *= 0.75;
   if (delta < 0) delta *= 1 - 0.5 * fatigue;
 
+  // Per item, not per round: the ring buffer stores ms/item so the baseline
+  // survives a change of level. A round that does not report its item count
+  // is skipped rather than compared against a different unit.
+  const perUnit =
+    outcome.inputMs !== undefined && outcome.responseUnits && outcome.responseUnits > 0
+      ? outcome.inputMs / outcome.responseUnits
+      : undefined;
   const baseline = medianInputMs(state);
   if (
     delta > 0 &&
-    outcome.inputMs !== undefined &&
+    perUnit !== undefined &&
     baseline !== null &&
-    outcome.inputMs > baseline * LATENCY_STRAIN_RATIO
+    perUnit > baseline * LATENCY_STRAIN_RATIO
   ) {
     delta *= 0.5;
   }
@@ -155,8 +181,8 @@ export function updateSkill(
   const level = clamp(state.level + delta, MIN_LEVEL, ceiling);
   const recent = [...state.recent, accuracy].slice(-10);
   const recentInputMs =
-    outcome.inputMs !== undefined
-      ? [...(state.recentInputMs ?? []), outcome.inputMs].slice(-10)
+    perUnit !== undefined
+      ? [...(state.recentInputMs ?? []), perUnit].slice(-10)
       : (state.recentInputMs ?? []);
 
   return {
@@ -169,7 +195,7 @@ export function updateSkill(
   };
 }
 
-/** Rolling median answer time, or null before LATENCY_MIN_SAMPLES exist. */
+/** Rolling median answer time PER ITEM, or null before LATENCY_MIN_SAMPLES exist. */
 export function medianInputMs(state: SkillState): number | null {
   const samples = state.recentInputMs ?? [];
   if (samples.length < LATENCY_MIN_SAMPLES) return null;

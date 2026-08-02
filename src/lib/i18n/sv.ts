@@ -52,6 +52,7 @@ export const SV: Record<string, string> = {
     "Inga pass ännu. Ditt första pass tar cirka {goal} minuter.",
   Session: "Pass",
   "Training insight": "Träningsinsikt",
+  "No answer — tap to try again": "Inget svar — tryck för att försöka igen",
   "Round paused": "Rundan pausad",
   "The app was in the background, so this round was not scored — timings there are not comparable. Play it again when you are ready.":
     "Appen var i bakgrunden, så rundan poängsattes inte — tidtagning där går inte att jämföra. Spela den igen när du är redo.",
@@ -326,7 +327,8 @@ export const SV: Record<string, string> = {
     "Tryck på panelen och håll dig sedan stilla tills den blir grön.",
   "Steady… wait for GO.": "Lugnt … vänta på GO.",
   "Now!": "Nu!",
-  "That was before the signal — it will not count.": "Det var före signalen — det räknas inte.",
+  "Too fast to be a reaction — that round does not count.":
+    "För snabbt för att vara en reaktion — den rundan räknas inte.",
   "Nice. Next round coming up.": "Snyggt. Nästa runda kommer strax.",
   "False start": "Tjuvstart",
 
@@ -379,8 +381,8 @@ export const SV: Record<string, string> = {
     "I samma ögonblick som den lyser upp och visar GO trycker du (eller trycker mellanslag).",
   "Tapping early is a false start and does not count.":
     "Att trycka för tidigt är en tjuvstart och räknas inte.",
-  "Your reaction time in milliseconds. Lower is better; your average and best are tracked.":
-    "Din reaktionstid i millisekunder. Lägre är bättre; snitt och bästa sparas.",
+  "Your reaction time in milliseconds, measured from the moment the panel actually changes. Lower is better. A tap too fast to be a reaction does not count, and a round left unanswered for three seconds is dropped rather than scored.":
+    "Din reaktionstid i millisekunder, mätt från när panelen faktiskt ändras. Lägre är bättre. En tryckning som är för snabb för att vara en reaktion räknas inte, och en runda som lämnas obesvarad i tre sekunder kastas i stället för att poängsättas.",
 
   // Achievements
   "First Steps": "Första stegen",

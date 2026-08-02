@@ -23,6 +23,12 @@ export interface RoundResult {
   unavailable?: boolean;
   /** Representative response time for this round (reaction-style games). */
   responseMs?: number;
+  /**
+   * How many things the round asked the user to produce — digits, tiles,
+   * notes. Answer time grows with this by construction, so comparing raw
+   * milliseconds across levels compares task length, not effort.
+   */
+  responseUnits?: number;
   /** Short human summary, e.g. "Span 5 · reverse". */
   detail?: string;
   /** Numeric extras aggregated into ExerciseResult.details (max is kept). */

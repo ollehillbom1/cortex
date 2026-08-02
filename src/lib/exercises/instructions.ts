@@ -103,7 +103,7 @@ export const INSTRUCTIONS: Record<ExerciseId, ExerciseInstructions> = {
       "Tapping early is a false start and does not count.",
     ],
     scoring:
-      "Your reaction time in milliseconds. Lower is better; your average and best are tracked.",
+      "Your reaction time in milliseconds, measured from the moment the panel actually changes. Lower is better. A tap too fast to be a reaction does not count, and a round left unanswered for three seconds is dropped rather than scored.",
     accessibility:
       "This exercise needs sight: the GO signal is a visual change. Keyboard: the space bar works instead of tapping.",
   },

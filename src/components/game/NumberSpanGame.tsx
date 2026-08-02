@@ -65,6 +65,7 @@ export function NumberSpanGame({ level, roundIndex, seed, onRoundComplete }: Gam
       onRoundComplete({
         accuracy: score.accuracy,
         perfect: score.perfect,
+        responseUnits: params.span,
         responseMs:
           inputStart.current !== null
             ? Math.round(performance.now() - inputStart.current)

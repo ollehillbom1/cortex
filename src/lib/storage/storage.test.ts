@@ -293,4 +293,30 @@ describe("export / import", () => {
     expect(result.sessionsSkipped).toBe(1);
     expect(result.sessionsAdded).toBe(0);
   });
+
+  it("clears the latency buffer when its unit changed (v8 -> v9)", () => {
+    // recentInputMs went from ms-per-round to ms-per-item. An old per-round
+    // value is several times any per-item one, so a mixed buffer's median
+    // never trips the strain ratio and the damper is silently off.
+    const v8 = {
+      ...createProfile({ id: "p", name: "P" }),
+      dataVersion: 8,
+      skills: {
+        "number-span": {
+          level: 6,
+          streak: 1,
+          recent: [0.8],
+          recentInputMs: [6000, 5800, 6200],
+          attempts: 12,
+          updatedAt: "2026-07-01T00:00:00Z",
+        },
+      },
+    };
+    const out = migrateProfile(v8 as unknown as Record<string, unknown>);
+    expect(out.dataVersion).toBe(CURRENT_DATA_VERSION);
+    expect(out.skills["number-span"]?.recentInputMs).toEqual([]);
+    // ...and everything else about the skill survives.
+    expect(out.skills["number-span"]?.level).toBe(6);
+    expect(out.skills["number-span"]?.attempts).toBe(12);
+  });
 });

@@ -11,7 +11,7 @@ import {
   type SessionRecord,
   type SkillState,
 } from "@/lib/domain/types";
-import { effectiveLevel, initialSkill, updateSkill } from "@/lib/adaptive/engine";
+import { FATIGUE_FULL_MS, effectiveLevel, initialSkill, updateSkill } from "@/lib/adaptive/engine";
 import { xpForRound } from "@/lib/progression/xp";
 import {
   dailyPlanSeed,
@@ -107,6 +107,8 @@ export function SessionRunner() {
   const [seedBase] = useState(timeSeed);
   const startedAt = useRef<string>("");
   const persisted = useRef(false);
+  // Milliseconds actually spent answering, which is what fatigue should mean.
+  const activePlayMs = useRef(0);
   const sessionId = useRef<string>("");
   // A commit is in flight. Distinct from `persisted`, which means one succeeded.
   const saving = useRef(false);
@@ -320,10 +322,18 @@ export function SessionRunner() {
       const skill = skills[id] ?? initialSkill();
       const maxLevel = EXERCISES[id].maxLevel;
       const level = practice ? practice.level : effectiveLevel(skill, maxLevel);
-      const elapsedMin = startedAt.current
-        ? (Date.now() - new Date(startedAt.current).getTime()) / 60_000
-        : 0;
-      const fatigue = Math.min(1, elapsedMin / 15);
+      // Active play time, not wall clock: the old measure counted instruction
+      // screens, interruptions and time spent away as fatigue, so a session
+      // read as exhausting because the user paused to read.
+      // Reaction rounds are excluded for the same reason their latency is:
+      // the response IS the measurement, ~250 ms against ~8 s of round, so
+      // counting it would understate the session's real effort.
+      if (id !== "reaction-time") activePlayMs.current += result.responseMs ?? 0;
+      // Calibrated to answering time, not wall clock. The 15-minute constant
+      // belonged to the old wall-clock measure; a whole session is at most
+      // ~7 minutes of it, so keeping 15 left fatigue near zero and silently
+      // removed the late-session softening it exists to provide.
+      const fatigue = Math.min(1, activePlayMs.current / FATIGUE_FULL_MS);
       const nextSkill = updateSkill(
         skill,
         {
@@ -331,6 +341,7 @@ export function SessionRunner() {
           fatigue,
           // Reaction accuracy is already speed-derived; don't double-count.
           inputMs: id === "reaction-time" ? undefined : result.responseMs,
+          responseUnits: id === "reaction-time" ? undefined : result.responseUnits,
         },
         new Date(),
         { gentle: profile?.preferences.kidMode ?? false, maxLevel },

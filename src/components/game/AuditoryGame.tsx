@@ -101,6 +101,7 @@ export function AuditoryGame({ level, roundIndex, seed, audio, onRoundComplete }
       onRoundComplete({
         accuracy: score.accuracy,
         perfect: score.perfect,
+        responseUnits: items.length,
         responseMs:
           inputStart.current !== null
             ? Math.round(performance.now() - inputStart.current)
