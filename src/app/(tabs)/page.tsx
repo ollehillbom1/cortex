@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { EXERCISES, MODALITY_LABELS, type SessionRecord } from "@/lib/domain/types";
 import { getStorage } from "@/lib/storage/db";
-import { planSession } from "@/lib/session/planner";
+import { dailyPlanSeed, planSession, PLAN_HISTORY_WINDOW } from "@/lib/session/planner";
 import { levelProgress } from "@/lib/progression/xp";
 import { dayKey, displayedStreak, streakAtRisk } from "@/lib/progression/streak";
 import { strengthsAndFocus } from "@/lib/stats/aggregate";
@@ -94,10 +94,18 @@ export default function HomePage() {
 
   const plan = useMemo(() => {
     if (!profile || sessions === null) return null;
-    // Stable per day so the preview doesn't change on every visit.
-    const seed = [...today].reduce((a, c) => a * 31 + c.charCodeAt(0), 7) >>> 0;
-    return planSession({ profile, recentSessions: sessions, seed });
+    // Same seed and history window as the runner, so this preview is the
+    // session that actually starts.
+    return planSession({
+      profile,
+      recentSessions: sessions.slice(0, PLAN_HISTORY_WINDOW),
+      seed: dailyPlanSeed(today),
+    });
   }, [profile, sessions, today]);
+
+  // A plan may repeat an exercise across blocks to fill the time budget;
+  // name each exercise once in the preview.
+  const planExercises = plan ? [...new Set(plan.items.map((i) => i.exerciseId))] : [];
 
   if (!ready || !profile) return null;
 
@@ -237,7 +245,7 @@ export default function HomePage() {
               <ClockIcon className="h-4 w-4" />
               {t("about {min} min · {count} exercises", {
                 min: plan.estimatedMinutes,
-                count: plan.items.length,
+                count: planExercises.length,
               })}
             </p>
             <div className="mt-3 flex flex-wrap gap-1.5">
@@ -251,10 +259,10 @@ export default function HomePage() {
               ))}
             </div>
             <div className="mt-3 text-sm text-[var(--color-ink-dim)]">
-              {plan.items.map((i, idx) => (
-                <span key={i.exerciseId}>
+              {planExercises.map((id, idx) => (
+                <span key={id}>
                   {idx > 0 && " · "}
-                  {t(EXERCISES[i.exerciseId].name)}
+                  {t(EXERCISES[id].name)}
                 </span>
               ))}
             </div>

@@ -38,6 +38,8 @@ export const SV: Record<string, string> = {
   "Train again": "Träna igen",
   "Start session": "Starta pass",
   "Daily goal": "Dagligt mål",
+  "A session runs up to {max} minutes — train twice to reach a longer goal.":
+    "Ett pass är upp till {max} minuter — träna två gånger för att nå ett längre mål.",
   "Daily goal progress": "Framsteg mot dagligt mål",
   Strengths: "Styrkor",
   "Strengths and focus areas": "Styrkor och fokusområden",

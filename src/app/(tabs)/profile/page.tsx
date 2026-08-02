@@ -23,6 +23,7 @@ import { createPinRecord, isValidPin } from "@/lib/security/pin";
 import { recordProfileDeletion, recordSessionsCleared, syncNow } from "@/lib/sync/engine";
 import { isCoachConfigured } from "@/lib/coach/client";
 import { useT } from "@/lib/i18n/useT";
+import { MAX_SESSION_MINUTES } from "@/lib/session/planner";
 import { useProfiles } from "@/components/app/ProfileProvider";
 import { META_SKIP_PROFILE_PICKER } from "@/components/app/ProfileGate";
 import { PinDialog } from "@/components/app/PinDialog";
@@ -368,6 +369,13 @@ export default function ProfilePage() {
               className="mt-2 w-full accent-[var(--color-accent)]"
               aria-label={t("Daily goal in minutes")}
             />
+            {profile.preferences.dailyGoalMinutes > MAX_SESSION_MINUTES && (
+              <span className="mt-1 block text-xs text-[var(--color-ink-faint)]">
+                {t("A session runs up to {max} minutes — train twice to reach a longer goal.", {
+                  max: MAX_SESSION_MINUTES,
+                })}
+              </span>
+            )}
           </label>
           {coachAvailable && (
             <Toggle

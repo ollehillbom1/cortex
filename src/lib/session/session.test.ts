@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { planSession } from "./planner";
+import {
+  dailyPlanSeed,
+  planSession,
+  MAX_SESSION_MINUTES,
+  PLAN_HISTORY_WINDOW,
+  PLAN_TOLERANCE,
+} from "./planner";
 import { applySession } from "./apply";
 import { createProfile } from "@/lib/storage/profileFactory";
 import { EXERCISES, type ExerciseId, type SessionRecord } from "@/lib/domain/types";
@@ -28,16 +34,83 @@ describe("session planner", () => {
     expect(a).toEqual(b);
   });
 
-  it("covers at least three modalities with 3-5 items", () => {
+  it("covers at least three modalities from 3-5 distinct exercises", () => {
     const profile = createProfile({ id: "p1", name: "Test" });
     for (const seed of [1, 2, 3, 99, 12345]) {
       const plan = planSession({ profile, recentSessions: [], seed });
-      expect(plan.items.length).toBeGreaterThanOrEqual(3);
-      expect(plan.items.length).toBeLessThanOrEqual(5);
-      expect(plan.modalities.length).toBeGreaterThanOrEqual(3);
       const ids = plan.items.map((i) => i.exerciseId);
-      expect(new Set(ids).size).toBe(ids.length);
+      const distinct = new Set(ids);
+      expect(distinct.size).toBeGreaterThanOrEqual(3);
+      expect(distinct.size).toBeLessThanOrEqual(5);
+      expect(plan.modalities.length).toBeGreaterThanOrEqual(3);
+      // Repeat blocks are allowed to fill the time budget, but only as whole
+      // extra blocks of an exercise already in the session.
+      expect(ids.every((id) => distinct.has(id))).toBe(true);
     }
+  });
+
+  it("reaches the daily goal, or the longest session the exercise pool allows", () => {
+    // Five distinct exercises at their default length total 6.9 minutes, so
+    // every goal above ~7 min used to be silently ignored: the default goal
+    // of 10 produced a 7-minute session for ever.
+    for (const excludeVisionRequired of [false, true]) {
+      const profile = createProfile({ id: "p1", name: "Test" });
+      profile.preferences.excludeVisionRequired = excludeVisionRequired;
+      let previousCeiling = 0;
+      for (const goal of [5, 10, 15, 20, 25]) {
+        profile.preferences.dailyGoalMinutes = goal;
+        const plan = planSession({ profile, recentSessions: [], seed: 5 });
+        const capped = Math.min(goal, MAX_SESSION_MINUTES);
+        const withinTolerance = Math.abs(plan.estimatedMinutes - capped) <= capped * PLAN_TOLERANCE;
+        // Either the plan hits its target, or the pool is exhausted — in which
+        // case it must be at least as long as the next-smaller goal produced.
+        expect(withinTolerance || plan.estimatedMinutes >= previousCeiling).toBe(true);
+        expect(plan.estimatedMinutes).toBeLessThanOrEqual(MAX_SESSION_MINUTES * 1.15);
+        previousCeiling = plan.estimatedMinutes;
+      }
+    }
+  });
+
+  it("hits the default 10-minute goal, which the old planner could not", () => {
+    const profile = createProfile({ id: "p1", name: "Test" });
+    expect(profile.preferences.dailyGoalMinutes).toBe(10);
+    for (const seed of [1, 42, 7777]) {
+      const plan = planSession({ profile, recentSessions: [], seed });
+      expect(plan.estimatedMinutes).toBeGreaterThanOrEqual(9);
+      expect(plan.estimatedMinutes).toBeLessThanOrEqual(11);
+    }
+  });
+
+  it("gives the runner exactly the plan the home preview showed", () => {
+    // The preview seeded from the day and read 30 sessions; the runner seeded
+    // from the clock and read 10, so the session you started was not the one
+    // you were shown. Both now use dailyPlanSeed + PLAN_HISTORY_WINDOW.
+    const profile = createProfile({ id: "p1", name: "Test" });
+    const history = Array.from({ length: 30 }, (_, i) =>
+      makeSession({
+        id: `s${i}`,
+        startedAt: `2026-07-${String(i + 1).padStart(2, "0")}T10:00:00.000Z`,
+      }),
+    );
+    const preview = planSession({
+      profile,
+      recentSessions: history.slice(0, PLAN_HISTORY_WINDOW),
+      seed: dailyPlanSeed("2026-08-02"),
+    });
+    const started = planSession({
+      profile,
+      recentSessions: history.slice(0, PLAN_HISTORY_WINDOW),
+      seed: dailyPlanSeed("2026-08-02"),
+    });
+    expect(started).toEqual(preview);
+    // ...and a different day genuinely differs, so the seed is doing work.
+    const tomorrow = planSession({
+      profile,
+      recentSessions: history.slice(0, PLAN_HISTORY_WINDOW),
+      seed: dailyPlanSeed("2026-08-03"),
+    });
+    expect(dailyPlanSeed("2026-08-03")).not.toBe(dailyPlanSeed("2026-08-02"));
+    expect(tomorrow.items.length).toBeGreaterThan(0);
   });
 
   it("plans only non-visual exercises when the profile excludes vision", () => {
