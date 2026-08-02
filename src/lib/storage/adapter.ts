@@ -13,9 +13,21 @@ export interface StorageAdapter {
   deleteProfile(id: string): Promise<void>;
 
   addSession(session: SessionRecord): Promise<void>;
+  /**
+   * Write a finished session and the profile it produced in ONE transaction.
+   *
+   * These two writes are a single fact: the session happened and the profile
+   * earned its XP, skills and records. Written separately, a failure between
+   * them leaves history without progression (or progression without history),
+   * and no later read can tell which. Re-committing the same session id is
+   * idempotent, so a retry after a partial failure is safe.
+   */
+  commitSession(session: SessionRecord, profile: Profile): Promise<void>;
   /** Sessions for a profile, newest first, optionally limited. */
   listSessions(profileId: string, limit?: number): Promise<SessionRecord[]>;
   deleteSessions(profileId: string): Promise<void>;
+  /** Removes one session. Used when a sync merge decides it is gone. */
+  deleteSession(sessionId: string): Promise<void>;
 
   getMeta(key: string): Promise<string | undefined>;
   setMeta(key: string, value: string): Promise<void>;

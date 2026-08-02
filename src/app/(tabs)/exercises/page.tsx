@@ -26,7 +26,7 @@ export default function ExercisesPage() {
 
   const openPractice = (id: ExerciseId) => {
     const skill = profile?.skills[id];
-    setPracticeLevel(skill ? effectiveLevel(skill) : 1);
+    setPracticeLevel(skill ? effectiveLevel(skill, EXERCISES[id].maxLevel) : 1);
     setPracticeRounds(null);
     setPracticeFor(id);
   };
@@ -54,7 +54,7 @@ export default function ExercisesPage() {
         {visible.map((id) => {
           const def = EXERCISES[id];
           const skill = profile?.skills[id];
-          const level = skill ? effectiveLevel(skill) : 1;
+          const level = skill ? effectiveLevel(skill, EXERCISES[id].maxLevel) : 1;
           const acc = skill ? recentAccuracy(skill) : null;
           return (
             <li key={id} className="card flex items-center gap-2 p-4">
@@ -102,7 +102,7 @@ export default function ExercisesPage() {
       </ul>
       {hiddenCount > 0 && (
         <Button variant="subtle" onClick={() => setShowAll(true)}>
-          {t("Show {n} exercises that need sight", { n: hiddenCount })}
+          {t("Show {n} hidden exercises", { n: hiddenCount })}
         </Button>
       )}
       <p className="text-xs leading-relaxed text-[var(--color-ink-faint)]">

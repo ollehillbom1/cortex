@@ -3,6 +3,7 @@ import { clientKey, createRateLimiter } from "@/lib/security/rateLimit";
 import { isValidGroupId } from "@/lib/sync/crypto";
 import {
   MAX_BLOB_CHARS,
+  QuotaExceededError,
   readRecord,
   RevConflictError,
   syncDataDir,
@@ -27,6 +28,49 @@ type Params = { params: Promise<{ groupId: string }> };
 // to ~11 MB of JSON per request the write path is the disk-exhaustion vector.
 const readLimiter = createRateLimiter({ capacity: 60, refillPerMinute: 60 });
 const writeLimiter = createRateLimiter({ capacity: 20, refillPerMinute: 10 });
+
+/**
+ * Ceiling on the request body, enforced BEFORE the JSON is parsed.
+ *
+ * `request.json()` buffers the whole body first, so validating the blob
+ * length afterwards is too late: the memory is already spent. Base64 blob at
+ * its cap plus the JSON envelope needs ~8.1 MB; 12 MB leaves room without
+ * inviting a 100 MB POST.
+ */
+const MAX_BODY_BYTES = 8_500_000;
+
+/**
+ * Read the body with a hard cap, aborting as soon as it is passed.
+ *
+ * Content-Length is a claim, not a fact, and a chunked request has none at
+ * all — so the cap has to hold while the bytes arrive, not just before.
+ */
+async function readBodyCapped(request: NextRequest, limit: number): Promise<string | null> {
+  const declared = Number(request.headers.get("content-length"));
+  if (Number.isFinite(declared) && declared > limit) return null;
+  const body = request.body;
+  if (!body) return "";
+  const reader = body.getReader();
+  const chunks: Uint8Array[] = [];
+  let total = 0;
+  try {
+    for (;;) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      total += value.byteLength;
+      if (total > limit) {
+        await reader.cancel();
+        return null;
+      }
+      chunks.push(value);
+    }
+  } finally {
+    reader.releaseLock();
+  }
+  // Buffer.concat takes Uint8Array[] directly; mapping through Buffer.from
+  // copied every chunk a second time and doubled the peak.
+  return Buffer.concat(chunks).toString("utf8");
+}
 
 function rateLimited(retryAfterSeconds: number | undefined): NextResponse {
   return NextResponse.json(
@@ -55,9 +99,14 @@ export async function PUT(request: NextRequest, { params }: Params) {
     return NextResponse.json({ error: "invalid group id" }, { status: 400 });
   }
 
+  const raw = await readBodyCapped(request, MAX_BODY_BYTES);
+  if (raw === null) {
+    return NextResponse.json({ error: "payload too large" }, { status: 413 });
+  }
+
   let body: { blob?: unknown; iv?: unknown; expectedRev?: unknown };
   try {
-    body = await request.json();
+    body = JSON.parse(raw);
   } catch {
     return NextResponse.json({ error: "invalid json" }, { status: 400 });
   }
@@ -88,6 +137,10 @@ export async function PUT(request: NextRequest, { params }: Params) {
         { error: "revision conflict", rev: err.currentRev },
         { status: 409 },
       );
+    }
+    if (err instanceof QuotaExceededError) {
+      // 507: the request is well-formed, the store simply has no room.
+      return NextResponse.json({ error: "sync storage full" }, { status: 507 });
     }
     return NextResponse.json({ error: "storage unavailable" }, { status: 500 });
   }

@@ -47,17 +47,24 @@ Modifiers, applied in order:
    the kid-mode damping both still apply.
 2. **Calibration**: first 3 attempts multiply Δ by 1.8 to find the user's level
    fast.
-3. **Fatigue**: the runner passes `fatigue ∈ [0,1]` (minutes into session / 15).
-   Downward steps are discounted by up to 50 % — late-session misses are more
-   likely tiredness than a wrong skill estimate.
+3. **Fatigue**: the runner passes `fatigue ∈ [0,1]`, computed from **active
+   play time** — the milliseconds actually spent answering — over 15 minutes.
+   Downward steps are discounted by up to 50 %: late-session misses are more
+   likely tiredness than a wrong skill estimate. It used to be wall-clock time
+   since the session started, which counted instruction screens, interruptions
+   and time spent in another app, so a session read as exhausting because the
+   user paused to read.
 4. **Latency strain** ("correct but laboured"): each skill keeps a ring buffer
-   of the last 10 answer times (`recentInputMs`, input-phase start →
-   submission). Once ≥3 samples exist, an _upward_ step is halved when the
-   round took more than 1.35× the user's own rolling median. Latency
-   modulates, never dominates: it cannot turn a success into a step down, and
-   it is skipped for reaction-style exercises whose accuracy is already
-   speed-derived. The baseline is per-user per-exercise (a rolling median), so
-   naturally deliberate users are not penalised.
+   of the last 10 answer times **per item** (`recentInputMs` = ms ÷ the number
+   of digits, tiles or notes the round asked for). Once ≥3 samples exist, an
+   _upward_ step is halved when the round took more than 1.35× the user's own
+   rolling median. Per item, not per round: a six-digit answer takes longer
+   than a three-digit one at the same effort, so raw milliseconds measured
+   task length rather than strain and the baseline broke every time the level
+   changed. A round that does not report its item count is skipped entirely —
+   a confounded signal is worse than none. Latency modulates, never dominates:
+   it cannot turn a success into a step down, and it is skipped for
+   reaction-style exercises whose accuracy is already speed-derived.
 5. **Safety valve**: from the 3rd consecutive sub-band round, an extra −0.25
    prevents a slow, demoralising grind at a too-high level.
 6. **Clamp**: net Δ ∈ [−1, +1]; level ∈ [1, 40].
