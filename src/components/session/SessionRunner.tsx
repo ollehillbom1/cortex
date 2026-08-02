@@ -441,7 +441,7 @@ export function SessionRunner() {
           <div className="rise-in flex flex-col gap-5">
             <div className="text-center">
               <p className="text-xs font-semibold uppercase tracking-widest text-[var(--color-ink-faint)]">
-                {t("Exercise {i} of {total}", { i: itemIndex + 1, total: items.length })}
+                {t("Block {i} of {total}", { i: itemIndex + 1, total: items.length })}
               </p>
               <h1 className="mt-1 text-3xl font-bold">{t(currentDef.name)}</h1>
               <p className="mt-1 text-sm text-[var(--color-ink-dim)]">{t(currentDef.tagline)}</p>

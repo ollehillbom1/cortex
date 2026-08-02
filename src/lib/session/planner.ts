@@ -173,6 +173,18 @@ export function planSession(input: PlanInput): PlannedSession {
     shortest.rounds += 1;
   }
 
+  // Overshoot: three blocks at their default length can exceed a short goal
+  // on their own, since MIN_ITEMS is satisfied before the budget is checked.
+  // Shrink the longest block first, mirroring the grow pass, so a 5-minute
+  // goal is not a 6-minute session on the days the seed lands badly.
+  for (let guard = 0; guard < MAX_BLOCKS * 40; guard++) {
+    if (total() <= targetSeconds * (1 + PLAN_TOLERANCE)) break;
+    const shrinkable = items.filter((i) => i.rounds > 1);
+    if (shrinkable.length === 0) break;
+    const longest = shrinkable.reduce((a, b) => (blockSeconds(a) >= blockSeconds(b) ? a : b));
+    longest.rounds -= 1;
+  }
+
   // Land inside tolerance: shorten the last block round by round while that
   // brings the estimate closer to the target. Never below a single round.
   const last = items[items.length - 1];

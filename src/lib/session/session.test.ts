@@ -58,15 +58,20 @@ describe("session planner", () => {
       profile.preferences.excludeVisionRequired = excludeVisionRequired;
       for (const goal of [5, 10, 15, 20, 25]) {
         profile.preferences.dailyGoalMinutes = goal;
-        const plan = planSession({ profile, recentSessions: [], seed: 5 });
-        // Every goal is met within tolerance, including for a vision-filtered
-        // profile with only three exercises to draw on — the repeat factor
-        // scales with the size of the pool. 25 clamps to the session cap.
-        const capped = Math.min(goal, MAX_SESSION_MINUTES);
-        expect(Math.abs(plan.estimatedMinutes - capped)).toBeLessThanOrEqual(
-          capped * PLAN_TOLERANCE,
-        );
-        expect(plan.items.length).toBeLessThanOrEqual(8);
+        // Several seeds, not the one that happened to pass: the plan seed is
+        // derived from the day, so a seed-lucky assertion means a user gets a
+        // wrong-length session on some days and not others.
+        for (const seed of [1, 5, 6, 12, 31, 404]) {
+          const plan = planSession({ profile, recentSessions: [], seed });
+          // Every goal is met within tolerance, including for a vision-filtered
+          // profile with only three exercises to draw on — the repeat factor
+          // scales with the size of the pool. 25 clamps to the session cap.
+          const capped = Math.min(goal, MAX_SESSION_MINUTES);
+          expect(Math.abs(plan.estimatedMinutes - capped)).toBeLessThanOrEqual(
+            capped * PLAN_TOLERANCE,
+          );
+          expect(plan.items.length).toBeLessThanOrEqual(8);
+        }
       }
     }
   });
@@ -115,17 +120,38 @@ describe("session planner", () => {
         startedAt: `2026-07-${String(i + 1).padStart(2, "0")}T10:00:00.000Z`,
       }),
     );
-    const preview = planSession({
+    // Calling planSession twice with the same arguments only proves
+    // determinism, which the seed test above already covers. What matters is
+    // that the two CALL SITES agree, so this reproduces what each one passes:
+    // the home screen reads 30 sessions and seeds from the day; the runner
+    // reads PLAN_HISTORY_WINDOW and used to seed from the clock.
+    const homeArgs = {
       profile,
       recentSessions: history.slice(0, PLAN_HISTORY_WINDOW),
       seed: dailyPlanSeed("2026-08-02"),
-    });
-    const started = planSession({
+    };
+    const runnerArgs = {
       profile,
       recentSessions: history.slice(0, PLAN_HISTORY_WINDOW),
       seed: dailyPlanSeed("2026-08-02"),
-    });
+    };
+    const preview = planSession(homeArgs);
+    const started = planSession(runnerArgs);
     expect(started).toEqual(preview);
+
+    // ...and the combinations the old code actually used must differ, or the
+    // assertion above would hold no matter what the call sites did.
+    const oldHome = planSession({
+      profile,
+      recentSessions: history,
+      seed: dailyPlanSeed("2026-08-02"),
+    });
+    const oldRunner = planSession({
+      profile,
+      recentSessions: history.slice(0, PLAN_HISTORY_WINDOW),
+      seed: 1_234_567,
+    });
+    expect(oldRunner).not.toEqual(oldHome);
     // ...and a different day genuinely differs, so the seed is doing work.
     const tomorrow = planSession({
       profile,

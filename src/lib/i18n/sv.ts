@@ -194,7 +194,7 @@ export const SV: Record<string, string> = {
   // Session runner
   "Today's session": "Dagens pass",
   "Session progress": "Passets förlopp",
-  "Exercise {i} of {total}": "Övning {i} av {total}",
+  "Block {i} of {total}": "Block {i} av {total}",
   "How it works": "Så fungerar det",
   "Scoring:": "Poäng:",
   "Start {name}": "Starta {name}",
