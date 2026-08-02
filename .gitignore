@@ -51,3 +51,6 @@ next-env.d.ts
 
 # allow the documented env example
 !.env.example
+
+# Agent worktrees (temporary, created by subagent isolation)
+.claude/worktrees/

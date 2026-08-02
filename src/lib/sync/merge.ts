@@ -37,6 +37,19 @@ export function mergeStates(a: SyncState, b: SyncState): SyncState {
   // LWW silently discarded the loser's XP, skills, records and achievements
   // even though its sessions were kept, so history and summary disagreed
   // whenever two devices finished a session from the same base.
+  //
+  // Progression is merged against the sessions that SURVIVE the reset
+  // watermark, not the raw lists. Counting a cleared session's XP would undo
+  // the reset it belongs to — and re-add it for every device that joins
+  // later, so the total climbs without bound while the history stays empty.
+  const surviving = (sessions: SessionRecord[]) =>
+    sessions.filter((s) => {
+      const clearedAt = tombstones.clearedSessions[s.profileId];
+      return !clearedAt || s.startedAt >= clearedAt;
+    });
+  const aLive = surviving(a.sessions);
+  const bLive = surviving(b.sessions);
+
   const profileMap = new Map<string, Profile>();
   const seenIds = new Set([...a.profiles, ...b.profiles].map((p) => p.id));
   for (const id of seenIds) {
@@ -46,7 +59,7 @@ export function mergeStates(a: SyncState, b: SyncState): SyncState {
       profileMap.set(id, (left ?? right)!);
       continue;
     }
-    profileMap.set(id, mergeProfiles(left, right, a.sessions, b.sessions));
+    profileMap.set(id, mergeProfiles(left, right, aLive, bLive, tombstones));
   }
   const profiles = [...profileMap.values()].filter((p) => {
     const deletedAt = tombstones.deletedProfiles[p.id];
@@ -119,6 +132,7 @@ export function mergeProfiles(
   y: Profile,
   xSessions: SessionRecord[] = [],
   ySessions: SessionRecord[] = [],
+  tombstones: SyncTombstones = emptyTombstones(),
 ): Profile {
   const winner = pickNewer(x, y);
   const loser = winner === x ? y : x;
@@ -132,6 +146,12 @@ export function mergeProfiles(
     .filter((s) => s.profileId === winner.id && !winnerSessionIds.has(s.id))
     .reduce((sum, s) => sum + (s.xpEarned ?? 0), 0);
 
+  // A reset that postdates the loser's last edit means the loser is carrying
+  // exactly the progression the user asked to clear. Merging its records and
+  // achievements back in would resurrect them one device at a time.
+  const clearedAt = tombstones.clearedSessions[winner.id];
+  const loserWasCleared = Boolean(clearedAt && (loser.updatedAt ?? "") < clearedAt);
+
   const skills: Profile["skills"] = { ...winner.skills };
   for (const [id, loserSkill] of Object.entries(loser.skills)) {
     const mine = skills[id as keyof Profile["skills"]];
@@ -139,18 +159,31 @@ export function mergeProfiles(
     if (!mine || (loserSkill.updatedAt ?? "") > (mine.updatedAt ?? "")) {
       skills[id as keyof Profile["skills"]] = loserSkill;
     }
+    // attempts only ever grows, so a clock behind the other device must not
+    // make it shrink — that would re-trigger the x1.8 calibration ramp.
+    const chosen = skills[id as keyof Profile["skills"]];
+    if (chosen && mine) {
+      skills[id as keyof Profile["skills"]] = {
+        ...chosen,
+        attempts: Math.max(chosen.attempts, mine.attempts),
+      };
+    }
   }
 
   const records: Profile["records"] = { ...winner.records };
-  for (const [key, theirs] of Object.entries(loser.records)) {
-    const mine = records[key];
-    if (!mine || betterRecord(key, theirs.value, mine.value)) records[key] = theirs;
+  if (!loserWasCleared) {
+    for (const [key, theirs] of Object.entries(loser.records)) {
+      const mine = records[key];
+      if (!mine || betterRecord(key, theirs.value, mine.value)) records[key] = theirs;
+    }
   }
 
   const achievements: Profile["achievements"] = { ...winner.achievements };
-  for (const [id, at] of Object.entries(loser.achievements)) {
-    const mine = achievements[id];
-    if (!mine || at < mine) achievements[id] = at;
+  if (!loserWasCleared) {
+    for (const [id, at] of Object.entries(loser.achievements)) {
+      const mine = achievements[id];
+      if (!mine || at < mine) achievements[id] = at;
+    }
   }
 
   const aheadOnDays =

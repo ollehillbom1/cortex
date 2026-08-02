@@ -156,6 +156,63 @@ describe("profile merge keeps both devices' progression", () => {
     expect(mergeProfiles(newer, older).name).toBe("Nytt namn");
   });
 
+  it("does not resurrect the XP of sessions a reset cleared", () => {
+    // The first version of this merge counted the loser's RAW session list,
+    // including sessions the same merge was about to drop for being older
+    // than the reset watermark. A reset therefore restored itself, and every
+    // device that joined later re-added the same XP.
+    const reset = profileAt("2026-07-05T00:00:00Z", { xp: 0 });
+    const stale = profileAt("2026-07-04T00:00:00Z", {
+      xp: 100,
+      records: { "number-span:maxSpan": { value: 9, achievedAt: "2026-07-01T00:00:00Z" } },
+      achievements: { "first-session": "2026-07-01T00:00:00Z" },
+    });
+    const merged = mergeStates(
+      state({
+        profiles: [reset],
+        sessions: [],
+        tombstones: { deletedProfiles: {}, clearedSessions: { p: "2026-07-04T12:00:00.000Z" } },
+      }),
+      state({ profiles: [stale], sessions: [session("old-1", 100, "2026-07-01T10:00:00.000Z")] }),
+    );
+    expect(merged.sessions).toHaveLength(0);
+    expect(merged.profiles[0].xp).toBe(0);
+    expect(merged.profiles[0].records).toEqual({});
+    expect(merged.profiles[0].achievements).toEqual({});
+  });
+
+  it("does not inflate XP as more stale devices join after a reset", () => {
+    const cleared = { deletedProfiles: {}, clearedSessions: { p: "2026-07-04T12:00:00.000Z" } };
+    const reset = profileAt("2026-07-05T00:00:00Z", { xp: 0 });
+    let merged = state({ profiles: [reset], sessions: [], tombstones: cleared });
+    for (let device = 0; device < 4; device++) {
+      const stale = profileAt("2026-07-04T00:00:00Z", { xp: 100 });
+      merged = mergeStates(
+        merged,
+        state({
+          profiles: [stale],
+          sessions: [session(`old-${device}`, 100, "2026-07-01T10:00:00.000Z")],
+        }),
+      );
+      expect(merged.profiles[0].xp).toBe(0);
+    }
+  });
+
+  it("never lets attempts run backwards when a clock is behind", () => {
+    const ahead = profileAt("2026-07-02T00:00:00Z", {
+      skills: {
+        "n-back": { ...initialSkill(), level: 5, attempts: 400, updatedAt: "2026-07-02T00:00:00Z" },
+      },
+    });
+    const behind = profileAt("2026-07-01T00:00:00Z", {
+      skills: {
+        "n-back": { ...initialSkill(), level: 4, attempts: 12, updatedAt: "2026-07-01T00:00:00Z" },
+      },
+    });
+    expect(mergeProfiles(ahead, behind).skills["n-back"]?.attempts).toBe(400);
+    expect(mergeProfiles(behind, ahead).skills["n-back"]?.attempts).toBe(400);
+  });
+
   it("is symmetric: both devices converge on the same profile", () => {
     const phone = profileAt("2026-07-01T10:00:00Z", { xp: 120 });
     const laptop = profileAt("2026-07-01T11:00:00Z", { xp: 130 });
