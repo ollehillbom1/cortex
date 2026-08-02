@@ -150,6 +150,41 @@ export class IndexedDBAdapter implements StorageAdapter {
     }
   }
 
+  async importRecords(profiles: Profile[], sessions: SessionRecord[]): Promise<void> {
+    const db = await this.db();
+    const tx = db.transaction(["sessions", "profiles"], "readwrite");
+    try {
+      // Same discipline as commitSession: every write gets its rejection
+      // handler the instant it is issued, because `put` can throw
+      // synchronously and `Promise.all` short-circuits — either way an
+      // already-issued write would otherwise reject into nobody's hands when
+      // the abort below rolls the transaction back.
+      const writes: Promise<unknown>[] = [];
+      const issue = (write: Promise<unknown>) => {
+        void write.catch(() => {});
+        writes.push(write);
+      };
+      const profileStore = tx.objectStore("profiles");
+      const sessionStore = tx.objectStore("sessions");
+      for (const profile of profiles) {
+        issue(profileStore.put({ ...profile, dataVersion: CURRENT_DATA_VERSION }));
+      }
+      for (const session of sessions) {
+        issue(sessionStore.put(session));
+      }
+      await Promise.all(writes);
+      await tx.done;
+    } catch (err) {
+      try {
+        tx.abort();
+      } catch {
+        /* Already aborted or finished; the rollback is what matters. */
+      }
+      await tx.done.catch(() => {});
+      throw err;
+    }
+  }
+
   async addSession(session: SessionRecord): Promise<void> {
     const db = await this.db();
     await db.put("sessions", session);

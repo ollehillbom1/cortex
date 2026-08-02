@@ -23,6 +23,13 @@ export interface StorageAdapter {
    * idempotent, so a retry after a partial failure is safe.
    */
   commitSession(session: SessionRecord, profile: Profile): Promise<void>;
+  /**
+   * Write an import's records in ONE transaction: every profile and session,
+   * or none of them. A failure midway through per-record writes left a
+   * partial import — profiles without their history — that a retry then
+   * "skipped" as already present.
+   */
+  importRecords(profiles: Profile[], sessions: SessionRecord[]): Promise<void>;
   /** Sessions for a profile, newest first, optionally limited. */
   listSessions(profileId: string, limit?: number): Promise<SessionRecord[]>;
   deleteSessions(profileId: string): Promise<void>;

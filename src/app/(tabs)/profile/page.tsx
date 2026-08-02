@@ -7,12 +7,7 @@ import { levelProgress } from "@/lib/progression/xp";
 import { initialStreak } from "@/lib/progression/streak";
 import { getStorage } from "@/lib/storage/db";
 import { AVATAR_CHOICES, createProfile, newId } from "@/lib/storage/profileFactory";
-import {
-  exportAll,
-  importBundle,
-  ImportError,
-  parseExportBundle,
-} from "@/lib/storage/exportImport";
+import { exportAll, importBundle, ImportError, readExportFile } from "@/lib/storage/exportImport";
 import { META_LAST_EXPORT_AT } from "@/lib/storage/backupReminder";
 import {
   persistentStorageStatus,
@@ -122,7 +117,7 @@ export default function ProfilePage() {
 
   const doImport = async (file: File) => {
     try {
-      const bundle = parseExportBundle(await file.text());
+      const bundle = await readExportFile(file);
       const result = await importBundle(getStorage(), bundle);
       await refresh();
       setMessage(
