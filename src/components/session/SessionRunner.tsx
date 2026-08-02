@@ -13,7 +13,13 @@ import {
 } from "@/lib/domain/types";
 import { effectiveLevel, initialSkill, updateSkill } from "@/lib/adaptive/engine";
 import { xpForRound } from "@/lib/progression/xp";
-import { planSession, type PlannedItem } from "@/lib/session/planner";
+import {
+  dailyPlanSeed,
+  planSession,
+  PLAN_HISTORY_WINDOW,
+  type PlannedItem,
+} from "@/lib/session/planner";
+import { dayKey } from "@/lib/progression/streak";
 import { parsePracticeParams } from "@/lib/session/practice";
 import { applySession } from "@/lib/session/apply";
 import { timeSeed } from "@/lib/engine/rng";
@@ -127,9 +133,16 @@ export function SessionRunner() {
           setPhase("instructions");
         }
       } else {
-        const recent = await getStorage().listSessions(profile.id, 10);
+        const recent = await getStorage().listSessions(profile.id, PLAN_HISTORY_WINDOW);
         if (cancelled) return;
-        const plan = planSession({ profile, recentSessions: recent, seed: seedBase });
+        // The daily seed, not the session seed: this must rebuild exactly the
+        // plan the home screen previewed. Round seeds below stay time-based so
+        // two sessions on the same day do not repeat the same digits.
+        const plan = planSession({
+          profile,
+          recentSessions: recent,
+          seed: dailyPlanSeed(dayKey(new Date())),
+        });
         setItems(plan.items);
         setEstimatedMinutes(plan.estimatedMinutes);
         setPhase("overview");
@@ -335,6 +348,17 @@ export function SessionRunner() {
 
   const seed = seedBase + itemIndex * 1009 + roundIndex * 37;
   const totalRounds = useMemo(() => items.reduce((a, i) => a + i.rounds, 0), [items]);
+
+  // The plan may repeat an exercise as several blocks to fill the time
+  // budget; the overview shows one row per exercise with its total rounds,
+  // rather than the same name three times (and duplicate React keys).
+  const overview = useMemo(() => {
+    const byId = new Map<ExerciseId, number>();
+    for (const item of items) {
+      byId.set(item.exerciseId, (byId.get(item.exerciseId) ?? 0) + item.rounds);
+    }
+    return [...byId.entries()].map(([exerciseId, rounds]) => ({ exerciseId, rounds }));
+  }, [items]);
   const doneRounds =
     items.slice(0, itemIndex).reduce((a, i) => a + i.rounds, 0) +
     roundIndex +
@@ -429,12 +453,12 @@ export function SessionRunner() {
                 <ClockIcon className="h-4 w-4" />{" "}
                 {t("about {min} min · {count} exercises", {
                   min: estimatedMinutes,
-                  count: items.length,
+                  count: overview.length,
                 })}
               </p>
             </div>
             <ol className="card divide-y divide-white/6 px-5">
-              {items.map((item) => {
+              {overview.map((item) => {
                 const def = EXERCISES[item.exerciseId];
                 const level = effectiveLevel(skills[item.exerciseId] ?? initialSkill());
                 return (
@@ -442,7 +466,8 @@ export function SessionRunner() {
                     <div>
                       <p className="font-semibold">{t(def.name)}</p>
                       <p className="text-xs text-[var(--color-ink-dim)]">
-                        {def.modalities.map((m) => t(MODALITY_LABELS[m])).join(" · ")}
+                        {def.modalities.map((m) => t(MODALITY_LABELS[m])).join(" · ")} ·{" "}
+                        {t("{n} rounds", { n: item.rounds })}
                       </p>
                     </div>
                     <span className="rounded-full bg-white/8 px-2.5 py-1 text-xs font-semibold text-[var(--color-ink-dim)]">
@@ -462,7 +487,7 @@ export function SessionRunner() {
           <div className="rise-in flex flex-col gap-5">
             <div className="text-center">
               <p className="text-xs font-semibold uppercase tracking-widest text-[var(--color-ink-faint)]">
-                {t("Exercise {i} of {total}", { i: itemIndex + 1, total: items.length })}
+                {t("Block {i} of {total}", { i: itemIndex + 1, total: items.length })}
               </p>
               <h1 className="mt-1 text-3xl font-bold">{t(currentDef.name)}</h1>
               <p className="mt-1 text-sm text-[var(--color-ink-dim)]">{t(currentDef.tagline)}</p>

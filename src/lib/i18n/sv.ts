@@ -38,6 +38,8 @@ export const SV: Record<string, string> = {
   "Train again": "Träna igen",
   "Start session": "Starta pass",
   "Daily goal": "Dagligt mål",
+  "A session runs up to {max} minutes — train twice to reach a longer goal.":
+    "Ett pass är upp till {max} minuter — träna två gånger för att nå ett längre mål.",
   "Daily goal progress": "Framsteg mot dagligt mål",
   Strengths: "Styrkor",
   "Strengths and focus areas": "Styrkor och fokusområden",
@@ -200,7 +202,7 @@ export const SV: Record<string, string> = {
   // Session runner
   "Today's session": "Dagens pass",
   "Session progress": "Passets förlopp",
-  "Exercise {i} of {total}": "Övning {i} av {total}",
+  "Block {i} of {total}": "Block {i} av {total}",
   "How it works": "Så fungerar det",
   "Scoring:": "Poäng:",
   "Start {name}": "Starta {name}",
