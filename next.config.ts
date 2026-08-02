@@ -35,8 +35,18 @@ const securityHeaders = [
   },
 ];
 
+/**
+ * A per-build identifier exposed to the client.
+ *
+ * The service worker scopes its caches by it, so each release gets its own
+ * cache and the previous one is deleted on activation. Falls back to a
+ * timestamp when the deploy does not pass one in.
+ */
+const buildId = process.env.BUILD_ID || process.env.SOURCE_COMMIT || String(Date.now());
+
 const nextConfig: NextConfig = {
   output: "standalone",
+  env: { NEXT_PUBLIC_BUILD_ID: buildId },
   reactStrictMode: true,
   poweredByHeader: false,
   async headers() {
