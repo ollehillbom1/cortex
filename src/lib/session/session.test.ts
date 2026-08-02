@@ -5,6 +5,7 @@ import {
   MAX_SESSION_MINUTES,
   PLAN_HISTORY_WINDOW,
   PLAN_TOLERANCE,
+  sessionTargetMinutes,
 } from "./planner";
 import { applySession } from "./apply";
 import { createProfile } from "@/lib/storage/profileFactory";
@@ -73,6 +74,33 @@ describe("session planner", () => {
           expect(plan.items.length).toBeLessThanOrEqual(8);
         }
       }
+    }
+  });
+
+  it("sends the second session after the remainder, not another full session", () => {
+    // The approved 25-minute goal: a session caps at 20 and the REST is the
+    // second session. Without this, "train again" planned another 20 minutes
+    // and the goal was reachable only by overshooting it.
+    expect(sessionTargetMinutes(25, 0)).toBe(25); // planSession caps at 20
+    expect(sessionTargetMinutes(25, 20)).toBe(5);
+    expect(sessionTargetMinutes(25, 12.5)).toBe(12.5);
+    expect(sessionTargetMinutes(10, 3.5)).toBe(6.5);
+    // At or past the goal, an extra session is a deliberate full one.
+    expect(sessionTargetMinutes(25, 25)).toBe(25);
+    expect(sessionTargetMinutes(10, 26)).toBe(10);
+
+    // And the plan actually lands on the remainder.
+    const profile = createProfile({ id: "p1", name: "Test" });
+    profile.preferences.dailyGoalMinutes = 25;
+    for (const seed of [1, 5, 6, 12, 31, 404]) {
+      const plan = planSession({
+        profile,
+        recentSessions: [],
+        seed,
+        targetMinutes: sessionTargetMinutes(25, 20),
+      });
+      expect(plan.estimatedMinutes).toBeGreaterThanOrEqual(4);
+      expect(plan.estimatedMinutes).toBeLessThanOrEqual(7);
     }
   });
 

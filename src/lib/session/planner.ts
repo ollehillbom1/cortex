@@ -66,6 +66,23 @@ export const MAX_SESSION_MINUTES = 20;
 /** A plan counts as matching its target within this fraction. */
 export const PLAN_TOLERANCE = 0.1;
 
+/**
+ * What the NEXT session should aim for, given what today already holds.
+ *
+ * A goal above the session cap is delivered in parts: the first session runs
+ * to the cap, and this sends the second one after the remainder instead of
+ * another full session — a 25-minute goal is 20 + 5, not 20 + 20. Once the
+ * goal is met, an extra session is a deliberate full one, not a sliver.
+ * planSession clamps whatever this returns to [4, MAX_SESSION_MINUTES].
+ *
+ * Shared by the home preview and the runner so both compute the same target
+ * from the same inputs — the preview must BE the session that starts.
+ */
+export function sessionTargetMinutes(goalMinutes: number, minutesToday: number): number {
+  const remaining = goalMinutes - minutesToday;
+  return remaining > 0 ? remaining : goalMinutes;
+}
+
 /** Seconds one block of this exercise takes at the given round count. */
 function blockSeconds(item: PlannedItem): number {
   return EXERCISES[item.exerciseId].secondsPerRound * item.rounds;
