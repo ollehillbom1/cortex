@@ -15,7 +15,12 @@ export function patternParams(level: number): PatternParams {
   const gridSize = level < 5 ? 3 : level < 11 ? 4 : 5;
   const cells = gridSize * gridSize;
   const activeCells = Math.min(cells - 2, 3 + Math.floor((level - 1) * 0.7));
-  const showMs = Math.max(900, 2200 - (level - 1) * 70);
+  // showMs bottomed out at level 20 while activeCells only moves on 7 of 10
+  // levels, leaving dead steps in the low twenties. Past 20 the show time
+  // keeps shrinking at a gentler slope, with a floor that binds exactly at
+  // the ceiling (30): every exposed step changes something.
+  const showMs =
+    level <= 20 ? Math.max(900, 2200 - (level - 1) * 70) : Math.max(750, 900 - (level - 20) * 15);
   return { gridSize, activeCells, showMs };
 }
 

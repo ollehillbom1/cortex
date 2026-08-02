@@ -19,6 +19,13 @@ export interface NumberSpanParams {
 /**
  * Level mapping. Reverse recall is introduced from level 4 on alternating
  * rounds; reversed spans are one digit shorter (reverse is harder).
+ *
+ * Every level must change at least one parameter (the in-range cousin of
+ * GAME-05's ceiling rule). The span grows every OTHER level by design —
+ * that pace is deliberate — and digitMs bottoms out mid-range, so the gap
+ * carries the ramp from there: it shrinks per level from the point where
+ * digitMs stops, and its floor is chosen to bind exactly at the level
+ * ceiling (39), so the ladder ends where the contract test says it does.
  */
 export function numberSpanParams(
   level: number,
@@ -33,7 +40,11 @@ export function numberSpanParams(
     variant === "auditory"
       ? Math.max(650, 1000 - (level - 1) * 25)
       : Math.max(450, 900 - (level - 1) * 35);
-  return { span, direction, digitMs, gapMs: variant === "auditory" ? 150 : 200 };
+  const gapMs =
+    variant === "auditory"
+      ? Math.max(54, 150 - Math.max(0, level - 15) * 4)
+      : Math.max(96, 200 - Math.max(0, level - 13) * 4);
+  return { span, direction, digitMs, gapMs };
 }
 
 /** Digits 0-9, avoiding immediate repeats so spoken digits stay distinct. */
