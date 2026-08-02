@@ -74,6 +74,21 @@ function isExerciseId(v: unknown): v is ExerciseId {
   return typeof v === "string" && (ALL_EXERCISE_IDS as readonly string[]).includes(v);
 }
 
+/**
+ * Keys that must never become properties of a rebuilt record.
+ *
+ * `JSON.parse` makes `__proto__` an OWN property, so it reaches
+ * `Object.entries` and — on a normal object — assigning it hits the prototype
+ * setter instead of defining a key. Even on a null-prototype object it would
+ * be stored literally, which is a field the allow-list never named.
+ */
+const FORBIDDEN_KEYS = new Set(["__proto__", "constructor", "prototype"]);
+
+function safeKey(key: string, max = 64): string | null {
+  if (FORBIDDEN_KEYS.has(key)) return null;
+  return str(key, max);
+}
+
 function sanitizePreferences(raw: unknown): ProfilePreferences {
   const p = isRecord(raw) ? raw : {};
   const locale = p.locale;
@@ -121,21 +136,25 @@ export function sanitizeProfile(raw: unknown): Profile | null {
     }
   }
 
-  const records: Profile["records"] = {};
+  // Object.create(null): a JSON payload can carry `__proto__` as an OWN
+  // property, and assigning it on a normal object hits the prototype setter
+  // instead of defining a key — so the rebuilt record carried a field the
+  // allow-list never named.
+  const records: Profile["records"] = Object.create(null);
   if (isRecord(raw.records)) {
     for (const [key, value] of Object.entries(raw.records).slice(0, MAX_RECORD_KEYS)) {
       if (!isRecord(value)) continue;
-      const short = str(key, 64);
+      const short = safeKey(key);
       const val = num(value.value, -1e9, 1e9);
       const achievedAt = isoDate(value.achievedAt);
       if (short && val !== null && achievedAt) records[short] = { value: val, achievedAt };
     }
   }
 
-  const achievements: Profile["achievements"] = {};
+  const achievements: Profile["achievements"] = Object.create(null);
   if (isRecord(raw.achievements)) {
     for (const [key, value] of Object.entries(raw.achievements).slice(0, MAX_ACHIEVEMENTS)) {
-      const short = str(key, 64);
+      const short = safeKey(key);
       const at = isoDate(value);
       if (short && at) achievements[short] = at;
     }
@@ -171,10 +190,10 @@ export function sanitizeProfile(raw: unknown): Profile | null {
 
 function sanitizeExerciseResult(raw: unknown): ExerciseResult | null {
   if (!isRecord(raw) || !isExerciseId(raw.exerciseId)) return null;
-  const details: Record<string, number> = {};
+  const details: Record<string, number> = Object.create(null);
   if (isRecord(raw.details)) {
     for (const [key, value] of Object.entries(raw.details).slice(0, 32)) {
-      const short = str(key, 64);
+      const short = safeKey(key);
       const n = num(value, -1e9, 1e9);
       if (short && n !== null) details[short] = n;
     }

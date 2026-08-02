@@ -19,10 +19,11 @@ function isRecord(v: unknown): v is Record<string, unknown> {
 }
 
 function sanitizeStamps(raw: unknown): Record<string, string> {
-  const out: Record<string, string> = {};
+  const out: Record<string, string> = Object.create(null);
   if (!isRecord(raw)) return out;
   for (const [key, value] of Object.entries(raw).slice(0, MAX_TOMBSTONES)) {
     if (typeof key !== "string" || key.length === 0 || key.length > 64) continue;
+    if (key === "__proto__" || key === "constructor" || key === "prototype") continue;
     if (typeof value !== "string" || Number.isNaN(Date.parse(value))) continue;
     out[key.slice(0, 64)] = value.slice(0, 40);
   }
@@ -43,13 +44,14 @@ export function sanitizeSyncState(raw: unknown): SyncState | null {
   if (raw.profiles.length > MAX_PROFILES || raw.sessions.length > MAX_SESSIONS) return null;
 
   const profiles = raw.profiles.map(sanitizeProfile).filter((p) => p !== null);
-  const known = new Set(profiles.map((p) => p.id));
-  // Sessions whose profile did not survive are orphans; the merge drops them
-  // anyway, and keeping them would mean writing rows nothing can reach.
-  const sessions = raw.sessions
-    .map(sanitizeSession)
-    .filter((s) => s !== null)
-    .filter((s) => known.has(s.profileId));
+  // Orphan filtering is deliberately NOT done here. mergeStates already drops
+  // sessions with no live profile, using the union of local and remote
+  // profiles — strictly more information than this side has. Filtering on the
+  // remote payload alone deleted sessions whose profile merely failed
+  // validation here while existing perfectly well locally, and the merged
+  // result is pushed back, so one bad field on one profile erased that
+  // profile's whole history for every device in the group.
+  const sessions = raw.sessions.map(sanitizeSession).filter((s) => s !== null);
 
   const dataVersion = typeof raw.dataVersion === "number" ? raw.dataVersion : 1;
   return { dataVersion, profiles, sessions, tombstones: sanitizeTombstones(raw.tombstones) };

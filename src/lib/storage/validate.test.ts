@@ -110,7 +110,7 @@ describe("untrusted record projection", () => {
     expect(out!.exercises[0].exerciseId).toBe("number-span");
   });
 
-  it("projects a decrypted sync payload and drops orphaned sessions", () => {
+  it("projects a decrypted sync payload and leaves orphan filtering to the merge", () => {
     const profile = validProfile();
     const state = sanitizeSyncState({
       dataVersion: 8,
@@ -138,9 +138,27 @@ describe("untrusted record projection", () => {
       tombstones: { deletedProfiles: { p2: "2026-07-01T00:00:00.000Z" }, clearedSessions: "junk" },
     });
     expect(state!.profiles).toHaveLength(1);
-    expect(state!.sessions.map((s) => s.id)).toEqual(["s1"]);
+    // Both sessions survive. mergeStates drops orphans against the UNION of
+    // local and remote profiles; dropping them here, on the remote payload
+    // alone, deleted history whose profile exists perfectly well locally —
+    // and the merged result is pushed back, so the deletion spread.
+    expect(state!.sessions.map((s) => s.id).sort()).toEqual(["s1", "s2"]);
     expect(state!.tombstones.clearedSessions).toEqual({});
     expect(state!.tombstones.deletedProfiles).toEqual({ p2: "2026-07-01T00:00:00.000Z" });
+  });
+
+  it("does not emit a record carrying a field the allow-list never named", () => {
+    // JSON.parse makes `__proto__` an OWN property, so it survives to
+    // Object.entries and assigning it hits the prototype setter rather than
+    // defining a key — the rebuilt object then answers for a field nobody
+    // allowed.
+    const raw = JSON.parse(
+      '{"id":"p","name":"P","createdAt":"2026-07-01T00:00:00.000Z","records":{"__proto__":{"value":1337,"achievedAt":"2026-07-01T00:00:00.000Z"}}}',
+    );
+    const out = sanitizeProfile(raw);
+    expect(out).not.toBeNull();
+    expect((out!.records as Record<string, unknown>).value).toBeUndefined();
+    expect(Object.keys(out!.records)).toEqual([]);
   });
 
   it("rejects a sync payload that is not the expected shape at all", () => {
