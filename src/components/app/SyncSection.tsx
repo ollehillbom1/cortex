@@ -48,6 +48,10 @@ export function SyncSection() {
       await refresh();
       setShowEnable(false);
       setPassphrase("");
+      // Back to masked: one tap of Generate left the field in clear text for
+      // the component's lifetime, including the upgrade dialog where the user
+      // types their real existing passphrase.
+      setRevealPassphrase(false);
       setMessage(
         t("Sync is on. This device now shares data with everyone using the same passphrase."),
       );
