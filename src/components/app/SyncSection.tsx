@@ -96,7 +96,20 @@ export function SyncSection() {
               "Optional: sync profiles and history between devices via your own server. Data is end-to-end encrypted with a passphrase — the server only ever stores ciphertext.",
             )}
           </p>
-          <Button variant="ghost" onClick={() => setShowEnable(true)} className="mt-3 w-full">
+          <Button
+            variant="ghost"
+            onClick={() => {
+              // Pre-filled, not offered. A "Generate" button beside an empty
+              // autofocused field is an option nobody takes, so the entropy
+              // that is the ONLY defence against two households sharing a
+              // group stayed at whatever the user typed. Joining an existing
+              // group means replacing it, which is a deliberate act.
+              setPassphrase(generatePassphrase());
+              setRevealPassphrase(true);
+              setShowEnable(true);
+            }}
+            className="mt-3 w-full"
+          >
             {t("Enable sync")}
           </Button>
         </>
@@ -115,7 +128,20 @@ export function SyncSection() {
                   "This device still uses the old key derivation, which made the passphrase easier to guess from the server's files. Enter your passphrase to upgrade — your synced data comes with you. Until you do, this device will not see devices that have already upgraded.",
                 )}
               </p>
-              <Button variant="ghost" onClick={() => setShowEnable(true)} className="mt-3 w-full">
+              <Button
+                variant="ghost"
+                onClick={() => {
+                  // Pre-filled, not offered. A "Generate" button beside an empty
+                  // autofocused field is an option nobody takes, so the entropy
+                  // that is the ONLY defence against two households sharing a
+                  // group stayed at whatever the user typed. Joining an existing
+                  // group means replacing it, which is a deliberate act.
+                  setPassphrase(generatePassphrase());
+                  setRevealPassphrase(true);
+                  setShowEnable(true);
+                }}
+                className="mt-3 w-full"
+              >
                 {t("Upgrade sync security")}
               </Button>
             </div>
@@ -159,7 +185,7 @@ export function SyncSection() {
           </p>
           <div className="mt-3 flex items-center justify-between gap-2">
             <p className="text-xs text-[var(--color-ink-dim)]">
-              {t("Starting a new group? Use a generated passphrase and write it down.")}
+              {t("Starting a new group? Keep the generated passphrase and write it down.")}
             </p>
             <Button
               variant="ghost"
@@ -168,7 +194,7 @@ export function SyncSection() {
                 setRevealPassphrase(true);
               }}
             >
-              {t("Generate")}
+              {t("Generate another")}
             </Button>
           </div>
           <input

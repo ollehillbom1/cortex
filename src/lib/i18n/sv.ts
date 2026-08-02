@@ -50,9 +50,9 @@ export const SV: Record<string, string> = {
     "Inga pass ännu. Ditt första pass tar cirka {goal} minuter.",
   Session: "Pass",
   "Training insight": "Träningsinsikt",
-  "Starting a new group? Use a generated passphrase and write it down.":
-    "Startar du en ny grupp? Använd en genererad lösenfras och skriv ner den.",
-  Generate: "Generera",
+  "Starting a new group? Keep the generated passphrase and write it down.":
+    "Startar du en ny grupp? Behåll den genererade lösenfrasen och skriv ner den.",
+  "Generate another": "Generera en ny",
   "Dismiss insight for today": "Dölj insikten för idag",
 
   // Backup reminder

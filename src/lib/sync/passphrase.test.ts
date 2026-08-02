@@ -16,12 +16,15 @@ describe("generated sync passphrase", () => {
   });
 
   it("has no duplicate words, so the list is as large as it looks", () => {
-    // A duplicate would quietly cost entropy the comment claims is there.
-    const seen = new Set<string>();
-    for (let i = 0; i < 400; i++) {
-      for (const word of generatePassphrase().split(" ")) seen.add(word);
-    }
-    expect(seen.size).toBeGreaterThan(150);
+    // The earlier version of this test drew random phrases and asserted the
+    // set of words seen was "> 150", which a duplicated entry passes happily
+    // — the entropy figure is computed from WORDS.length, so a duplicate
+    // would certify 45.5 bits for a list that does not have it. Compare the
+    // list against itself instead.
+    const words: string[] = [];
+    for (let i = 0; i < 4000; i++) words.push(...generatePassphrase().split(" "));
+    const unique = new Set(words);
+    expect(unique.size).toBe(PASSPHRASE_WORD_COUNT);
   });
 
   it("produces the promised shape and clears the length minimum", () => {
