@@ -12,7 +12,13 @@ export default defineConfig({
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,
   workers: 1,
-  reporter: process.env.CI ? "github" : "list",
+  // The HTML report is what the two upload-artifact steps in CI exist to
+  // preserve. With "github" alone nothing is ever written to playwright-report,
+  // so both uploads found no files and every WebKit and failure run produced
+  // no evidence to look at.
+  reporter: process.env.CI
+    ? [["github"], ["html", { open: "never" }]]
+    : [["list"], ["html", { open: "never" }]],
   timeout: 60_000,
   use: {
     baseURL: `http://127.0.0.1:${E2E_PORT}`,
