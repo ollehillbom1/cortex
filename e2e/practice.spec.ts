@@ -14,17 +14,19 @@ test.describe("practice mode", () => {
     await page.getByRole("link", { name: "Train", exact: true }).click();
     await page.getByRole("button", { name: /practice reaction/i }).click();
 
-    // Raise the level from 1 to 3 and pick 3 rounds.
+    // Reaction has no difficulty scale: the stepper is absent and the dialog
+    // says why, rather than offering a number that changes neither the task
+    // nor the score.
     const dialog = page.getByRole("dialog");
-    await dialog.getByRole("button", { name: /raise level/i }).click();
-    await dialog.getByRole("button", { name: /raise level/i }).click();
-    await expect(dialog.getByRole("group", { name: "Level" }).getByText("3")).toBeVisible();
+    await expect(dialog.getByRole("group", { name: "Level" })).toHaveCount(0);
+    await expect(dialog.getByText(/no difficulty levels/i)).toBeVisible();
     await dialog.getByRole("button", { name: "3", exact: true }).click();
     await dialog.getByRole("button", { name: /start practice/i }).click();
 
     // Instructions carry the chosen settings and the no-progress promise.
-    await page.waitForURL(/\/session\?exercise=reaction-time&level=3&rounds=3/);
-    await expect(page.getByText("Level 3 · 3 rounds")).toBeVisible();
+    await page.waitForURL(/\/session\?exercise=reaction-time&level=1&rounds=3/);
+    await expect(page.getByText("3 rounds")).toBeVisible();
+    await expect(page.getByText(/^Level \d/)).toHaveCount(0);
     await expect(page.getByText(/practice — does not affect/i)).toBeVisible();
 
     await playReactionBlock(page, 3);

@@ -14,6 +14,7 @@ import { generateSequence, scoreSequenceResponse, sequenceParams } from "./seque
 import { generatePattern, patternParams, scorePatternResponse } from "./visualPattern";
 import { generateNBackStream, nBackParams, scoreNBack } from "./nback";
 import { generateDelay, reactionParams, scoreReaction } from "./reaction";
+import type { ReactionParams } from "./reaction";
 import { dualNBackParams } from "./dualNBack";
 import { tonePatternParams } from "./tonePattern";
 import { rhythmParams } from "./rhythm";
@@ -227,7 +228,10 @@ describe("level ceilings", () => {
     "dual-n-back": (l) => dualNBackParams(l),
     "tone-pattern": (l) => tonePatternParams(l),
     "rhythm-recall": (l) => rhythmParams(l),
-    "reaction-time": (l) => reactionParams(l),
+    // Still fed a level, deliberately: reactionParams ignores it, and the
+    // measurement below is only meaningful if a reintroduced dependence
+    // would show up here.
+    "reaction-time": (l) => (reactionParams as (level?: number) => ReactionParams)(l),
   };
 
   it("stops each exercise where its parameters stop changing", () => {
@@ -306,13 +310,44 @@ describe("level ceilings", () => {
 
 describe("reaction", () => {
   it("generates delays inside the configured window", () => {
-    const params = reactionParams(1);
+    const params = reactionParams();
     const rng = createRng(11);
     for (let i = 0; i < 50; i++) {
       const d = generateDelay(rng, params);
       expect(d).toBeGreaterThanOrEqual(params.minDelayMs);
       expect(d).toBeLessThanOrEqual(params.maxDelayMs);
     }
+  });
+
+  it("has no difficulty scale, and says so", () => {
+    // The UI offered a difficulty stepper running to 40 and the profile showed
+    // a rising "Lv N", but scoreReaction is a pure function of milliseconds:
+    // the same performance scored identically at every level. The parameters
+    // the level used to move were the delay window, which changes how
+    // predictable the signal is, not how hard the task is.
+    expect(EXERCISES["reaction-time"].maxLevel).toBe(MIN_LEVEL);
+    // Checked by calling, not by inspecting the signature: a default
+    // parameter would leave Function.length at 0 while quietly restoring the
+    // level dependence. Cast so this still compiles once the parameter is
+    // gone from the type.
+    const at = (level: number) =>
+      JSON.stringify((reactionParams as (level?: number) => ReactionParams)(level));
+    for (let level = MIN_LEVEL; level <= MAX_LEVEL; level++) {
+      expect(at(level)).toBe(at(MIN_LEVEL));
+    }
+  });
+
+  it("scores a performance the same however the session was configured", () => {
+    const rounds = [
+      { kind: "ok", ms: 240 },
+      { kind: "ok", ms: 310 },
+      { kind: "false-start" },
+    ] as const;
+    const score = scoreReaction([...rounds]);
+    // Re-scoring the identical rounds must be identical — there is no second
+    // input that could move it. Stated as a test so a future "level affects
+    // scoring" change has to delete this rather than silently pass.
+    expect(scoreReaction([...rounds])).toEqual(score);
   });
 
   it("computes averages, best and false starts", () => {

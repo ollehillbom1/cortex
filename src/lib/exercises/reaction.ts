@@ -11,14 +11,17 @@ export interface ReactionParams {
   maxDelayMs: number;
 }
 
-export function reactionParams(level: number): ReactionParams {
-  // Higher levels shorten the predictable floor and widen the delay window,
-  // making anticipation less useful.
-  return {
-    rounds: 5,
-    minDelayMs: Math.max(800, 1500 - (level - 1) * 40),
-    maxDelayMs: Math.min(5000, 3200 + (level - 1) * 100),
-  };
+export function reactionParams(): ReactionParams {
+  // Deliberately not a function of level. Simple reaction time has no
+  // difficulty dimension: the task is "press when it turns green", and
+  // scoreReaction maps milliseconds to accuracy without ever consulting a
+  // level. What the level used to change was the delay window, which alters
+  // how predictable the signal is, not how hard the task is — so the same
+  // performance scored identically at level 1 and level 19 while the UI
+  // offered a difficulty stepper and the profile displayed a rising number.
+  //
+  // The window stays wide enough that anticipation does not pay.
+  return { rounds: 5, minDelayMs: 1500, maxDelayMs: 3200 };
 }
 
 export function generateDelay(rng: Rng, params: ReactionParams): number {

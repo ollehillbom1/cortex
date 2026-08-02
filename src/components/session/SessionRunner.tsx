@@ -11,7 +11,13 @@ import {
   type SessionRecord,
   type SkillState,
 } from "@/lib/domain/types";
-import { FATIGUE_FULL_MS, effectiveLevel, initialSkill, updateSkill } from "@/lib/adaptive/engine";
+import {
+  FATIGUE_FULL_MS,
+  MIN_LEVEL,
+  effectiveLevel,
+  initialSkill,
+  updateSkill,
+} from "@/lib/adaptive/engine";
 import { xpForRound } from "@/lib/progression/xp";
 import {
   dailyPlanSeed,
@@ -604,12 +610,22 @@ export function SessionRunner() {
                 </p>
               )}
               <p className="mt-2 inline-block rounded-full bg-white/8 px-3 py-1 text-xs font-semibold">
-                {t("Level {n}", {
-                  n: practice
-                    ? practice.level
-                    : effectiveLevel(skills[currentDef.id] ?? initialSkill(), currentDef.maxLevel),
-                })}{" "}
-                ·{" "}
+                {/* An exercise with no difficulty scale shows rounds only —
+                    "Level 1" there is a number that never moves and never
+                    meant anything. */}
+                {currentDef.maxLevel > MIN_LEVEL && (
+                  <>
+                    {t("Level {n}", {
+                      n: practice
+                        ? practice.level
+                        : effectiveLevel(
+                            skills[currentDef.id] ?? initialSkill(),
+                            currentDef.maxLevel,
+                          ),
+                    })}{" "}
+                    ·{" "}
+                  </>
+                )}
                 {t((currentItem?.rounds ?? 0) > 1 ? "{n} rounds" : "{n} round", {
                   n: currentItem?.rounds ?? 0,
                 })}

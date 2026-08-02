@@ -19,7 +19,8 @@ type Phase = "ready" | "waiting" | "go" | "false-start" | "result" | "timeout";
  * performance.now() captured locally; no network involved.
  */
 export function ReactionGame({
-  level,
+  // `level` is deliberately not destructured: this exercise has no difficulty
+  // scale, so consuming one would reintroduce the number that never mattered.
   seed,
   roundIndex,
   audio,
@@ -27,7 +28,7 @@ export function ReactionGame({
   onRoundComplete,
 }: GameProps) {
   const { t } = useT();
-  const params = reactionParams(level);
+  const params = reactionParams();
   const [delayMs] = useState(() => {
     const rng = createRng(seed + roundIndex * 7919);
     return generateDelay(rng, params);

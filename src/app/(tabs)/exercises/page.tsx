@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { ALL_EXERCISE_IDS, EXERCISES, MODALITY_LABELS, type ExerciseId } from "@/lib/domain/types";
-import { effectiveLevel, MAX_LEVEL, MIN_LEVEL, recentAccuracy } from "@/lib/adaptive/engine";
+import { effectiveLevel, MIN_LEVEL, recentAccuracy } from "@/lib/adaptive/engine";
 import { availableExerciseIds } from "@/lib/exercises/availability";
 import { PRACTICE_ROUND_CHOICES } from "@/lib/session/practice";
 import { useT } from "@/lib/i18n/useT";
@@ -65,9 +65,11 @@ export default function ExercisesPage() {
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2">
                     <h2 className="font-bold">{t(def.name)}</h2>
-                    <span className="rounded-full bg-white/8 px-2 py-0.5 text-[11px] font-semibold text-[var(--color-ink-dim)]">
-                      Lv {level}
-                    </span>
+                    {def.maxLevel > MIN_LEVEL && (
+                      <span className="rounded-full bg-white/8 px-2 py-0.5 text-[11px] font-semibold text-[var(--color-ink-dim)]">
+                        Lv {level}
+                      </span>
+                    )}
                   </div>
                   <p className="mt-0.5 truncate text-sm text-[var(--color-ink-dim)]">
                     {t(def.tagline)}
@@ -118,34 +120,52 @@ export default function ExercisesPage() {
             {t("Pick a fixed difficulty and go. Practice does not affect XP, streak or level.")}
           </p>
 
-          <p className="mt-4 mb-1.5 text-sm text-[var(--color-ink-dim)]">{t("Level")}</p>
-          <div
-            className="flex items-center justify-center gap-4"
-            role="group"
-            aria-label={t("Level")}
-          >
-            <button
-              type="button"
-              onClick={() => setPracticeLevel((l) => Math.max(MIN_LEVEL, l - 1))}
-              disabled={practiceLevel <= MIN_LEVEL}
-              aria-label={t("Lower level")}
-              className="touch-target rounded-2xl border border-white/10 bg-white/5 px-5 py-2.5 text-xl font-bold transition-colors active:bg-white/15 disabled:opacity-40"
-            >
-              −
-            </button>
-            <span className="w-14 text-center text-3xl font-bold tabular-nums" aria-live="polite">
-              {practiceLevel}
-            </span>
-            <button
-              type="button"
-              onClick={() => setPracticeLevel((l) => Math.min(MAX_LEVEL, l + 1))}
-              disabled={practiceLevel >= MAX_LEVEL}
-              aria-label={t("Raise level")}
-              className="touch-target rounded-2xl border border-white/10 bg-white/5 px-5 py-2.5 text-xl font-bold transition-colors active:bg-white/15 disabled:opacity-40"
-            >
-              +
-            </button>
-          </div>
+          {EXERCISES[practiceFor].maxLevel > MIN_LEVEL ? (
+            <>
+              <p className="mt-4 mb-1.5 text-sm text-[var(--color-ink-dim)]">{t("Level")}</p>
+              <div
+                className="flex items-center justify-center gap-4"
+                role="group"
+                aria-label={t("Level")}
+              >
+                <button
+                  type="button"
+                  onClick={() => setPracticeLevel((l) => Math.max(MIN_LEVEL, l - 1))}
+                  disabled={practiceLevel <= MIN_LEVEL}
+                  aria-label={t("Lower level")}
+                  className="touch-target rounded-2xl border border-white/10 bg-white/5 px-5 py-2.5 text-xl font-bold transition-colors active:bg-white/15 disabled:opacity-40"
+                >
+                  −
+                </button>
+                <span
+                  className="w-14 text-center text-3xl font-bold tabular-nums"
+                  aria-live="polite"
+                >
+                  {practiceLevel}
+                </span>
+                <button
+                  type="button"
+                  // The exercise's own ceiling, not the shared scale: the
+                  // stepper ran to 40 everywhere, so practice could be set
+                  // to a level whose parameters are identical to the top
+                  // real one — the exact false progress the per-exercise
+                  // ceiling exists to remove.
+                  onClick={() =>
+                    setPracticeLevel((l) => Math.min(EXERCISES[practiceFor].maxLevel, l + 1))
+                  }
+                  disabled={practiceLevel >= EXERCISES[practiceFor].maxLevel}
+                  aria-label={t("Raise level")}
+                  className="touch-target rounded-2xl border border-white/10 bg-white/5 px-5 py-2.5 text-xl font-bold transition-colors active:bg-white/15 disabled:opacity-40"
+                >
+                  +
+                </button>
+              </div>
+            </>
+          ) : (
+            <p className="mt-4 text-sm text-[var(--color-ink-dim)]">
+              {t("This exercise has no difficulty levels — the task is the same every time.")}
+            </p>
+          )}
 
           <p className="mt-4 mb-1.5 text-sm text-[var(--color-ink-dim)]">{t("Rounds")}</p>
           <div className="grid grid-cols-4 gap-2" role="group" aria-label={t("Rounds")}>
