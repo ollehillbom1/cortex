@@ -101,6 +101,55 @@ export class IndexedDBAdapter implements StorageAdapter {
     await db.delete("profiles", id);
   }
 
+  async commitSession(session: SessionRecord, profile: Profile): Promise<void> {
+    const db = await this.db();
+    const tx = db.transaction(["sessions", "profiles"], "readwrite");
+    const profiles = tx.objectStore("profiles");
+    // Same guard as putProfile: never overwrite a record from a newer build.
+    const existing = await profiles.get(profile.id);
+    if (existing && (existing.dataVersion ?? 1) > CURRENT_DATA_VERSION) {
+      tx.abort();
+      // The abort rejects tx.done; that is the intent, not an unhandled error.
+      await tx.done.catch(() => {});
+      throw new Error(
+        `Profile was saved by a newer version of Cortex (data version ${existing.dataVersion}). Update the app to continue.`,
+      );
+    }
+    try {
+      // Both puts inside the try: `put` validates its argument and can throw
+      // SYNCHRONOUSLY (a missing key path, a value that cannot be structured-
+      // cloned). Without this, the first put had already been issued to the
+      // transaction, the second threw before being issued, nothing aborted,
+      // and the transaction committed the half it had — a session written
+      // with no profile, which is exactly the split this method exists to
+      // prevent.
+      // Every write gets a rejection handler the instant it is issued, not
+      // once the whole batch is built. Two reasons, and both bite:
+      // `Promise.all` short-circuits on the first failure, and `put` can
+      // throw SYNCHRONOUSLY — so building an array first leaves any earlier
+      // write orphaned when a later one throws. The abort below then rejects
+      // it with nobody listening, which is an unhandled rejection on every
+      // rolled-back commit.
+      const writes: Promise<unknown>[] = [];
+      const issue = (write: Promise<unknown>) => {
+        void write.catch(() => {});
+        writes.push(write);
+      };
+      issue(tx.objectStore("sessions").put(session));
+      issue(profiles.put({ ...profile, dataVersion: CURRENT_DATA_VERSION }));
+      await Promise.all(writes);
+      await tx.done;
+    } catch (err) {
+      try {
+        tx.abort();
+      } catch {
+        /* Already aborted or finished; the rollback is what matters. */
+      }
+      await tx.done.catch(() => {});
+      throw err;
+    }
+  }
+
   async addSession(session: SessionRecord): Promise<void> {
     const db = await this.db();
     await db.put("sessions", session);

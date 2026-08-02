@@ -52,6 +52,9 @@ export const SV: Record<string, string> = {
     "Inga pass ännu. Ditt första pass tar cirka {goal} minuter.",
   Session: "Pass",
   "Training insight": "Träningsinsikt",
+  "This session could not be saved.": "Passet kunde inte sparas.",
+  "Try saving again": "Försök spara igen",
+  "Saving…": "Sparar…",
   "Nothing was recorded": "Ingenting registrerades",
   "This session had nothing that could be played, so no result was saved and your levels are unchanged.":
     "Passet innehöll inget som gick att spela, så inget resultat sparades och dina nivåer är oförändrade.",
