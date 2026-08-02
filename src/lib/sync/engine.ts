@@ -1,5 +1,9 @@
 import type { StorageAdapter } from "@/lib/storage/adapter";
-import { CURRENT_DATA_VERSION, FutureDataVersionError } from "@/lib/storage/migrations";
+import {
+  CURRENT_DATA_VERSION,
+  FutureDataVersionError,
+  storedDataVersion,
+} from "@/lib/storage/migrations";
 import { withLocalConsent } from "@/lib/storage/exportImport";
 import {
   CURRENT_SYNC_SCHEMA,
@@ -195,8 +199,20 @@ async function readLocalState(storage: StorageAdapter): Promise<SyncState> {
   const profiles = await storage.listProfiles();
   const sessions = [];
   for (const p of profiles) sessions.push(...(await storage.listSessions(p.id)));
+  // The envelope must describe what is INSIDE it, not what this build is.
+  // Hard-coding CURRENT meant a device holding a future-stamped record — a
+  // rolled-back PWA with newer IndexedDB still present, which is the exact
+  // premise the putProfile guard assumes — pushed an envelope claiming this
+  // version while carrying newer records. Receiving devices saw a version
+  // they understood, the guard never fired, and the newer data was relabelled
+  // downwards: the very corruption this change exists to stop, arriving
+  // through the push path instead of the pull path.
+  const highest = profiles.reduce(
+    (max, p) => Math.max(max, storedDataVersion(p as unknown as Record<string, unknown>)),
+    CURRENT_DATA_VERSION,
+  );
   return {
-    dataVersion: CURRENT_DATA_VERSION,
+    dataVersion: highest,
     profiles,
     sessions,
     tombstones: await loadTombstones(storage),

@@ -87,7 +87,11 @@ export default function ProfilePage() {
   const setPref = <K extends keyof Profile["preferences"]>(
     key: K,
     value: Profile["preferences"][K],
-  ) => void saveProfile({ ...profile, preferences: { ...profile.preferences, [key]: value } });
+  ) =>
+    void saveProfile({ ...profile, preferences: { ...profile.preferences, [key]: value } }).catch(
+      (err: unknown) =>
+        setMessage(err instanceof Error ? err.message : t("Import failed — file not recognised.")),
+    );
 
   const doExport = async () => {
     const bundle = await exportAll(getStorage());
@@ -124,6 +128,9 @@ export default function ProfilePage() {
   };
 
   const doReset = async () => {
+    // Save FIRST. putProfile can refuse a record from a newer build, and the
+    // deletions below are irreversible: doing them first meant a refused save
+    // left the user with no history, no progression reset, and no message.
     const fresh: Profile = {
       ...profile,
       xp: 0,
@@ -132,10 +139,16 @@ export default function ProfilePage() {
       records: {},
       achievements: {},
     };
+    try {
+      await saveProfile(fresh);
+    } catch (err) {
+      setConfirming(null);
+      setMessage(err instanceof Error ? err.message : t("Import failed — file not recognised."));
+      return;
+    }
     await getStorage().deleteSessions(profile.id);
     // Watermark so old sessions do not resurrect via sync.
     await recordSessionsCleared(getStorage(), profile.id);
-    await saveProfile(fresh);
     setConfirming(null);
     setMessage(t("Progression reset. Profile and preferences kept."));
     void syncNow(getStorage());

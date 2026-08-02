@@ -65,6 +65,9 @@ const MIGRATIONS: Migration[] = [
 ];
 
 /** The `dataVersion` a stored record carries; 1 when it predates the field. */
+/** How many migration steps exist. Pinned against CURRENT_DATA_VERSION. */
+export const MIGRATION_COUNT = MIGRATIONS.length;
+
 export function storedDataVersion(raw: Record<string, unknown>): number {
   return typeof raw.dataVersion === "number" ? raw.dataVersion : 1;
 }

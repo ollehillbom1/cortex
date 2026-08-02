@@ -4,7 +4,7 @@ import { IDBFactory } from "fake-indexeddb";
 import { IndexedDBAdapter } from "@/lib/storage/db";
 import { createProfile } from "@/lib/storage/profileFactory";
 import { CURRENT_DATA_VERSION } from "@/lib/storage/migrations";
-import { deriveCredentials, encryptJson } from "./crypto";
+import { decryptJson, deriveCredentials, encryptJson } from "./crypto";
 import { emptyTombstones, type SyncState } from "./merge";
 import { enableSync, META_SYNC_LAST_ERROR, syncNow } from "./engine";
 
@@ -85,6 +85,38 @@ describe("sync against a newer build", () => {
     // ...and the user is told what to do about it.
     const error = await storage.getMeta(META_SYNC_LAST_ERROR);
     expect(error).toMatch(/newer version/i);
+  });
+
+  it("labels the pushed envelope with the newest record it carries", async () => {
+    // A device holding a future-stamped record used to push an envelope
+    // claiming THIS version, so receiving devices saw a version they
+    // understood, the guard never fired, and the newer data was relabelled
+    // downwards — the same corruption, arriving through the push path.
+    const records = mockServer();
+    const creds = await deriveCredentials(PASSPHRASE);
+
+    const storage = new IndexedDBAdapter();
+    const profile = createProfile({ id: "local", name: "Lokal" });
+    await storage.putProfile(profile);
+    // Simulate a record written by a newer build sitting in local storage.
+    const db = await (
+      storage as unknown as { db: () => Promise<import("idb").IDBPDatabase<never>> }
+    ).db();
+    await (db as unknown as { put: (s: string, v: unknown) => Promise<unknown> }).put("profiles", {
+      ...profile,
+      dataVersion: CURRENT_DATA_VERSION + 1,
+    });
+
+    await enableSync(storage, PASSPHRASE);
+    await syncNow(storage);
+
+    const pushed = records.get(creds.groupId);
+    expect(pushed).toBeDefined();
+    const state = await decryptJson<SyncState>(creds.key, {
+      blob: pushed!.blob,
+      iv: pushed!.iv,
+    });
+    expect(state.dataVersion).toBe(CURRENT_DATA_VERSION + 1);
   });
 
   it("still syncs normally against a state at the current version", async () => {
