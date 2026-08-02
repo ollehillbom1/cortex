@@ -61,6 +61,23 @@ export function accuracyTrend(sessions: SessionRecord[], exerciseId: ExerciseId)
   );
 }
 
+/**
+ * Level per session for one exercise, oldest first.
+ *
+ * When adaptivity does its job, accuracy sits near its target band by
+ * DESIGN — a flat accuracy curve is success, not stagnation. The signal
+ * that actually carries progress within an exercise is the level trend at
+ * that held accuracy, which is what this exposes (GAME-06). Uses the last
+ * block's levelAfter per session: where the exercise ended that day.
+ */
+export function levelTrend(sessions: SessionRecord[], exerciseId: ExerciseId): TrendPoint[] {
+  return sortedAsc(sessions).flatMap((s) => {
+    const blocks = s.exercises.filter((e) => e.exerciseId === exerciseId);
+    const last = blocks[blocks.length - 1];
+    return last ? [{ at: s.startedAt, value: last.levelAfter }] : [];
+  });
+}
+
 /** Average response time per session for reaction-style exercises. */
 export function responseTimeTrend(sessions: SessionRecord[], exerciseId: ExerciseId): TrendPoint[] {
   return sortedAsc(sessions).flatMap((s) =>

@@ -3,6 +3,7 @@ import {
   activityByDay,
   exerciseLevels,
   exerciseProgress,
+  levelTrend,
   modalityBalance,
   shiftDay,
   strengthsAndFocus,
@@ -105,6 +106,38 @@ describe("stats aggregation", () => {
     expect(morning?.accuracy).toBeCloseTo(0.8, 5);
     expect(evening?.sessions).toBe(2);
     expect(parts.find((p) => p.part === "night")).toBeUndefined();
+  });
+});
+
+describe("level trend", () => {
+  const block = (levelAfter: number) => ({
+    exerciseId: "number-span" as const,
+    rounds: 5,
+    accuracy: 0.75,
+    levelBefore: levelAfter - 1,
+    levelAfter,
+    xp: 10,
+  });
+
+  it("tracks where the exercise ended per session, oldest first", () => {
+    // Accuracy is flat by DESIGN when adaptivity works; the level at held
+    // accuracy is the within-exercise progress signal (GAME-06).
+    const sessions = [
+      session("b", "2026-07-30T10:00:00Z", { exercises: [block(6)] }),
+      session("a", "2026-07-29T10:00:00Z", { exercises: [block(4), block(5)] }),
+    ];
+    expect(levelTrend(sessions, "number-span").map((p) => p.value)).toEqual([5, 6]);
+  });
+
+  it("skips sessions without the exercise, and other exercises' blocks", () => {
+    const sessions = [
+      session("a", "2026-07-29T10:00:00Z", {
+        exercises: [{ ...block(9), exerciseId: "n-back" as const }],
+      }),
+      session("b", "2026-07-30T10:00:00Z", { exercises: [block(3)] }),
+      session("c", "2026-07-31T10:00:00Z"),
+    ];
+    expect(levelTrend(sessions, "number-span").map((p) => p.value)).toEqual([3]);
   });
 });
 
