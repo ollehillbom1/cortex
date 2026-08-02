@@ -26,6 +26,17 @@ export default defineConfig({
       name: "mobile-chromium",
       use: { ...devices["iPhone 13"], defaultBrowserType: "chromium" },
     },
+    /**
+     * The primary target is an iPhone, and "iPhone 13" above is a Chromium
+     * running at iPhone dimensions — it shares nothing with Safari's engine.
+     * This project runs the same specs on WebKit, which is what the app has
+     * to work in. Selected explicitly (`--project=webkit-mobile`) so the
+     * default run stays fast; CI runs it as its own step.
+     */
+    {
+      name: "webkit-mobile",
+      use: { ...devices["iPhone 13"], defaultBrowserType: "webkit" },
+    },
   ],
   webServer: {
     command: "npm run start -- -p 3100 -H 127.0.0.1",

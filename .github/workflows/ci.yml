@@ -52,7 +52,19 @@ jobs:
       - name: Install Playwright chromium
         run: npx playwright install --with-deps chromium
       - name: Run e2e tests
-        run: npx playwright test
+        run: npx playwright test --project=mobile-chromium
+        env:
+          NEXT_TELEMETRY_DISABLED: "1"
+      # The primary target is an iPhone and the run above is Chromium at
+      # iPhone dimensions, which shares nothing with Safari's engine. WebKit
+      # has never run against this app, so it starts non-blocking: the point
+      # of this step is to find out what it says, not to fail every PR until
+      # someone looks. Promote to required once it has a green run.
+      - name: Install Playwright webkit
+        run: npx playwright install --with-deps webkit
+      - name: Run e2e tests on WebKit (non-blocking)
+        continue-on-error: true
+        run: npx playwright test --project=webkit-mobile
         env:
           NEXT_TELEMETRY_DISABLED: "1"
       - name: Upload report on failure
