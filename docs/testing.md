@@ -66,7 +66,7 @@ what the primary target actually runs.
 `webkit-mobile` runs the same specs on WebKit:
 
 ```bash
-npx playwright test --project=webkit-mobile
+E2E_WEBKIT=1 npx playwright test --project=webkit-mobile
 ```
 
 CI runs it as a separate, **non-blocking** step. WebKit has never run against

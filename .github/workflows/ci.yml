@@ -73,6 +73,7 @@ jobs:
           npx playwright test --project=webkit-mobile
         env:
           NEXT_TELEMETRY_DISABLED: "1"
+          E2E_WEBKIT: "1"
       - name: Summarise the WebKit result
         if: always()
         run: |
