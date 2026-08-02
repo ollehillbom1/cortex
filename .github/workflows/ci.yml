@@ -57,31 +57,22 @@ jobs:
           NEXT_TELEMETRY_DISABLED: "1"
       # The primary target is an iPhone and the run above is Chromium at
       # iPhone dimensions, which shares nothing with Safari's engine. WebKit
-      # has never run against this app, so it starts non-blocking: the point
-      # of this step is to find out what it says, not to fail every PR until
-      # someone looks. Promote to required once it has a green run.
+      # started non-blocking ("find out what it says") and was promoted to
+      # REQUIRED on 2026-08-02 after nine consecutive green step runs — a
+      # WebKit failure now fails the job, which is the point: Safari's engine
+      # is what the primary target actually runs.
       - name: Install Playwright webkit
-        # Non-blocking too: an apt/network failure here must not fail the job
-        # that the WebKit work promised would not block anything.
-        continue-on-error: true
         run: npx playwright install --with-deps webkit
-      - name: Run e2e tests on WebKit (non-blocking)
-        id: webkit
-        continue-on-error: true
+      - name: Run e2e tests on WebKit
         run: |
           rm -rf .sync-test-data
           npx playwright test --project=webkit-mobile
         env:
           NEXT_TELEMETRY_DISABLED: "1"
           E2E_WEBKIT: "1"
-      - name: Summarise the WebKit result
-        if: always()
-        run: |
-          echo "### WebKit e2e: ${{ steps.webkit.outcome }}" >> "$GITHUB_STEP_SUMMARY"
-          echo "Non-blocking. Promote to required once it has a green run." >> "$GITHUB_STEP_SUMMARY"
-      # if: always() — continue-on-error means the job never reaches failure()
-      # state, so a failure()-gated upload never ran and the whole point of the
-      # step (find out what WebKit says) produced no artifact at all.
+      # always(), not failure(): a green WebKit report is still worth reading
+      # — the offline tests are skipped there with their reason attached, and
+      # the report is where that shows.
       - name: Upload WebKit report
         if: always()
         uses: actions/upload-artifact@v4
