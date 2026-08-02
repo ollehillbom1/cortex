@@ -16,6 +16,7 @@ import {
   activityByDay,
   DAY_PART_LABELS,
   exerciseLevels,
+  levelTrend,
   modalityBalance,
   responseTimeTrend,
   timeOfDayPerformance,
@@ -56,6 +57,7 @@ export default function StatsPage() {
   const days = useMemo(() => activityByDay(sessions, today, 28), [sessions, today]);
   const balance = useMemo(() => modalityBalance(sessions), [sessions]);
   const trend = useMemo(() => accuracyTrend(sessions, selected).slice(-20), [sessions, selected]);
+  const levels20 = useMemo(() => levelTrend(sessions, selected).slice(-20), [sessions, selected]);
   const latency = useMemo(
     () => responseTimeTrend(sessions, selected).slice(-20),
     [sessions, selected],
@@ -109,10 +111,10 @@ export default function StatsPage() {
         </p>
       </section>
 
-      {/* Accuracy trend */}
-      <section className="card p-5" aria-label={t("Accuracy trend")}>
+      {/* Per-exercise trends: level first — accuracy is flat by design */}
+      <section className="card p-5" aria-label={t("Exercise trends")}>
         <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-[var(--color-ink-dim)]">
-          {t("Accuracy trend")}
+          {t("Exercise trends")}
         </h2>
         <div className="mb-3 flex flex-wrap gap-1.5" role="group" aria-label={t("Choose exercise")}>
           {ALL_EXERCISE_IDS.map((id) => (
@@ -131,11 +133,34 @@ export default function StatsPage() {
             </button>
           ))}
         </div>
+        {levels20.length > 1 && (
+          <>
+            <Sparkline
+              values={levels20.map((p) => p.value)}
+              label={t("{name} level", { name: t(EXERCISES[selected].name) })}
+              formatValue={(v) => `Lv ${v.toFixed(0)}`}
+            />
+            <p className="mb-3 mt-2 text-xs text-[var(--color-ink-faint)]">
+              {t(
+                "Level per session. This is the progress signal: the difficulty adapts so accuracy stays near its target, and the level climbs when you do.",
+              )}
+            </p>
+          </>
+        )}
         <Sparkline
           values={trend.map((p) => p.value * 100)}
           label={t("{name} accuracy", { name: t(EXERCISES[selected].name) })}
           formatValue={(v) => `${v.toFixed(0)}%`}
         />
+        <p className="mt-2 text-xs text-[var(--color-ink-faint)]">
+          {trend.length > 0 && trend.length < 5
+            ? t("Only {n} session(s) with this exercise so far — read this as a first hint.", {
+                n: trend.length,
+              })
+            : t(
+                "Accuracy per session. Flat near 75% means the difficulty is tracking you — look at the level above for progress.",
+              )}
+        </p>
       </section>
 
       {/* Response time trend for the selected exercise */}

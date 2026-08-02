@@ -161,9 +161,16 @@ export const SV: Record<string, string> = {
   "Last 4 weeks": "Senaste 4 veckorna",
   "Training minutes per day": "Träningsminuter per dag",
   "{days} active days · {min} min trained": "{days} aktiva dagar · {min} min tränade",
-  "Accuracy trend": "Träffsäkerhetstrend",
+  "Exercise trends": "Övningstrender",
   "Choose exercise": "Välj övning",
   "{name} accuracy": "Träffsäkerhet i {name}",
+  "{name} level": "Nivå i {name}",
+  "Level per session. This is the progress signal: the difficulty adapts so accuracy stays near its target, and the level climbs when you do.":
+    "Nivå per pass. Det är detta som visar framsteg: svårigheten anpassar sig så att träffsäkerheten ligger nära sitt mål, och nivån stiger när du gör det.",
+  "Only {n} session(s) with this exercise so far — read this as a first hint.":
+    "Bara {n} pass med den här övningen hittills — läs det som en första fingervisning.",
+  "Accuracy per session. Flat near 75% means the difficulty is tracking you — look at the level above for progress.":
+    "Träffsäkerhet per pass. Platt kring 75 % betyder att svårigheten följer dig — titta på nivån ovan för framsteg.",
   "Response time trend": "Svarstidstrend",
   "response time": "svarstid",
   "{name} average response time": "Genomsnittlig svarstid i {name}",
