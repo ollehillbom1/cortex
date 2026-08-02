@@ -154,6 +154,16 @@ export interface ExerciseDefinition {
   requiresVision: boolean;
   /** True when the exercise needs audible sound to be playable at all. */
   requiresAudio: boolean;
+  /**
+   * Highest level whose parameters still differ from the one below.
+   *
+   * The shared scale runs to 40, but each exercise stops responding well
+   * before that — n-back at 18, tone pattern at 19, dual n-back at 20.
+   * Beyond the ceiling the difficulty is identical while the level number and
+   * its XP bonus keep climbing, which is a number pretending to be progress.
+   * Measured in exercises.test.ts, so these cannot drift from the code.
+   */
+  maxLevel: number;
 }
 
 export const EXERCISES: Record<ExerciseId, ExerciseDefinition> = {
@@ -166,6 +176,7 @@ export const EXERCISES: Record<ExerciseId, ExerciseDefinition> = {
     defaultRounds: 4,
     requiresVision: true,
     requiresAudio: false,
+    maxLevel: 39,
   },
   "sequence-memory": {
     id: "sequence-memory",
@@ -176,6 +187,7 @@ export const EXERCISES: Record<ExerciseId, ExerciseDefinition> = {
     defaultRounds: 4,
     requiresVision: true,
     requiresAudio: false,
+    maxLevel: 39,
   },
   "visual-pattern": {
     id: "visual-pattern",
@@ -186,6 +198,7 @@ export const EXERCISES: Record<ExerciseId, ExerciseDefinition> = {
     defaultRounds: 5,
     requiresVision: true,
     requiresAudio: false,
+    maxLevel: 30,
   },
   "n-back": {
     id: "n-back",
@@ -196,6 +209,7 @@ export const EXERCISES: Record<ExerciseId, ExerciseDefinition> = {
     defaultRounds: 1,
     requiresVision: true,
     requiresAudio: false,
+    maxLevel: 18,
   },
   "dual-n-back": {
     id: "dual-n-back",
@@ -206,6 +220,7 @@ export const EXERCISES: Record<ExerciseId, ExerciseDefinition> = {
     defaultRounds: 1,
     requiresVision: true,
     requiresAudio: true,
+    maxLevel: 20,
   },
   "auditory-digits": {
     id: "auditory-digits",
@@ -216,6 +231,7 @@ export const EXERCISES: Record<ExerciseId, ExerciseDefinition> = {
     defaultRounds: 4,
     requiresVision: false,
     requiresAudio: true,
+    maxLevel: 39,
   },
   "tone-pattern": {
     id: "tone-pattern",
@@ -226,6 +242,7 @@ export const EXERCISES: Record<ExerciseId, ExerciseDefinition> = {
     defaultRounds: 4,
     requiresVision: false,
     requiresAudio: true,
+    maxLevel: 19,
   },
   "rhythm-recall": {
     id: "rhythm-recall",
@@ -236,6 +253,7 @@ export const EXERCISES: Record<ExerciseId, ExerciseDefinition> = {
     defaultRounds: 4,
     requiresVision: false,
     requiresAudio: true,
+    maxLevel: 21,
   },
   "reaction-time": {
     id: "reaction-time",
@@ -246,6 +264,7 @@ export const EXERCISES: Record<ExerciseId, ExerciseDefinition> = {
     defaultRounds: 5,
     requiresVision: true,
     requiresAudio: false,
+    maxLevel: 19,
   },
 };
 
