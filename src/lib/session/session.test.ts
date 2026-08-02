@@ -56,17 +56,40 @@ describe("session planner", () => {
     for (const excludeVisionRequired of [false, true]) {
       const profile = createProfile({ id: "p1", name: "Test" });
       profile.preferences.excludeVisionRequired = excludeVisionRequired;
-      let previousCeiling = 0;
       for (const goal of [5, 10, 15, 20, 25]) {
         profile.preferences.dailyGoalMinutes = goal;
         const plan = planSession({ profile, recentSessions: [], seed: 5 });
+        // Every goal is met within tolerance, including for a vision-filtered
+        // profile with only three exercises to draw on — the repeat factor
+        // scales with the size of the pool. 25 clamps to the session cap.
         const capped = Math.min(goal, MAX_SESSION_MINUTES);
-        const withinTolerance = Math.abs(plan.estimatedMinutes - capped) <= capped * PLAN_TOLERANCE;
-        // Either the plan hits its target, or the pool is exhausted — in which
-        // case it must be at least as long as the next-smaller goal produced.
-        expect(withinTolerance || plan.estimatedMinutes >= previousCeiling).toBe(true);
-        expect(plan.estimatedMinutes).toBeLessThanOrEqual(MAX_SESSION_MINUTES * 1.15);
-        previousCeiling = plan.estimatedMinutes;
+        expect(Math.abs(plan.estimatedMinutes - capped)).toBeLessThanOrEqual(
+          capped * PLAN_TOLERANCE,
+        );
+        expect(plan.items.length).toBeLessThanOrEqual(8);
+      }
+    }
+  });
+
+  it("keeps blocks comparable rather than piling rounds onto the first one", () => {
+    // Growing whichever block came first produced a 20-round Pattern Recall
+    // (320s) beside a 1-round n-back (55s). The rule is now "grow the
+    // shortest block", and the property that matters is that no block
+    // dominates the session. Measured over 40 seeds x both filters: the
+    // largest block takes at most 22% of the session, and the spread between
+    // blocks (excluding the final one, which is deliberately trimmed to land
+    // on the target) is at most 4.13x with a median of 1.5.
+    for (const excludeVisionRequired of [false, true]) {
+      const profile = createProfile({ id: "p1", name: "Test" });
+      profile.preferences.excludeVisionRequired = excludeVisionRequired;
+      profile.preferences.dailyGoalMinutes = 20;
+      for (const seed of [5, 23, 25, 31, 404]) {
+        const plan = planSession({ profile, recentSessions: [], seed });
+        const seconds = plan.items.map((i) => EXERCISES[i.exerciseId].secondsPerRound * i.rounds);
+        const totalSeconds = seconds.reduce((a, b) => a + b, 0);
+        expect(Math.max(...seconds)).toBeLessThanOrEqual(totalSeconds * 0.3);
+        const head = seconds.slice(0, -1);
+        expect(Math.max(...head) / Math.min(...head)).toBeLessThanOrEqual(4.5);
       }
     }
   });
