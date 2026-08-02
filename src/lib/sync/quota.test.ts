@@ -2,7 +2,12 @@ import { afterEach, describe, expect, it } from "vitest";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
-import { QuotaExceededError, writeRecord, maxGroups, DEFAULT_MAX_GROUPS } from "./serverStore";
+import {
+  QuotaExceededError,
+  writeRecord,
+  maxTotalBytes,
+  DEFAULT_MAX_TOTAL_BYTES,
+} from "./serverStore";
 
 /**
  * Per-request size limits and per-IP rate limits bound how fast one client
@@ -45,9 +50,11 @@ describe("sync store quotas", () => {
   it("still lets an existing group keep syncing when the store is full", async () => {
     // The households already using the server must not be locked out by a
     // newcomer filling it: a replacement no larger than what it replaces is
-    // always allowed.
+    // always allowed. The ceiling is set so the store is genuinely FULL —
+    // an earlier version used a ceiling the record never reached, so the
+    // naive "refuse every write when full" implementation passed it too.
     const dir = tempDir();
-    process.env.SYNC_MAX_TOTAL_BYTES = "2000";
+    process.env.SYNC_MAX_TOTAL_BYTES = "1700";
     try {
       await writeRecord(dir, groupId(1), payload("A".repeat(1500)));
       const same = await writeRecord(dir, groupId(1), payload("B".repeat(1500), 1));
@@ -72,33 +79,17 @@ describe("sync store quotas", () => {
     }
   });
 
-  it("refuses a new group past the group ceiling", async () => {
-    const dir = tempDir();
-    process.env.SYNC_MAX_GROUPS = "3";
-    try {
-      for (let i = 1; i <= 3; i++) await writeRecord(dir, groupId(i), payload("A".repeat(10)));
-      await expect(writeRecord(dir, groupId(4), payload("A".repeat(10)))).rejects.toBeInstanceOf(
-        QuotaExceededError,
-      );
-      // ...and the groups that exist still work.
-      const again = await writeRecord(dir, groupId(1), payload("B".repeat(10), 1));
-      expect(again.rev).toBe(2);
-    } finally {
-      delete process.env.SYNC_MAX_GROUPS;
-    }
-  });
-
   it("resolves ceilings per call, so deployment settings are honoured", () => {
     // Read at module load, an env var set by the operator (or a test) after
     // import is silently ignored - the failure mode is a limit that looks
     // configured and is not.
-    expect(maxGroups()).toBe(DEFAULT_MAX_GROUPS);
-    process.env.SYNC_MAX_GROUPS = "7";
+    expect(maxTotalBytes()).toBe(DEFAULT_MAX_TOTAL_BYTES);
+    process.env.SYNC_MAX_TOTAL_BYTES = "7777";
     try {
-      expect(maxGroups()).toBe(7);
+      expect(maxTotalBytes()).toBe(7777);
     } finally {
-      delete process.env.SYNC_MAX_GROUPS;
+      delete process.env.SYNC_MAX_TOTAL_BYTES;
     }
-    expect(maxGroups()).toBe(DEFAULT_MAX_GROUPS);
+    expect(maxTotalBytes()).toBe(DEFAULT_MAX_TOTAL_BYTES);
   });
 });

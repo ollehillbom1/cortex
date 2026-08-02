@@ -37,7 +37,7 @@ const writeLimiter = createRateLimiter({ capacity: 20, refillPerMinute: 10 });
  * its cap plus the JSON envelope needs ~8.1 MB; 12 MB leaves room without
  * inviting a 100 MB POST.
  */
-const MAX_BODY_BYTES = 12_000_000;
+const MAX_BODY_BYTES = 8_500_000;
 
 /**
  * Read the body with a hard cap, aborting as soon as it is passed.
@@ -67,7 +67,9 @@ async function readBodyCapped(request: NextRequest, limit: number): Promise<stri
   } finally {
     reader.releaseLock();
   }
-  return Buffer.concat(chunks.map((c) => Buffer.from(c))).toString("utf8");
+  // Buffer.concat takes Uint8Array[] directly; mapping through Buffer.from
+  // copied every chunk a second time and doubled the peak.
+  return Buffer.concat(chunks).toString("utf8");
 }
 
 function rateLimited(retryAfterSeconds: number | undefined): NextResponse {

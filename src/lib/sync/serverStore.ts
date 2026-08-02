@@ -52,7 +52,7 @@ export function maxGroups(): number {
 
 /** Thrown when a write would take the store past a global ceiling. */
 export class QuotaExceededError extends Error {
-  constructor(readonly reason: "groups" | "bytes") {
+  constructor(readonly reason: "bytes") {
     super(`sync store quota exceeded (${reason})`);
     this.name = "QuotaExceededError";
   }
@@ -160,7 +160,12 @@ export function writeRecord(
     const previousSize = current ? await recordSize(target) : 0;
     if (nextSize > previousSize) {
       const usage = await storeUsage(dir);
-      if (!current && usage.groups >= maxGroups()) throw new QuotaExceededError("groups");
+      // Byte budget only. A group COUNT ceiling looked prudent and was the
+      // cheaper attack: 550 empty groups (~50 kB, ~2 s from one host) locked
+      // every new household out permanently, because nothing expires records
+      // and existing groups kept working so nothing surfaced it. Bytes are
+      // what the disk actually runs out of, and filling those costs the
+      // attacker the same as it costs the server.
       if (usage.bytes - previousSize + nextSize > maxTotalBytes()) {
         throw new QuotaExceededError("bytes");
       }
