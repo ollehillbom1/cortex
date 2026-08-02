@@ -57,6 +57,21 @@ export function withLocalConsent(profile: Profile): Profile {
 
 const MAX_PROFILES = 50;
 const MAX_SESSIONS = 20_000;
+/**
+ * Refused before the file is READ, not after: `file.text()` pulls the whole
+ * thing into memory, so a size check after it has already paid the cost it
+ * exists to avoid. Generous — a full 50-profile, 20k-session export is a
+ * fraction of this — but a hard stop for a mistaken or hostile gigabyte.
+ */
+export const MAX_IMPORT_BYTES = 50 * 1024 * 1024;
+
+/** Size-check, read and parse a user-chosen export file. */
+export async function readExportFile(file: { size: number; text(): Promise<string> }) {
+  if (file.size > MAX_IMPORT_BYTES) {
+    throw new ImportError("The file is too large to be a Cortex export.");
+  }
+  return parseExportBundle(await file.text());
+}
 
 export function parseExportBundle(text: string): ExportBundle {
   let raw: unknown;
@@ -103,36 +118,40 @@ export async function importBundle(
     sessionsAdded: 0,
     sessionsSkipped: 0,
   };
+  // Decide everything first, write once: the whole import lands in a single
+  // transaction, so a quota error or crash midway cannot leave profiles
+  // without their history — which a retry would then "skip" as present.
   const knownProfiles = new Set((await storage.listProfiles()).map((p) => p.id));
+  const newProfiles: Profile[] = [];
   for (const profile of bundle.profiles) {
     if (knownProfiles.has(profile.id)) {
       result.profilesSkipped++;
       continue;
     }
     const migrated = migrateProfile({ ...profile, dataVersion: bundle.dataVersion }) as Profile;
-    await storage.putProfile(withLocalConsent(migrated));
+    newProfiles.push(withLocalConsent(migrated));
     knownProfiles.add(profile.id);
     result.profilesAdded++;
   }
+
+  const knownSessions = new Set<string>();
+  for (const profileId of new Set(bundle.sessions.map((s) => s.profileId))) {
+    if (!knownProfiles.has(profileId)) continue;
+    for (const s of await storage.listSessions(profileId)) knownSessions.add(s.id);
+  }
+  const newSessions: SessionRecord[] = [];
   for (const session of bundle.sessions) {
-    if (!knownProfiles.has(session.profileId)) {
+    if (!knownProfiles.has(session.profileId) || knownSessions.has(session.id)) {
       result.sessionsSkipped++;
       continue;
     }
-    const existing = await storageHasSession(storage, session);
-    if (existing) {
-      result.sessionsSkipped++;
-      continue;
-    }
-    await storage.addSession(session);
+    knownSessions.add(session.id);
+    newSessions.push(session);
     result.sessionsAdded++;
   }
-  return result;
-}
 
-async function storageHasSession(storage: StorageAdapter, session: SessionRecord) {
-  const sessions = await storage.listSessions(session.profileId);
-  return sessions.some((s) => s.id === session.id);
+  await storage.importRecords(newProfiles, newSessions);
+  return result;
 }
 
 function validateProfile(raw: unknown, index: number): Profile {

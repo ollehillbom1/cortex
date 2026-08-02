@@ -9,7 +9,14 @@ import {
   isFutureDataVersion,
   migrateProfile,
 } from "./migrations";
-import { exportAll, importBundle, ImportError, parseExportBundle } from "./exportImport";
+import {
+  exportAll,
+  importBundle,
+  ImportError,
+  MAX_IMPORT_BYTES,
+  parseExportBundle,
+  readExportFile,
+} from "./exportImport";
 import type { SessionRecord } from "@/lib/domain/types";
 
 function makeSession(id: string, profileId: string, startedAt: string): SessionRecord {
@@ -279,6 +286,66 @@ describe("export / import", () => {
         }),
       ),
     ).toThrow(ImportError);
+  });
+
+  it("refuses an oversized file BEFORE reading it", async () => {
+    // file.text() pulls the whole file into memory; a size check after that
+    // has already paid the cost it exists to avoid.
+    let read = false;
+    const file = {
+      size: MAX_IMPORT_BYTES + 1,
+      text: async () => {
+        read = true;
+        return "{}";
+      },
+    };
+    await expect(readExportFile(file)).rejects.toThrow(/too large/);
+    expect(read).toBe(false);
+  });
+
+  it("imports everything or nothing (single transaction)", async () => {
+    // A quota error or crash midway used to leave profiles without their
+    // history — and a retry then "skipped" them as already present, making
+    // the loss permanent. Same failure-injection as the commitSession tests:
+    // an uncloneable LAST record, so every earlier write is already issued
+    // and only a rollback can undo it.
+    const p = createProfile({ id: "p", name: "P" });
+    const bundle = {
+      format: "cortex-export" as const,
+      dataVersion: CURRENT_DATA_VERSION,
+      exportedAt: "2026-08-02T00:00:00Z",
+      profiles: [p],
+      sessions: [
+        makeSession("s1", "p", "2026-07-01T10:00:00Z"),
+        { ...makeSession("s2", "p", "2026-07-02T10:00:00Z"), boom: () => "x" } as SessionRecord,
+      ],
+    };
+    await expect(importBundle(storage, bundle)).rejects.toBeTruthy();
+    expect(await storage.listProfiles()).toEqual([]);
+    expect(await storage.listSessions("p")).toEqual([]);
+
+    // And after the failure, a clean retry imports everything.
+    bundle.sessions[1] = makeSession("s2", "p", "2026-07-02T10:00:00Z");
+    const retry = await importBundle(storage, bundle);
+    expect(retry).toMatchObject({ profilesAdded: 1, sessionsAdded: 2 });
+  });
+
+  it("counts duplicate session ids inside one bundle as skipped, not double-added", async () => {
+    const p = createProfile({ id: "p", name: "P" });
+    const bundle = {
+      format: "cortex-export" as const,
+      dataVersion: CURRENT_DATA_VERSION,
+      exportedAt: "2026-08-02T00:00:00Z",
+      profiles: [p],
+      sessions: [
+        makeSession("dup", "p", "2026-07-01T10:00:00Z"),
+        makeSession("dup", "p", "2026-07-01T10:00:00Z"),
+      ],
+    };
+    const result = await importBundle(storage, bundle);
+    expect(result.sessionsAdded).toBe(1);
+    expect(result.sessionsSkipped).toBe(1);
+    expect(await storage.listSessions("p")).toHaveLength(1);
   });
 
   it("drops sessions whose profile is unknown", async () => {
