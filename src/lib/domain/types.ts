@@ -264,7 +264,8 @@ export const EXERCISES: Record<ExerciseId, ExerciseDefinition> = {
     defaultRounds: 5,
     requiresVision: true,
     requiresAudio: false,
-    maxLevel: 19,
+    // 1 means "no difficulty scale", not "capped low": see reactionParams.
+    maxLevel: 1,
   },
 };
 

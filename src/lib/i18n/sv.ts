@@ -59,6 +59,8 @@ export const SV: Record<string, string> = {
   "How Cortex handles your data": "Så hanterar Cortex dina data",
   "Ask for a 4-digit PIN when switching to this profile. It is a courtesy barrier between household profiles, not encryption.":
     "Fråga efter en fyrsiffrig PIN när man byter till den här profilen. Det är en hövlighetsspärr mellan hushållsprofiler, inte kryptering.",
+  "This exercise has no difficulty levels — the task is the same every time.":
+    "Den här övningen har inga svårighetsnivåer — uppgiften är densamma varje gång.",
   "Generate a passphrase": "Skapa en lösenfras",
   "Starting a new group? Generate a passphrase and write it down.":
     "Startar du en ny grupp? Skapa en lösenfras och skriv ned den.",
