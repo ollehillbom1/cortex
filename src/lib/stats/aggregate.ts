@@ -145,7 +145,11 @@ export function strengthsAndFocus(profile: Profile): {
 export function exerciseProgress(summary: ExerciseLevelSummary): number {
   const ceiling = EXERCISES[summary.exerciseId].maxLevel;
   if (ceiling <= MIN_LEVEL) return 0;
-  return (summary.level - MIN_LEVEL) / (ceiling - MIN_LEVEL);
+  // Clamped: an estimate stored above the ceiling — which existing profiles
+  // carry until the exercise is played once — produced values over 100% and
+  // took the top "strength" slot on a level the exercise cannot produce.
+  const fraction = (summary.level - MIN_LEVEL) / (ceiling - MIN_LEVEL);
+  return Math.min(1, Math.max(0, fraction));
 }
 
 export const DAY_PARTS = ["morning", "afternoon", "evening", "night"] as const;

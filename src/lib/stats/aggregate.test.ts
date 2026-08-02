@@ -123,6 +123,16 @@ describe("strengths and focus", () => {
     expect(focus[0].exerciseId).toBe("reaction-time");
   });
 
+  it("never reports more than complete, even for an inflated estimate", () => {
+    // Existing profiles carry estimates above the new ceilings until the
+    // exercise is played once. Unclamped, n-back at 25 scored 141% and
+    // outranked a genuinely maxed exercise.
+    const profile = createProfile({ id: "p", name: "P" });
+    profile.skills["n-back"] = { ...initialSkill(), level: 25, attempts: 10 };
+    const [summary] = exerciseLevels(profile).filter((e) => e.exerciseId === "n-back");
+    expect(exerciseProgress(summary)).toBeLessThanOrEqual(1);
+  });
+
   it("expresses progress as a fraction of the exercise's own range", () => {
     const profile = createProfile({ id: "p", name: "P" });
     profile.skills["n-back"] = { ...initialSkill(), level: 18, attempts: 10 };
