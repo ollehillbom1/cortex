@@ -61,7 +61,7 @@ type Phase = "loading" | "overview" | "instructions" | "playing" | "feedback" | 
 export function SessionRunner() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { ready, profile, saveProfile } = useProfiles();
+  const { ready, profile, refresh: refreshProfiles } = useProfiles();
   const { t } = useT();
   const audio = getAudioEngine();
 
@@ -87,6 +87,8 @@ export function SessionRunner() {
   const [completed, setCompleted] = useState<ExerciseResult[]>([]);
   const [summaryData, setSummaryData] = useState<ReturnType<typeof applySession> | null>(null);
   const [quitPrompt, setQuitPrompt] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
+  const [retrying, setRetrying] = useState(false);
 
   const blockRounds = useRef<{ result: RoundResult; level: number; xp: number }[]>([]);
   // State, not a ref: the per-round seed below is derived during render, and
@@ -94,6 +96,7 @@ export function SessionRunner() {
   const [seedBase] = useState(timeSeed);
   const startedAt = useRef<string>("");
   const persisted = useRef(false);
+  const sessionId = useRef<string>("");
   // Guards against the feedback auto-advance timer and the Continue button
   // both firing advance() for the same round.
   const advancing = useRef(false);
@@ -233,12 +236,14 @@ export function SessionRunner() {
   const persistSession = useCallback(
     async (exercises: ExerciseResult[]) => {
       if (!profile || persisted.current || exercises.length === 0) return null;
-      persisted.current = true;
       const now = new Date();
       const started = startedAt.current || now.toISOString();
       const xpEarned = exercises.reduce((a, e) => a + e.xp, 0);
+      // Stable across retries: a second attempt must overwrite the same
+      // record, not add a duplicate session.
+      if (!sessionId.current) sessionId.current = newId();
       const record: SessionRecord = {
-        id: newId(),
+        id: sessionId.current,
         profileId: profile.id,
         type: single ? "single" : "recommended",
         startedAt: started,
@@ -254,17 +259,41 @@ export function SessionRunner() {
       const applied = applySession({
         profile: { ...profile, skills: playedSkills },
         session: record,
-        priorSessionCount: priorSessions.length,
+        // Exclude this session: on a retry after a partial write it is
+        // already in storage, and counting it would shift achievements.
+        priorSessionCount: priorSessions.filter((s) => s.id !== record.id).length,
         now,
       });
-      await getStorage().addSession(applied.session);
-      await saveProfile(applied.profile);
+      // One transaction: the session and the progression it produced are a
+      // single fact. Written separately, a failure between them left history
+      // without XP (or XP without history) and nothing could tell which.
+      try {
+        await getStorage().commitSession(applied.session, {
+          ...applied.profile,
+          updatedAt: now.toISOString(),
+        });
+      } catch (err) {
+        // The guard stays down so the user can try again; the summary shows
+        // the failure instead of silently claiming the session was saved.
+        setSaveError(err instanceof Error ? err.message : "Could not save this session.");
+        return null;
+      }
+      persisted.current = true;
+      setSaveError(null);
+      await refreshProfiles();
       // Fire-and-forget: push the finished session to synced devices.
       void import("@/lib/sync/engine").then(({ syncNow }) => syncNow(getStorage()));
       return applied;
     },
-    [profile, single, skills, saveProfile],
+    [profile, single, skills, refreshProfiles],
   );
+
+  const retrySave = useCallback(async () => {
+    setRetrying(true);
+    const applied = await persistSession(completed);
+    setRetrying(false);
+    if (applied) setSummaryData(applied);
+  }, [persistSession, completed]);
 
   const advance = useCallback(async () => {
     if (!currentItem || advancing.current) return;
@@ -322,12 +351,32 @@ export function SessionRunner() {
 
   if (phase === "summary") {
     return (
-      <SessionSummary
-        applied={summaryData}
-        completed={completed}
-        skills={skills}
-        practice={!!practice}
-      />
+      <>
+        {saveError && (
+          <div className="mx-auto w-full max-w-md px-4 pt-safe">
+            <p
+              role="alert"
+              className="card mt-4 border-[var(--color-warn)]/40 p-4 text-sm text-[var(--color-ink)]"
+            >
+              {t("This session could not be saved.")} {saveError}
+            </p>
+            <Button
+              variant="ghost"
+              className="mt-2 w-full"
+              onClick={() => void retrySave()}
+              disabled={retrying}
+            >
+              {retrying ? t("Saving…") : t("Try saving again")}
+            </Button>
+          </div>
+        )}
+        <SessionSummary
+          applied={summaryData}
+          completed={completed}
+          skills={skills}
+          practice={!!practice}
+        />
+      </>
     );
   }
 

@@ -84,6 +84,27 @@ export class IndexedDBAdapter implements StorageAdapter {
     await db.delete("profiles", id);
   }
 
+  async commitSession(session: SessionRecord, profile: Profile): Promise<void> {
+    const db = await this.db();
+    const tx = db.transaction(["sessions", "profiles"], "readwrite");
+    const profiles = tx.objectStore("profiles");
+    // Same guard as putProfile: never overwrite a record from a newer build.
+    const existing = await profiles.get(profile.id);
+    if (existing && (existing.dataVersion ?? 1) > CURRENT_DATA_VERSION) {
+      tx.abort();
+      // The abort rejects tx.done; that is the intent, not an unhandled error.
+      await tx.done.catch(() => {});
+      throw new Error(
+        `Profile was saved by a newer version of Cortex (data version ${existing.dataVersion}). Update the app to continue.`,
+      );
+    }
+    await Promise.all([
+      tx.objectStore("sessions").put(session),
+      profiles.put({ ...profile, dataVersion: CURRENT_DATA_VERSION }),
+      tx.done,
+    ]);
+  }
+
   async addSession(session: SessionRecord): Promise<void> {
     const db = await this.db();
     await db.put("sessions", session);
