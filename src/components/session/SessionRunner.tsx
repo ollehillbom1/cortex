@@ -169,7 +169,8 @@ export function SessionRunner() {
       if (!currentItem) return;
       const id = currentItem.exerciseId;
       const skill = skills[id] ?? initialSkill();
-      const level = practice ? practice.level : effectiveLevel(skill);
+      const maxLevel = EXERCISES[id].maxLevel;
+      const level = practice ? practice.level : effectiveLevel(skill, maxLevel);
       const elapsedMin = startedAt.current
         ? (Date.now() - new Date(startedAt.current).getTime()) / 60_000
         : 0;
@@ -183,7 +184,7 @@ export function SessionRunner() {
           inputMs: id === "reaction-time" ? undefined : result.responseMs,
         },
         new Date(),
-        { gentle: profile?.preferences.kidMode ?? false },
+        { gentle: profile?.preferences.kidMode ?? false, maxLevel },
       );
       // Practice stays outside progression: the skill estimate is not fed and
       // no XP accrues — a chosen difficulty must not farm or wreck either.
