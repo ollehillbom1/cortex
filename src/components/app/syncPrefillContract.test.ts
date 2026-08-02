@@ -43,23 +43,23 @@ function onClickBodyForButton(src: string, label: string): string {
 describe("passphrase pre-fill", () => {
   const src = stripComments(SOURCE);
 
-  it.each([
-    ["Set up sync, or rejoin with your passphrase"],
-    ["Upgrade sync security"],
-  ])("does not generate one when opening the dialog from %s", (label) => {
-    const body = onClickBodyForButton(src, label);
-    expect(body).not.toContain("generatePassphrase(");
-    // A value left over from an earlier visit is the same trap.
-    expect(body).toContain('setPassphrase("")');
-    expect(body).toContain("setRevealPassphrase(false)");
-  });
+  it.each([["Set up sync, or rejoin with your passphrase"], ["Upgrade sync security"]])(
+    "does not generate one when opening the dialog from %s",
+    (label) => {
+      const body = onClickBodyForButton(src, label);
+      expect(body).not.toContain("generatePassphrase(");
+      // A value left over from an earlier visit is the same trap.
+      expect(body).toContain('setPassphrase("")');
+      expect(body).toContain("setRevealPassphrase(false)");
+    },
+  );
 
   it("still offers generation inside the dialog", () => {
     // PR #45's point stands: entropy is the only thing keeping two households
     // out of the same group, so generating must stay one tap away — just not
     // pre-applied to the flows that need an existing passphrase.
     expect(src).toContain("Generate a passphrase");
-    const generateAt = src.indexOf("t(\"Generate another\")");
+    const generateAt = src.indexOf('t("Generate another")');
     expect(generateAt, "in-dialog generate button not found").toBeGreaterThan(-1);
     expect(src.lastIndexOf("generatePassphrase(", generateAt)).toBeGreaterThan(-1);
   });
