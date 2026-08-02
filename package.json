@@ -18,8 +18,8 @@
   "dependencies": {
     "idb": "^8.0.3",
     "next": "16.2.12",
-    "react": "19.1.0",
-    "react-dom": "19.1.0"
+    "react": "19.2.8",
+    "react-dom": "19.2.8"
   },
   "devDependencies": {
     "@axe-core/playwright": "^4.12.1",
