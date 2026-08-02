@@ -164,41 +164,6 @@ export function SessionRunner() {
     setPhase("playing");
   };
 
-  const handleRoundComplete = useCallback(
-    (result: RoundResult) => {
-      if (!currentItem) return;
-      const id = currentItem.exerciseId;
-      const skill = skills[id] ?? initialSkill();
-      const level = practice ? practice.level : effectiveLevel(skill);
-      const elapsedMin = startedAt.current
-        ? (Date.now() - new Date(startedAt.current).getTime()) / 60_000
-        : 0;
-      const fatigue = Math.min(1, elapsedMin / 15);
-      const nextSkill = updateSkill(
-        skill,
-        {
-          accuracy: result.accuracy,
-          fatigue,
-          // Reaction accuracy is already speed-derived; don't double-count.
-          inputMs: id === "reaction-time" ? undefined : result.responseMs,
-        },
-        new Date(),
-        { gentle: profile?.preferences.kidMode ?? false },
-      );
-      // Practice stays outside progression: the skill estimate is not fed and
-      // no XP accrues — a chosen difficulty must not farm or wreck either.
-      const xp = practice
-        ? 0
-        : xpForRound({ accuracy: result.accuracy, level, perfect: result.perfect });
-      blockRounds.current.push({ result, level, xp });
-      if (!practice) setSkills((s) => ({ ...s, [id]: nextSkill }));
-      setLastRound(result);
-      advancing.current = false;
-      setPhase("feedback");
-    },
-    [currentItem, skills, practice, profile?.preferences.kidMode],
-  );
-
   const finalizeBlock = useCallback((): ExerciseResult | null => {
     if (!currentItem || blockRounds.current.length === 0) return null;
     const id = currentItem.exerciseId;
@@ -266,6 +231,65 @@ export function SessionRunner() {
     [profile, single, skills, saveProfile],
   );
 
+  /**
+   * Leave the current exercise without recording it. Used when the stimulus
+   * turned out to be unavailable: there is nothing to score, so the block is
+   * dropped rather than saved as a failed one.
+   */
+  const skipBlock = useCallback(async () => {
+    advancing.current = true;
+    blockRounds.current = [];
+    if (itemIndex + 1 < items.length) {
+      setItemIndex((i) => i + 1);
+      setPhase("instructions");
+    } else {
+      const applied = practice ? null : await persistSession(completed);
+      setSummaryData(applied);
+      setPhase("summary");
+    }
+  }, [itemIndex, items.length, practice, persistSession, completed]);
+
+  const handleRoundComplete = useCallback(
+    (result: RoundResult) => {
+      if (!currentItem) return;
+      // An unperceivable exercise is missing data, not a failed attempt:
+      // no skill update, no XP, no session record, no streak.
+      if (result.unavailable) {
+        void skipBlock();
+        return;
+      }
+      const id = currentItem.exerciseId;
+      const skill = skills[id] ?? initialSkill();
+      const level = practice ? practice.level : effectiveLevel(skill);
+      const elapsedMin = startedAt.current
+        ? (Date.now() - new Date(startedAt.current).getTime()) / 60_000
+        : 0;
+      const fatigue = Math.min(1, elapsedMin / 15);
+      const nextSkill = updateSkill(
+        skill,
+        {
+          accuracy: result.accuracy,
+          fatigue,
+          // Reaction accuracy is already speed-derived; don't double-count.
+          inputMs: id === "reaction-time" ? undefined : result.responseMs,
+        },
+        new Date(),
+        { gentle: profile?.preferences.kidMode ?? false },
+      );
+      // Practice stays outside progression: the skill estimate is not fed and
+      // no XP accrues — a chosen difficulty must not farm or wreck either.
+      const xp = practice
+        ? 0
+        : xpForRound({ accuracy: result.accuracy, level, perfect: result.perfect });
+      blockRounds.current.push({ result, level, xp });
+      if (!practice) setSkills((s) => ({ ...s, [id]: nextSkill }));
+      setLastRound(result);
+      advancing.current = false;
+      setPhase("feedback");
+    },
+    [currentItem, skills, practice, profile?.preferences.kidMode, skipBlock],
+  );
+
   const advance = useCallback(async () => {
     if (!currentItem || advancing.current) return;
     advancing.current = true;
@@ -318,6 +342,28 @@ export function SessionRunner() {
 
   if (!ready || phase === "loading" || !profile) {
     return <div className="min-h-dvh" />;
+  }
+
+  // An empty plan is reachable by URL, bookmark or PWA shortcut when the
+  // preferences leave nothing playable. Without this the overview offered a
+  // live "Start training" button leading to a blank screen — the same defect
+  // as planning a session of exercises the user cannot perceive, one layer
+  // down.
+  if (items.length === 0) {
+    return (
+      <div className="mx-auto flex min-h-dvh w-full max-w-md flex-col justify-center gap-4 px-6 text-center">
+        <h1 className="text-xl font-bold">{t("Nothing to play right now")}</h1>
+        <p className="text-sm text-[var(--color-ink-dim)]">
+          {t(
+            "No exercises can be played with your current settings: sound is off and exercises that need sight are left out. Turn sound on, or allow exercises that need sight, in Profile.",
+          )}
+        </p>
+        <Button onClick={() => router.push("/profile")}>{t("Open Profile")}</Button>
+        <Button variant="ghost" onClick={() => router.push("/")}>
+          {t("Back")}
+        </Button>
+      </div>
+    );
   }
 
   if (phase === "summary") {

@@ -231,7 +231,23 @@ export default function HomePage() {
             </span>
           )}
         </div>
-        {plan ? (
+        {plan && plan.items.length === 0 ? (
+          // Sound off plus "leave out exercises that need sight" removes every
+          // exercise. Say so instead of offering a session of blocks that
+          // cannot be played.
+          <div className="mt-3">
+            <p className="text-sm text-[var(--color-ink-dim)]">
+              {t(
+                "No exercises can be played with your current settings: sound is off and exercises that need sight are left out. Turn sound on, or allow exercises that need sight, in Profile.",
+              )}
+            </p>
+            <Link href="/profile" className="contents">
+              <Button variant="ghost" className="mt-3 w-full">
+                {t("Open Profile")}
+              </Button>
+            </Link>
+          </div>
+        ) : plan ? (
           <>
             <p className="mt-1 flex items-center gap-1.5 text-sm text-[var(--color-ink-dim)]">
               <ClockIcon className="h-4 w-4" />

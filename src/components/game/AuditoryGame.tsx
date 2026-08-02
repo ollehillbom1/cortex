@@ -156,7 +156,12 @@ export function AuditoryGame({ level, roundIndex, seed, audio, onRoundComplete }
           </Button>
           <Button
             onClick={() =>
-              onRoundComplete({ accuracy: 0, perfect: false, detail: t("Skipped — no audio") })
+              onRoundComplete({
+                accuracy: 0,
+                perfect: false,
+                unavailable: true,
+                detail: t("Skipped — no audio"),
+              })
             }
           >
             {t("Skip exercise")}
