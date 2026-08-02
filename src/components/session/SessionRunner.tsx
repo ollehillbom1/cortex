@@ -344,6 +344,28 @@ export function SessionRunner() {
     return <div className="min-h-dvh" />;
   }
 
+  // An empty plan is reachable by URL, bookmark or PWA shortcut when the
+  // preferences leave nothing playable. Without this the overview offered a
+  // live "Start training" button leading to a blank screen — the same defect
+  // as planning a session of exercises the user cannot perceive, one layer
+  // down.
+  if (items.length === 0) {
+    return (
+      <div className="mx-auto flex min-h-dvh w-full max-w-md flex-col justify-center gap-4 px-6 text-center">
+        <h1 className="text-xl font-bold">{t("Nothing to play right now")}</h1>
+        <p className="text-sm text-[var(--color-ink-dim)]">
+          {t(
+            "No exercises can be played with your current settings: sound is off and exercises that need sight are left out. Turn sound on, or allow exercises that need sight, in Profile.",
+          )}
+        </p>
+        <Button onClick={() => router.push("/profile")}>{t("Open Profile")}</Button>
+        <Button variant="ghost" onClick={() => router.push("/")}>
+          {t("Back")}
+        </Button>
+      </div>
+    );
+  }
+
   if (phase === "summary") {
     return (
       <SessionSummary

@@ -50,6 +50,11 @@ export const SV: Record<string, string> = {
     "Inga pass ännu. Ditt första pass tar cirka {goal} minuter.",
   Session: "Pass",
   "Training insight": "Träningsinsikt",
+  "Nothing was recorded": "Ingenting registrerades",
+  "This session had nothing that could be played, so no result was saved and your levels are unchanged.":
+    "Passet innehöll inget som gick att spela, så inget resultat sparades och dina nivåer är oförändrade.",
+  "Back to Today": "Tillbaka till Idag",
+  "Nothing to play right now": "Inget att spela just nu",
   "No exercises can be played with your current settings: sound is off and exercises that need sight are left out. Turn sound on, or allow exercises that need sight, in Profile.":
     "Inga övningar kan spelas med dina nuvarande inställningar: ljudet är av och övningar som kräver syn är bortvalda. Slå på ljudet, eller tillåt övningar som kräver syn, under Profil.",
   "Open Profile": "Öppna Profil",
@@ -424,7 +429,7 @@ export const SV: Record<string, string> = {
   "Needs sight": "Kräver syn",
   "Needs sound": "Kräver ljud",
   "Needs sight and sound": "Kräver syn och ljud",
-  "Show {n} exercises that need sight": "Visa {n} övningar som kräver syn",
+  "Show {n} hidden exercises": "Visa {n} dolda övningar",
   "Daily goal in minutes": "Dagligt mål i minuter",
   Language: "Språk",
   Automatic: "Automatiskt",
