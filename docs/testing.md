@@ -88,10 +88,10 @@ what the primary target actually runs.
 E2E_WEBKIT=1 npx playwright test --project=webkit-mobile
 ```
 
-CI runs it as a separate, **non-blocking** step. It has green runs since
-2026-08-02 (the two offline tests are skipped there, with the reason attached
-in the spec); it stays non-blocking until it has shown itself stable across
-runs, at which point it should be promoted to required.
+CI runs it as a **required** step since 2026-08-02, promoted from
+non-blocking after nine consecutive green step runs (the two offline tests
+are skipped there, with the reason attached in the spec). A WebKit failure
+fails the job — Safari's engine is what the primary target actually runs.
 
 If WebKit refuses to launch locally, it is usually these three system
 packages (`playwright install-deps` wants interactive sudo, so install them
@@ -110,6 +110,6 @@ screen reader.
 
 `.github/workflows/ci.yml` runs on PRs and pushes to main: `npm ci` (lockfile
 enforced) → format check → lint → typecheck → unit tests → production build →
-e2e (chromium, then WebKit non-blocking) → Docker build for **amd64 + arm64
+e2e (Chromium, then WebKit — both required) → Docker build for **amd64 + arm64
 on PRs too** — building arm64 only after merge hid a broken Raspberry Pi
 image twice.
