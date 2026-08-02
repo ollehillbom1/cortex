@@ -6,7 +6,7 @@
 npm run test          # or npm run test:watch
 ```
 
-195 tests cover the pure core and the component layer — every module in `src/lib` that contains logic:
+274 tests cover the pure core and the component layer — every module in `src/lib` that contains logic:
 
 | Area                       | File                                  | Highlights                                                                                                                                                                      |
 | -------------------------- | ------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |

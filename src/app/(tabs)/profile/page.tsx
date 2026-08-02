@@ -56,6 +56,10 @@ export default function ProfilePage() {
   const [pinSetup, setPinSetup] = useState(false);
   const [pinRemove, setPinRemove] = useState(false);
   const [coachAvailable, setCoachAvailable] = useState(false);
+  // null until known: rendering the default meant the screen asserted
+  // "nothing is sent anywhere" while sync was on, for as long as the status
+  // took to load — measured at 3 s behind a slow coach endpoint.
+  const [syncEnabled, setSyncEnabled] = useState<boolean | null>(null);
   const fileInput = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -73,6 +77,13 @@ export default function ProfilePage() {
       }
       // The AI-phrasing option only exists when the operator configured an
       // endpoint; otherwise the setting would be a dead switch.
+      // Read the sync status FIRST and independently: it used to queue behind
+      // isCoachConfigured(), a network call, so a slow endpoint held the
+      // false claim on screen for as long as it took.
+      void import("@/lib/sync/engine").then(async ({ getSyncStatus }) => {
+        const syncStatus = await getSyncStatus(getStorage());
+        if (!cancelled) setSyncEnabled(syncStatus.enabled);
+      });
       const configured = await isCoachConfigured();
       if (!cancelled) setCoachAvailable(configured);
     })();
@@ -413,7 +424,7 @@ export default function ProfilePage() {
                 {profile.pin
                   ? t("A PIN is required to switch to this profile.")
                   : t(
-                      "Ask for a 4-digit PIN when switching to this profile. Not a security feature — see PRIVACY.",
+                      "Ask for a 4-digit PIN when switching to this profile. It is a courtesy barrier between household profiles, not encryption.",
                     )}
               </span>
             </span>
@@ -463,10 +474,32 @@ export default function ProfilePage() {
         <h2 className="text-sm font-semibold uppercase tracking-wide text-[var(--color-ink-dim)]">
           {t("Your data")}
         </h2>
-        <p className="mt-2 text-sm text-[var(--color-ink-dim)]">
-          {t(
-            "Everything is stored locally in this browser — nothing is sent anywhere. Export a backup before clearing browser data or moving devices.",
-          )}
+        {/* State-aware: the flat claim was false whenever sync or the coach
+            was on, which is exactly when a user needs it to be accurate. */}
+        {syncEnabled === null ? (
+          <p className="mt-2 h-10 animate-pulse rounded bg-white/5" aria-hidden />
+        ) : (
+          <p className="mt-2 text-sm text-[var(--color-ink-dim)]">
+            {syncEnabled
+              ? t(
+                  "Your training is stored in this browser and, because sync is on, also end-to-end encrypted on your sync server. The server stores ciphertext only — it cannot read your data.",
+                )
+              : t(
+                  "Everything is stored locally in this browser — nothing is sent anywhere. Export a backup before clearing browser data or moving devices.",
+                )}
+          </p>
+        )}
+        {profile.preferences.aiCoach && (
+          <p className="mt-2 text-sm text-[var(--color-ink-dim)]">
+            {t(
+              "AI phrasing is on, so a short set of numbers from your insights is sent to the language model your server is configured with. No names, and no session history.",
+            )}
+          </p>
+        )}
+        <p className="mt-2 text-xs text-[var(--color-ink-faint)]">
+          <a className="underline" href="/privacy">
+            {t("How Cortex handles your data")}
+          </a>
         </p>
         <p className="mt-2 text-xs text-[var(--color-ink-faint)]">
           {t("Last export:")}{" "}

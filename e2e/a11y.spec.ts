@@ -45,6 +45,18 @@ test.describe("axe accessibility audit", () => {
 
     await page.goto("/profile");
     await expectNoSeriousViolations(page, "profile");
+
+    // The privacy page is linked from Profile and used to 404 in production;
+    // scanning it keeps the one page about data handling from rotting.
+    await page.goto("/privacy");
+    await expectNoSeriousViolations(page, "privacy");
+  });
+
+  test("the privacy page the app links to actually exists", async ({ page }) => {
+    const response = await page.goto("/privacy");
+    expect(response?.status()).toBe(200);
+    await expect(page.getByRole("heading", { name: "Privacy", level: 1 })).toBeVisible();
+    await expect(page.getByText(/end-to-end encrypted/i).first()).toBeVisible();
   });
 
   test("session screens are free of serious violations", async ({ page }) => {

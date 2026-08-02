@@ -33,3 +33,10 @@ cheap.
 - All interactive pages are client components; the server renders only shells.
 - The service worker is hand-written (ADR 0004) because Next has no built-in
   PWA story.
+
+## Update (2026-08-01)
+
+The decision stands; the version does not. The app runs **Next.js 16** with
+Turbopack production builds since the security upgrade in PR #24. This ADR is
+left as written — it records what was decided at the time, not what is true
+now — with this note so a reader is not misled by the version number.

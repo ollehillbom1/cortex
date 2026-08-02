@@ -52,6 +52,13 @@ export const SV: Record<string, string> = {
     "Inga pass ännu. Ditt första pass tar cirka {goal} minuter.",
   Session: "Pass",
   "Training insight": "Träningsinsikt",
+  "Your training is stored in this browser and, because sync is on, also end-to-end encrypted on your sync server. The server stores ciphertext only — it cannot read your data.":
+    "Din träning lagras i den här webbläsaren och, eftersom synk är på, även änd-till-änd-krypterad på din synkserver. Servern lagrar bara chiffertext — den kan inte läsa dina data.",
+  "AI phrasing is on, so a short set of numbers from your insights is sent to the language model your server is configured with. No names, and no session history.":
+    "AI-formulering är på, så en kort uppsättning siffror från dina insikter skickas till språkmodellen din server är konfigurerad med. Inga namn och ingen passhistorik.",
+  "How Cortex handles your data": "Så hanterar Cortex dina data",
+  "Ask for a 4-digit PIN when switching to this profile. It is a courtesy barrier between household profiles, not encryption.":
+    "Fråga efter en fyrsiffrig PIN när man byter till den här profilen. Det är en hövlighetsspärr mellan hushållsprofiler, inte kryptering.",
   "Generate a passphrase": "Skapa en lösenfras",
   "Starting a new group? Generate a passphrase and write it down.":
     "Startar du en ny grupp? Skapa en lösenfras och skriv ned den.",
