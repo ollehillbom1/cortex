@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { getStorage } from "@/lib/storage/db";
 import { MIN_PASSPHRASE_LENGTH } from "@/lib/sync/crypto";
+import { generatePassphrase } from "@/lib/sync/passphrase";
 import {
   disableSync,
   enableSync,
@@ -21,6 +22,7 @@ export function SyncSection() {
   const { refresh } = useProfiles();
   const [status, setStatus] = useState<SyncStatus | null>(null);
   const [showEnable, setShowEnable] = useState(false);
+  const [revealPassphrase, setRevealPassphrase] = useState(false);
   const [passphrase, setPassphrase] = useState("");
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
@@ -151,9 +153,23 @@ export function SyncSection() {
               { n: MIN_PASSPHRASE_LENGTH },
             )}
           </p>
+          <div className="mt-3 flex items-center justify-between gap-2">
+            <p className="text-xs text-[var(--color-ink-dim)]">
+              {t("Starting a new group? Use a generated passphrase and write it down.")}
+            </p>
+            <Button
+              variant="ghost"
+              onClick={() => {
+                setPassphrase(generatePassphrase());
+                setRevealPassphrase(true);
+              }}
+            >
+              {t("Generate")}
+            </Button>
+          </div>
           <input
             autoFocus
-            type="password"
+            type={revealPassphrase ? "text" : "password"}
             value={passphrase}
             onChange={(e) => setPassphrase(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && void doEnable()}
