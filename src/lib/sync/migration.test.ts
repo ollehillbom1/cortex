@@ -6,7 +6,13 @@ import { createProfile } from "@/lib/storage/profileFactory";
 import { CURRENT_DATA_VERSION } from "@/lib/storage/migrations";
 import { decryptJson, deriveCredentials, deriveLegacyCredentials, encryptJson } from "./crypto";
 import { emptyTombstones, type SyncState } from "./merge";
-import { enableSync, getSyncStatus, META_SYNC_GROUP_ID, META_SYNC_SCHEMA } from "./engine";
+import {
+  enableSync,
+  getSyncStatus,
+  META_SYNC_GROUP_ID,
+  META_SYNC_SCHEMA,
+  SyncGroupNotFoundError,
+} from "./engine";
 
 /**
  * The v1 -> v2 key-derivation migration. Entering the passphrase is the only
@@ -93,15 +99,19 @@ describe("sync key-derivation migration", () => {
     expect(records.get(v1.groupId)).toBeDefined();
   });
 
-  it("stores the new schema version, so the device stops asking to upgrade", async () => {
-    mockServer();
+  it("a legacy join stores the legacy schema and still advertises the v3 upgrade", async () => {
+    const records = mockServer();
+    const v2 = await deriveCredentials(PASSPHRASE);
+    records.set(v2.groupId, { ...(await encryptJson(v2.key, legacyState())), rev: 1 });
+
     const storage = new IndexedDBAdapter();
     await enableSync(storage, PASSPHRASE);
 
-    const v2 = await deriveCredentials(PASSPHRASE);
     expect(await storage.getMeta(META_SYNC_GROUP_ID)).toBe(v2.groupId);
+    // Still passphrase-derived: the device must keep offering the move to a
+    // random v3 identity, not report itself as current.
     expect(await storage.getMeta(META_SYNC_SCHEMA)).toBe("2");
-    expect((await getSyncStatus(storage)).needsUpgrade).toBe(false);
+    expect((await getSyncStatus(storage)).needsUpgrade).toBe(true);
   });
 
   it("flags a device still holding v1 credentials", async () => {
@@ -162,13 +172,17 @@ describe("sync key-derivation migration", () => {
     expect(await storage.getMeta(META_SYNC_GROUP_ID)).toBeFalsy();
   });
 
-  it("still enables sync when there is no old group to migrate", async () => {
+  it("refuses to CREATE a group from a passphrase (SEC-01)", async () => {
+    // Deterministic identities are retired: a passphrase that matches no
+    // existing group must fail loudly, not mint a group that a second
+    // household choosing the same phrase would silently share.
     const records = mockServer();
     const storage = new IndexedDBAdapter();
-    await enableSync(storage, PASSPHRASE);
+    await expect(enableSync(storage, PASSPHRASE)).rejects.toThrow(SyncGroupNotFoundError);
 
-    const v2 = await deriveCredentials(PASSPHRASE);
-    expect(records.get(v2.groupId)).toBeDefined();
-    expect((await getSyncStatus(storage)).enabled).toBe(true);
+    expect(records.size).toBe(0);
+    const status = await getSyncStatus(storage);
+    expect(status.enabled).toBe(false);
+    expect(await storage.getMeta(META_SYNC_GROUP_ID)).toBeFalsy();
   });
 });

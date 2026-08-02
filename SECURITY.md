@@ -47,20 +47,25 @@ Measures in place:
   the browser. Model output is validated before display — invented numbers and
   health-claim vocabulary are rejected. See `docs/adr/0008-optional-coach.md`.
 - **Sync endpoint** (`/api/sync/{groupId}`): the browser encrypts everything
-  with AES-GCM-256 before upload. One PBKDF2 run (310 000 iterations) over the
-  household passphrase is split with HKDF into the group id and the encryption
-  key, so the id the server stores costs as much to attack as the key itself.
-  Before v2 the id was a single unsalted SHA-256 of the passphrase, roughly
-  21 000x cheaper to brute-force from the server's filenames than the key —
-  anyone holding a copy of the data directory could have attacked it offline.
-  Devices still on v1 are prompted to re-enter their passphrase, which
-  migrates their group. The server never sees the passphrase or key, only the
-  group id, ciphertext, IV and a revision counter. Input
-  is strictly validated (hex id, base64 payload, size caps) and writes use
-  optimistic concurrency, so a stale device cannot silently overwrite newer
-  data. Knowing a passphrase grants read/write to that group — that is the
-  model (a shared household secret), so passphrases should be long and the
-  server ideally not exposed beyond your LAN/VPN.
+  with AES-GCM-256 before upload. Since v3, a group's identity is a random
+  128-bit seed shown to the user once as a **sync code**: HKDF splits it into
+  the group id and the encryption key. Nothing about the identity is chosen
+  by a person, so two households can never collide and the public endpoint's
+  404/200 answers cannot test guesses against anything smaller than 2^128.
+  The code is both the invite (a new device joins with it) and the recovery
+  (it alone restores after every device is lost) — the UI insists it is
+  saved, because the server cannot recover it. Groups created before v3
+  derived id and key from a household passphrase (PBKDF2, 310 000
+  iterations, split with HKDF); those still work for rejoin, but a
+  passphrase that matches no existing group is refused rather than allowed
+  to mint a new deterministic identity, and every pre-v3 device is offered
+  an upgrade that moves its data to a v3 group. The server never sees the
+  code, passphrase or key, only the group id, ciphertext, IV and a revision
+  counter. Input is strictly validated (hex id, base64 payload, size caps)
+  and writes use optimistic concurrency, so a stale device cannot silently
+  overwrite newer data. Holding a sync code grants read/write to that group
+  — that is the model (a shared household secret), so treat the code like a
+  key and ideally do not expose the server beyond your LAN/VPN.
 
 ## Deployment recommendations
 

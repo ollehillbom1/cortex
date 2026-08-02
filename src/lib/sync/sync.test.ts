@@ -6,11 +6,13 @@ import path from "node:path";
 import { emptyTombstones, mergeStates, type SyncState } from "./merge";
 import {
   decryptJson,
+  deriveCodeCredentials,
   deriveCredentials,
   deriveLegacyCredentials,
   encryptJson,
   isValidGroupId,
 } from "./crypto";
+import { generateSyncSeed } from "./syncCode";
 import { readRecord, RevConflictError, writeRecord, type StoredSyncRecord } from "./serverStore";
 import { createProfile } from "@/lib/storage/profileFactory";
 import { CURRENT_DATA_VERSION } from "@/lib/storage/migrations";
@@ -182,6 +184,46 @@ describe("sync crypto", () => {
     // of the other, so publishing the id cannot leak key material.
     expect(raw).not.toBe(groupId);
     expect(groupId.includes(raw)).toBe(false);
+    expect(raw.includes(groupId)).toBe(false);
+  });
+
+  it("derives exactly what it always has (golden values)", async () => {
+    // Computed with the pre-refactor implementation. If this fails, the
+    // derivation changed and EVERY existing v2 group id changed with it:
+    // every synced household would silently land in an empty group.
+    const { groupId, key } = await deriveCredentials("hemlig lösenfras");
+    expect(groupId).toBe("796dc127c832328803e82b0ac05f081d4c2ece32d7f15a2e0db8b2d63b8cf5ef");
+    expect(Buffer.from(await crypto.subtle.exportKey("raw", key)).toString("hex")).toBe(
+      "3a5e0970a2e7e17407b510cb1bfce0ab74551416b3a3450044d02848e6a5a1b2",
+    );
+  });
+
+  it("v3: same seed, same credentials; different seed, different everything", async () => {
+    const seed = generateSyncSeed();
+    const a = await deriveCodeCredentials(seed);
+    const b = await deriveCodeCredentials(seed);
+    const other = await deriveCodeCredentials(generateSyncSeed());
+    expect(a.groupId).toBe(b.groupId);
+    expect(isValidGroupId(a.groupId)).toBe(true);
+    expect(other.groupId).not.toBe(a.groupId);
+
+    const payload = await encryptJson(a.key, { v3: true });
+    expect(await decryptJson(b.key, payload)).toEqual({ v3: true });
+    await expect(decryptJson(other.key, payload)).rejects.toThrow();
+  });
+
+  it("v3: the group id is not the seed, its hash, or key material", async () => {
+    const seed = generateSyncSeed();
+    const { groupId, key } = await deriveCodeCredentials(seed);
+    const seedHex = Buffer.from(seed).toString("hex");
+    const raw = Buffer.from(await crypto.subtle.exportKey("raw", key)).toString("hex");
+    const digest = Buffer.from(
+      await crypto.subtle.digest("SHA-256", seed as BufferSource),
+    ).toString("hex");
+    expect(groupId).not.toBe(seedHex);
+    expect(groupId).not.toBe(digest);
+    expect(groupId).not.toBe(raw);
+    expect(groupId.includes(seedHex)).toBe(false);
     expect(raw.includes(groupId)).toBe(false);
   });
 

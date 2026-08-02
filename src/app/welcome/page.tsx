@@ -6,7 +6,14 @@ import { AVATAR_CHOICES, createProfile, newId } from "@/lib/storage/profileFacto
 import { requestPersistentStorage } from "@/lib/storage/persistence";
 import { getStorage } from "@/lib/storage/db";
 import { MIN_PASSPHRASE_LENGTH } from "@/lib/sync/crypto";
-import { disableSync, enableSync, getSyncStatus } from "@/lib/sync/engine";
+import {
+  disableSync,
+  enableSync,
+  getSyncStatus,
+  joinSyncGroup,
+  SyncGroupNotFoundError,
+} from "@/lib/sync/engine";
+import { looksLikeSyncCode, SyncCodeFormatError } from "@/lib/sync/syncCode";
 import { useT } from "@/lib/i18n/useT";
 import { useProfiles } from "@/components/app/ProfileProvider";
 import { Button } from "@/components/ui/Button";
@@ -61,33 +68,46 @@ export default function WelcomePage() {
   const [restoreError, setRestoreError] = useState<string | null>(null);
 
   const restore = async () => {
-    if (busy || passphrase.length < MIN_PASSPHRASE_LENGTH) return;
+    const input = passphrase.trim();
+    if (busy || input.length < MIN_PASSPHRASE_LENGTH) return;
     setBusy(true);
     setRestoreError(null);
     try {
-      // Judge success by what ARRIVED, not by how many profiles this device
-      // happens to hold. Counting local profiles meant a mistyped passphrase
-      // on a device that already had data looked like a success: it created a
-      // brand-new group on the server and pushed this device's profiles into
-      // it, silently, with the undo below never running.
-      const before = new Set((await getStorage().listProfiles()).map((p) => p.id));
-      await enableSync(getStorage(), passphrase);
+      // Joining throws before anything is persisted when the code or
+      // passphrase matches no stored group — a mistyped entry can no longer
+      // silently create a fresh group and push this device's data into it.
+      if (looksLikeSyncCode(input)) {
+        await joinSyncGroup(getStorage(), input);
+      } else {
+        await enableSync(getStorage(), input);
+      }
       const status = await getSyncStatus(getStorage());
-      const profiles = await getStorage().listProfiles();
-      const arrived = profiles.filter((p) => !before.has(p.id));
-      if (arrived.length > 0) {
-        await refresh();
-        router.replace("/");
+      if (status.lastError) {
+        // The group was found but the first cycle failed (network, corrupt
+        // record). Undo so a later "create profile" doesn't quietly push to a
+        // group the user never confirmed reaching.
+        await disableSync(getStorage());
+        setRestoreError(t("Sync failed: {error}", { error: status.lastError }));
         return;
       }
-      // Nothing came back — most likely a typo. Undo so a later "create
-      // profile" doesn't quietly start pushing to the wrong sync group.
-      await disableSync(getStorage());
-      setRestoreError(
-        status.lastError
-          ? t("Sync failed: {error}", { error: status.lastError })
-          : t("No data found for that passphrase. Check the spelling, or create a new profile."),
-      );
+      await refresh();
+      router.replace("/");
+    } catch (err) {
+      if (err instanceof SyncCodeFormatError) {
+        setRestoreError(t("That is not a complete sync code — compare it with the other device."));
+      } else if (err instanceof SyncGroupNotFoundError) {
+        setRestoreError(
+          t(
+            "No data found for that code or passphrase. Check the spelling, or create a new profile.",
+          ),
+        );
+      } else {
+        setRestoreError(
+          t("Sync failed: {error}", {
+            error: err instanceof Error ? err.message : "unknown error",
+          }),
+        );
+      }
     } finally {
       setBusy(false);
     }
@@ -240,20 +260,21 @@ export default function WelcomePage() {
           <p className="text-lg font-bold">{t("Restore from sync")}</p>
           <p className="mt-1 text-sm text-[var(--color-ink-dim)]">
             {t(
-              "Enter the sync passphrase you use on your other device. Profiles and history are fetched from your server and this device joins the sync group.",
+              "Enter the sync code from your other device (Profile → Show sync code), or the passphrase you used before sync codes existed. Profiles and history are fetched from your server and this device joins the sync group.",
             )}
           </p>
           <input
             autoFocus
-            type="password"
+            type="text"
+            autoComplete="off"
             value={passphrase}
             onChange={(e) => {
               setPassphrase(e.target.value);
               setRestoreError(null);
             }}
             onKeyDown={(e) => e.key === "Enter" && void restore()}
-            aria-label={t("Sync passphrase")}
-            placeholder={t("Sync passphrase")}
+            aria-label={t("Sync code or passphrase")}
+            placeholder={t("Sync code or passphrase")}
             className="mt-3 w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 outline-none focus:border-[var(--color-accent-2)]"
           />
           <p role="alert" className="mt-1.5 min-h-5 text-sm text-[var(--color-bad)]">

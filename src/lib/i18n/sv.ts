@@ -61,23 +61,35 @@ export const SV: Record<string, string> = {
     "Fråga efter en fyrsiffrig PIN när man byter till den här profilen. Det är en hövlighetsspärr mellan hushållsprofiler, inte kryptering.",
   "This exercise has no difficulty levels — the task is the same every time.":
     "Den här övningen har inga svårighetsnivåer — uppgiften är densamma varje gång.",
-  "Generate a passphrase": "Skapa en lösenfras",
-  "Starting a new group? Generate a passphrase and write it down.":
-    "Startar du en ny grupp? Skapa en lösenfras och skriv ned den.",
-  "Starting a new group? Keep the generated passphrase and write it down.":
-    "Startar du en ny grupp? Behåll den genererade lösenfrasen och skriv ner den.",
-  "Generate another": "Generera en ny",
-  "Reinstalled the app, or setting up a new device? Enter the passphrase you already use and this device rejoins that group — your profiles and history come back.":
-    "Har du installerat om appen eller skaffat en ny enhet? Ange lösenfrasen du redan använder så återansluter den här enheten till gruppen — dina profiler och din historik kommer tillbaka.",
-  "Set up sync, or rejoin with your passphrase":
-    "Ställ in synk, eller återanslut med din lösenfras",
-  "Set up sync": "Ställ in synk",
-  "A passphrase you already use on another device joins that group and brings its data here. A new passphrase starts a new group from this device's data.":
-    "En lösenfras du redan använder på en annan enhet ansluter till den gruppen och hämtar hit dess data. En ny lösenfras startar en ny grupp utifrån den här enhetens data.",
-  "At least {n} characters. It is the only key to your data: anyone who knows it can read and change the synced data, and it cannot be recovered if lost.":
-    "Minst {n} tecken. Den är den enda nyckeln till dina data: den som kan frasen kan läsa och ändra den synkade datan, och den går inte att återskapa om den tappas bort.",
   "Sync is on. Restored {n} profile(s) from your other devices.":
     "Synk är på. Återställde {n} profil(er) från dina andra enheter.",
+  "Sync is on. This device's data is now backed up to your server.":
+    "Synk är på. Den här enhetens data säkerhetskopieras nu till din server.",
+  "Sync is on. This device now shares data with the group.":
+    "Synk är på. Den här enheten delar nu data med gruppen.",
+  "Set up sync on this device": "Ställ in synk på den här enheten",
+  "Join with a sync code or passphrase": "Gå med via synkkod eller lösenfras",
+  "Join a sync group": "Gå med i en synkgrupp",
+  "Enter the sync code from another device (Profile → Show sync code), or the passphrase of a group created before sync codes existed.":
+    "Ange synkkoden från en annan enhet (Profil → Visa synkkod), eller lösenfrasen för en grupp som skapades innan synkkoder fanns.",
+  "Sync code or passphrase": "Synkkod eller lösenfras",
+  Join: "Gå med",
+  "That is not a complete sync code — compare it with the other device.":
+    "Det där är inte en fullständig synkkod — jämför med den andra enheten.",
+  "No sync group found. Check the code or passphrase, or create a new group instead.":
+    "Ingen synkgrupp hittades. Kontrollera koden eller lösenfrasen, eller skapa en ny grupp i stället.",
+  "Sync failed — try again.": "Synken misslyckades — försök igen.",
+  "Your sync code": "Din synkkod",
+  "Show sync code": "Visa synkkod",
+  "Write this code down and keep it safe. It is the key to your synced data: another device joins with it, and if every device is lost it is the ONLY way to get your data back. It cannot be recovered for you.":
+    "Skriv ner koden och förvara den säkert. Den är nyckeln till din synkade data: en annan enhet går med via den, och om alla enheter försvinner är den ENDA vägen tillbaka till din data. Den kan inte återskapas åt dig.",
+  "Other devices in your household must now join with this code — the old passphrase no longer finds this group.":
+    "Andra enheter i hushållet måste nu gå med via den här koden — den gamla lösenfrasen hittar inte längre den här gruppen.",
+  Copy: "Kopiera",
+  Copied: "Kopierad",
+  "I have saved my sync code": "Jag har sparat min synkkod",
+  "Sync security upgraded.": "Synksäkerheten uppgraderad.",
+  "Upgrade failed: {error}": "Uppgraderingen misslyckades: {error}",
   "No answer — tap to try again": "Inget svar — tryck för att försöka igen",
   "Round paused": "Rundan pausad",
   "The app was in the background, so this round was not scored — timings there are not comparable. Play it again when you are ready.":
@@ -594,9 +606,8 @@ export const SV: Record<string, string> = {
 
   // Sync
   "Sync between devices": "Synka mellan enheter",
-  "Optional: sync profiles and history between devices via your own server. Data is end-to-end encrypted with a passphrase — the server only ever stores ciphertext.":
-    "Valfritt: synka profiler och historik mellan enheter via din egen server. Datan är totalsträckskrypterad med en lösenfras — servern lagrar bara chiffertext.",
-  "Enable sync": "Aktivera synk",
+  "Optional: sync profiles and history between devices via your own server. Data is end-to-end encrypted — the server only ever stores ciphertext.":
+    "Valfritt: synka profiler och historik mellan enheter via din egen server. Datan är totalsträckskrypterad — servern lagrar bara chiffertext.",
   "Disable sync": "Stäng av synk",
   "Sync now": "Synka nu",
   "Syncing…": "Synkar …",
@@ -604,24 +615,20 @@ export const SV: Record<string, string> = {
   "last attempt failed:": "senaste försöket misslyckades:",
   "Synced.": "Synkat.",
   "Sync failed — see the status below.": "Synken misslyckades — se status nedan.",
-  "Sync is on. This device now shares data with everyone using the same passphrase.":
-    "Synken är på. Den här enheten delar nu data med alla som använder samma lösenfras.",
   "Sync is off. Local data stays on this device.":
     "Synken är av. Lokal data stannar på den här enheten.",
   "Security upgrade available": "Säkerhetsuppgradering tillgänglig",
-  "This device still uses the old key derivation, which made the passphrase easier to guess from the server's files. Enter your passphrase to upgrade — your synced data comes with you. Until you do, this device will not see devices that have already upgraded.":
-    "Den här enheten använder fortfarande den gamla nyckelhärledningen, som gjorde lösenfrasen lättare att gissa utifrån serverns filer. Ange din lösenfras för att uppgradera — din synkade data följer med. Tills dess ser den här enheten inte enheter som redan uppgraderat.",
+  "This group's identity is still derived from its passphrase, which can be guessed. Upgrading moves your data to a group with a random identity and gives you a sync code. Do this on ONE device; every other device then joins with that code.":
+    "Gruppens identitet härleds fortfarande ur dess lösenfras, som går att gissa. Uppgraderingen flyttar din data till en grupp med slumpmässig identitet och ger dig en synkkod. Gör detta på EN enhet; alla andra enheter går sedan med via koden.",
+  "This household already has a code — join with it": "Hushållet har redan en kod — gå med via den",
   "Upgrade sync security": "Uppgradera synksäkerheten",
-  "Choose a strong passphrase (at least {n} characters). It is the only key to your data: anyone who knows it can read and change the synced data, and it cannot be recovered if lost.":
-    "Välj en stark lösenfras (minst {n} tecken). Den är enda nyckeln till din data: den som kan frasen kan läsa och ändra synkad data, och den går inte att återställa om den tappas bort.",
-  "Sync passphrase": "Synk-lösenfras",
   "Already use Cortex? Restore from sync": "Använder du redan Cortex? Återställ från synk",
   "Restore from sync": "Återställ från synk",
   Restore: "Återställ",
-  "Enter the sync passphrase you use on your other device. Profiles and history are fetched from your server and this device joins the sync group.":
-    "Ange synk-lösenfrasen du använder på din andra enhet. Profiler och historik hämtas från din server och den här enheten går med i synk-gruppen.",
-  "No data found for that passphrase. Check the spelling, or create a new profile.":
-    "Ingen data hittades för den lösenfrasen. Kontrollera stavningen, eller skapa en ny profil.",
+  "Enter the sync code from your other device (Profile → Show sync code), or the passphrase you used before sync codes existed. Profiles and history are fetched from your server and this device joins the sync group.":
+    "Ange synkkoden från din andra enhet (Profil → Visa synkkod), eller lösenfrasen du använde innan synkkoder fanns. Profiler och historik hämtas från din server och den här enheten går med i synkgruppen.",
+  "No data found for that code or passphrase. Check the spelling, or create a new profile.":
+    "Ingen data hittades för den koden eller lösenfrasen. Kontrollera stavningen, eller skapa en ny profil.",
   "Sync failed: {error}": "Synken misslyckades: {error}",
 
   // App shell
