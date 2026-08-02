@@ -102,7 +102,7 @@ export default function ExercisesPage() {
       </ul>
       {hiddenCount > 0 && (
         <Button variant="subtle" onClick={() => setShowAll(true)}>
-          {t("Show {n} exercises that need sight", { n: hiddenCount })}
+          {t("Show {n} hidden exercises", { n: hiddenCount })}
         </Button>
       )}
       <p className="text-xs leading-relaxed text-[var(--color-ink-faint)]">

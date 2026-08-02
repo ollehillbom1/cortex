@@ -26,6 +26,8 @@ export interface StorageAdapter {
   /** Sessions for a profile, newest first, optionally limited. */
   listSessions(profileId: string, limit?: number): Promise<SessionRecord[]>;
   deleteSessions(profileId: string): Promise<void>;
+  /** Removes one session. Used when a sync merge decides it is gone. */
+  deleteSession(sessionId: string): Promise<void>;
 
   getMeta(key: string): Promise<string | undefined>;
   setMeta(key: string, value: string): Promise<void>;

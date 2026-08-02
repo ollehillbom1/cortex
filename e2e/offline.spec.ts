@@ -14,6 +14,40 @@ test.describe("offline PWA", () => {
     await page.goto("/");
   });
 
+  test("starts offline from a genuinely cold cache", async ({ page, context }) => {
+    // The existing offline test visits every route first, which pre-warms the
+    // runtime cache and hides the real gap: with the browser's HTTP cache
+    // cleared, the install step had cached HTML routes but no build assets,
+    // so a cold start rendered a bare tab bar. CacheStorage and IndexedDB are
+    // deliberately kept — that is what a reopened PWA has.
+    await createProfile(page, "Kall");
+    await page.evaluate(async () => {
+      const registration = await navigator.serviceWorker.ready;
+      if (!navigator.serviceWorker.controller) {
+        await new Promise<void>((resolve) => {
+          navigator.serviceWorker.addEventListener("controllerchange", () => resolve(), {
+            once: true,
+          });
+          registration.active?.postMessage({ type: "SKIP_WAITING" });
+        });
+      }
+    });
+    // Give the install-time asset sweep time to finish.
+    await page.waitForTimeout(1500);
+
+    const cdp = await context.newCDPSession(page);
+    await cdp.send("Network.clearBrowserCache");
+
+    await context.setOffline(true);
+    await page.reload();
+
+    await expect(page.getByRole("heading", { name: "Today's training" })).toBeVisible({
+      timeout: 20_000,
+    });
+    await expect(page.getByText(/Kall/)).toBeVisible();
+    await context.setOffline(false);
+  });
+
   test("app starts offline after the first visit", async ({ page, context }) => {
     await createProfile(page, "Offliner");
 

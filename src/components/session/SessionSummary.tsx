@@ -35,6 +35,26 @@ export function SessionSummary({
   const unlocked = applied?.unlocked ?? [];
   const newRecords = applied?.newRecords ?? [];
 
+  // Nothing was recorded: every block was skipped as unplayable. Celebrating
+  // "0% average accuracy" told the user they scored nothing and that their
+  // level would be adjusted — the opposite of "this was missing data, not a
+  // failed attempt", which is the whole point of skipping the block.
+  if (completed.length === 0) {
+    return (
+      <div className="mx-auto flex min-h-dvh w-full max-w-md flex-col justify-center gap-4 px-6 text-center">
+        <h1 className="text-2xl font-bold">{t("Nothing was recorded")}</h1>
+        <p className="text-sm text-[var(--color-ink-dim)]">
+          {t(
+            "This session had nothing that could be played, so no result was saved and your levels are unchanged.",
+          )}
+        </p>
+        <Link href="/" className="contents">
+          <Button>{t("Back to Today")}</Button>
+        </Link>
+      </div>
+    );
+  }
+
   return (
     <div className="mx-auto flex min-h-dvh w-full max-w-md flex-col px-4 pb-safe pt-safe">
       <div className="flex flex-1 flex-col justify-center gap-5 py-8">

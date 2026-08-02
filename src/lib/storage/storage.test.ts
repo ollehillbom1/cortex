@@ -3,7 +3,12 @@ import { beforeEach, describe, expect, it } from "vitest";
 import { IDBFactory } from "fake-indexeddb";
 import { IndexedDBAdapter } from "./db";
 import { createProfile } from "./profileFactory";
-import { CURRENT_DATA_VERSION, migrateProfile } from "./migrations";
+import {
+  CURRENT_DATA_VERSION,
+  MIGRATION_COUNT,
+  isFutureDataVersion,
+  migrateProfile,
+} from "./migrations";
 import { exportAll, importBundle, ImportError, parseExportBundle } from "./exportImport";
 import type { SessionRecord } from "@/lib/domain/types";
 
@@ -87,6 +92,47 @@ describe("migrations", () => {
     expect(migrated.streak.current).toBe(3);
     expect(migrated.preferences.reduceMotion).toBe(false);
     expect(migrated.preferences.audioEnabled).toBe(true);
+  });
+
+  it("leaves a record from a newer build untouched", () => {
+    // The old code stamped every record with CURRENT_DATA_VERSION on the way
+    // out, so a profile written by a newer build came back labelled as this
+    // build's version while keeping its newer shape. The migration chain
+    // would then replay on data already past it. Household sync reaches this
+    // whenever one device updates before another.
+    const future = {
+      ...createProfile({ id: "p", name: "P" }),
+      dataVersion: CURRENT_DATA_VERSION + 1,
+      somethingNew: { kept: true },
+    };
+    const out = migrateProfile(future as unknown as Record<string, unknown>);
+    expect(out.dataVersion).toBe(CURRENT_DATA_VERSION + 1);
+    expect((out as unknown as Record<string, unknown>).somethingNew).toEqual({ kept: true });
+    expect(isFutureDataVersion(future as unknown as Record<string, unknown>)).toBe(true);
+    expect(
+      isFutureDataVersion(
+        createProfile({ id: "q", name: "Q" }) as unknown as Record<string, unknown>,
+      ),
+    ).toBe(false);
+  });
+
+  it("stamps a record with the version it actually reached", () => {
+    // The first version of this test fed a record already AT the current
+    // version, which hits the early return and never enters the chain — it
+    // passed against the old unconditional re-stamp too. Feed a record from
+    // BELOW the chain's reach instead: version 0 has no migration at index
+    // -1, so the loop stops immediately and the record must carry 0, not a
+    // claim of being current.
+    const out = migrateProfile({ dataVersion: 0 } as Record<string, unknown>);
+    expect(out.dataVersion).toBe(0);
+    expect(out.dataVersion).not.toBe(CURRENT_DATA_VERSION);
+  });
+
+  it("has one migration per version step, so a bump cannot go unnoticed", () => {
+    // Without this, raising CURRENT_DATA_VERSION without adding a migration
+    // leaves every record permanently below current: db.ts rewrites it on
+    // every read, for every profile, on every sync.
+    expect(MIGRATION_COUNT).toBe(CURRENT_DATA_VERSION - 1);
   });
 
   it("migrates v2 skills to gain the latency ring buffer (v3)", () => {
