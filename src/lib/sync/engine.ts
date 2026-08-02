@@ -16,6 +16,7 @@ import {
   type EncryptedBlob,
 } from "./crypto";
 import { emptyTombstones, mergeStates, type SyncState, type SyncTombstones } from "./merge";
+import { sanitizeSyncState } from "./validateState";
 
 /**
  * Client sync engine (issue #2): pull → merge → apply locally → push, with
@@ -156,17 +157,26 @@ export async function syncNow(storage: StorageAdapter): Promise<boolean> {
       const remote = await fetchRemote(groupId);
       let remoteState: SyncState | null = null;
       if (remote.payload) {
-        remoteState = await decryptJson<SyncState>(key, remote.payload);
+        const decrypted = await decryptJson<unknown>(key, remote.payload);
         // Another device in this group runs a newer build. Merging would
         // apply fields this build does not understand and then push the
         // result back stamped with THIS version — silently downgrading the
         // whole group's data. Stop instead, and say why.
-        if (
-          typeof remoteState?.dataVersion === "number" &&
-          remoteState.dataVersion > CURRENT_DATA_VERSION
-        ) {
-          throw new FutureDataVersionError(remoteState.dataVersion);
+        //
+        // Read the version off the RAW payload, before sanitizing: a future
+        // shape may not survive the allow-list at all, and reporting it as
+        // "malformed" would hide the real reason and invite a downgrade.
+        const remoteVersion = (decrypted as { dataVersion?: unknown } | null)?.dataVersion;
+        if (typeof remoteVersion === "number" && remoteVersion > CURRENT_DATA_VERSION) {
+          throw new FutureDataVersionError(remoteVersion);
         }
+        // Decrypting proves the payload came from someone holding the group
+        // key. It proves nothing about its shape: the server stores whatever
+        // was pushed, and an older or modified client can push anything that
+        // encrypts. This used to be cast straight to SyncState and written
+        // to IndexedDB.
+        remoteState = sanitizeSyncState(decrypted);
+        if (!remoteState) throw new Error("remote sync data is malformed");
       }
 
       // 2. Merge with the full local state.

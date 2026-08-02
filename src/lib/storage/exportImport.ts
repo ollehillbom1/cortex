@@ -1,6 +1,7 @@
 import type { Profile, SessionRecord } from "@/lib/domain/types";
 import type { StorageAdapter } from "@/lib/storage/adapter";
 import { CURRENT_DATA_VERSION, migrateProfile } from "@/lib/storage/migrations";
+import { sanitizeProfile, sanitizeSession } from "@/lib/storage/validate";
 
 /**
  * JSON export / import with structural validation.
@@ -54,7 +55,6 @@ export function withLocalConsent(profile: Profile): Profile {
   return { ...profile, preferences: { ...profile.preferences, aiCoach: false } };
 }
 
-const MAX_STRING = 200;
 const MAX_PROFILES = 50;
 const MAX_SESSIONS = 20_000;
 
@@ -136,58 +136,18 @@ async function storageHasSession(storage: StorageAdapter, session: SessionRecord
 }
 
 function validateProfile(raw: unknown, index: number): Profile {
-  if (!isRecord(raw)) throw new ImportError(`Profile ${index} is malformed.`);
-  requireString(raw, "id", index, "Profile");
-  requireString(raw, "name", index, "Profile");
-  requireString(raw, "createdAt", index, "Profile");
-  if (!isRecord(raw.preferences) || !isRecord(raw.streak)) {
-    throw new ImportError(`Profile ${index} is missing required sections.`);
-  }
-  if (typeof raw.xp !== "number" || !Number.isFinite(raw.xp) || raw.xp < 0) {
-    throw new ImportError(`Profile ${index} has an invalid XP value.`);
-  }
-  const p = raw as unknown as Profile;
-  return {
-    ...p,
-    id: capString(p.id),
-    name: capString(p.name),
-    avatar: capString(typeof p.avatar === "string" ? p.avatar : "🧠", 8),
-    skills: isRecord(raw.skills) ? p.skills : {},
-    records: isRecord(raw.records) ? p.records : {},
-    achievements: isRecord(raw.achievements) ? p.achievements : {},
-  };
+  // Re-projected, not spread: only named fields with checked types and bounds
+  // survive. Spreading the original kept unknown keys, nested junk and
+  // out-of-range numbers, which is what SECURITY.md said did not happen.
+  const profile = sanitizeProfile(raw);
+  if (!profile) throw new ImportError(`Profile ${index} is malformed.`);
+  return profile;
 }
 
 function validateSession(raw: unknown, index: number): SessionRecord {
-  if (!isRecord(raw)) throw new ImportError(`Session ${index} is malformed.`);
-  requireString(raw, "id", index, "Session");
-  requireString(raw, "profileId", index, "Session");
-  requireString(raw, "startedAt", index, "Session");
-  requireString(raw, "endedAt", index, "Session");
-  if (!Array.isArray(raw.exercises)) {
-    throw new ImportError(`Session ${index} has no exercise list.`);
-  }
-  if (typeof raw.xpEarned !== "number" || !Number.isFinite(raw.xpEarned)) {
-    throw new ImportError(`Session ${index} has an invalid XP value.`);
-  }
-  const s = raw as unknown as SessionRecord;
-  return {
-    ...s,
-    id: capString(s.id),
-    profileId: capString(s.profileId),
-    unlocked: Array.isArray(raw.unlocked) ? s.unlocked : [],
-  };
-}
-
-function requireString(obj: Record<string, unknown>, key: string, index: number, kind: string) {
-  const v = obj[key];
-  if (typeof v !== "string" || v.length === 0 || v.length > MAX_STRING) {
-    throw new ImportError(`${kind} ${index} has an invalid "${key}" field.`);
-  }
-}
-
-function capString(v: string, max = MAX_STRING): string {
-  return v.slice(0, max);
+  const session = sanitizeSession(raw);
+  if (!session) throw new ImportError(`Session ${index} is malformed.`);
+  return session;
 }
 
 function isRecord(v: unknown): v is Record<string, unknown> {
