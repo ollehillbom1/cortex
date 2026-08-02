@@ -11,6 +11,7 @@ import {
 } from "react";
 import type { Profile } from "@/lib/domain/types";
 import { getStorage } from "@/lib/storage/db";
+import { localeOf } from "@/lib/i18n";
 
 /**
  * Loads profiles from IndexedDB and exposes the active one. This context is a
@@ -84,11 +85,11 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
     root.dataset.largeText =
       profile?.preferences.largeText || profile?.preferences.kidMode ? "true" : "false";
     root.dataset.reduceMotion = profile?.preferences.reduceMotion ? "true" : "false";
-  }, [
-    profile?.preferences.largeText,
-    profile?.preferences.reduceMotion,
-    profile?.preferences.kidMode,
-  ]);
+    // Keep <html lang> truthful: the document is server-rendered as English,
+    // but the content follows the profile. A screen reader reading Swedish
+    // text with an English voice is the visible symptom.
+    root.lang = localeOf(profile);
+  }, [profile]);
 
   const setActiveProfile = useCallback(async (id: string) => {
     await getStorage().setMeta(ACTIVE_PROFILE_KEY, id);
