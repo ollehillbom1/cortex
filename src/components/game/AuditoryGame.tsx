@@ -76,12 +76,15 @@ export function AuditoryGame({ level, roundIndex, seed, audio, onRoundComplete }
     for (let i = 0; i < items.length; i++) {
       if (cancelled.current) return;
       setPresentIndex(i);
+      // digitMs is THE pacing parameter the level moves (review: it was
+      // computed and never used — the pause was a constant, so presentation
+      // speed never changed with level, in either mode).
       if (speechMode) {
         await audio.speakDigit(items[i], speechLang(locale));
-        await wait(params.gapMs + 150);
+        await wait(params.digitMs);
       } else {
         await audio.playTone(TONE_FREQUENCIES[items[i]], 420);
-        await wait(230);
+        await wait(Math.max(80, params.digitMs - 420));
       }
     }
     if (!cancelled.current) {

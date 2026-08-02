@@ -36,6 +36,20 @@ describe("number span", () => {
     }
   });
 
+  it("auditory pacing lives in digitMs, the parameter the sound UI actually uses", () => {
+    // The review found digitMs computed and never used: the spoken/tone gap
+    // was a constant, so "level up" changed nothing audible. The auditory
+    // ramp now lives entirely in digitMs — strictly faster on every level
+    // up to the ceiling, with the floor binding exactly there.
+    const cap = EXERCISES["auditory-digits"].maxLevel;
+    for (let level = 2; level <= cap; level++) {
+      const prev = numberSpanParams(level - 1, 0, "auditory");
+      const curr = numberSpanParams(level, 0, "auditory");
+      expect(curr.digitMs, `level ${level} does not pace faster`).toBeLessThan(prev.digitMs);
+      expect(curr.gapMs).toBe(prev.gapMs); // constant: it is not what the UI paces by
+    }
+  });
+
   it("introduces reverse recall from level 4 on alternating rounds", () => {
     expect(numberSpanParams(3, 1).direction).toBe("forward");
     expect(numberSpanParams(4, 0).direction).toBe("forward");
