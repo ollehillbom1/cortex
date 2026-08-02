@@ -21,6 +21,9 @@ const RUNTIME_CACHE = `${CACHE_PREFIX}-${BUILD_ID}`;
 
 const PRECACHE_URLS = ["/", "/offline", "/manifest.webmanifest"];
 
+/** Routes whose HTML and assets a cold start needs. */
+const ROUTES_TO_PRECACHE = ["/", "/welcome", "/exercises", "/stats", "/profile", "/session", "/offline"];
+
 self.addEventListener("install", (event) => {
   event.waitUntil(precache());
 });
@@ -40,24 +43,43 @@ async function precache() {
   } catch {
     /* Best-effort: runtime caching still covers what is fetched later. */
   }
-  try {
-    const shell = await cache.match("/");
-    if (!shell) return;
-    const html = await shell.clone().text();
-    const assets = new Set();
-    for (const match of html.matchAll(/["'(](\/_next\/static\/[^"')\s]+)["')\s]/g)) {
-      assets.add(match[1]);
+  // Every route, not just "/": the assets are per-page, so scraping only the
+  // shell left each other route missing a chunk on a cold start — the app
+  // opened and every tab was blank.
+  const assets = new Set();
+  for (const route of ROUTES_TO_PRECACHE) {
+    try {
+      const page = (await cache.match(route)) ?? (await fetch(route));
+      if (!page || !page.ok) continue;
+      if (!(await cache.match(route))) await cache.put(route, page.clone());
+      collectAssets(await page.clone().text(), assets);
+    } catch {
+      /* One unreachable route must not stop the others. */
     }
-    await Promise.all(
-      [...assets].map((url) =>
-        cache.add(url).catch(() => {
-          /* One missing asset must not fail the whole install. */
-        }),
-      ),
-    );
-  } catch {
-    /* Parsing is opportunistic; never block activation on it. */
   }
+  await Promise.all(
+    [...assets].map((url) =>
+      cache.add(url).catch(() => {
+        /* One missing asset must not fail the whole install. */
+      }),
+    ),
+  );
+}
+
+/**
+ * Pull /_next/static URLs out of a page's HTML.
+ *
+ * The character class excludes backslash on purpose: Next embeds these paths
+ * inside escaped JSON, where they appear as \"/_next/static/...\". A class of
+ * [^"')\s] swallowed the closing backslash, producing URLs that 308-redirect
+ * and get stored a second time under a bogus key — six phantom entries and
+ * ~184 kB of duplicate download per install, measured.
+ */
+function collectAssets(html, into) {
+  for (const match of html.matchAll(/["'(](\/_next\/static\/[^"')\s\\]+)["')\s\\]/g)) {
+    into.add(match[1]);
+  }
+  return into;
 }
 
 self.addEventListener("activate", (event) => {
@@ -140,7 +162,7 @@ async function networkFirst(request) {
   const cache = await caches.open(RUNTIME_CACHE);
   try {
     const response = await fetch(request);
-    if (response.ok) await cache.put(request, response.clone());
+    if (response.ok) await storeQuietly(request, response);
     return response;
   } catch (err) {
     const cached = await cache.match(request);
@@ -153,7 +175,7 @@ async function navigationHandler(request, url) {
   const cache = await caches.open(RUNTIME_CACHE);
   try {
     const response = await fetch(request);
-    if (response.ok) await cache.put(url.pathname, response.clone());
+    if (response.ok) await storeQuietly(url.pathname, response);
     return response;
   } catch {
     const cached =
@@ -165,5 +187,22 @@ async function navigationHandler(request, url) {
       status: 503,
       headers: { "Content-Type": "text/plain" },
     });
+  }
+}
+
+/**
+ * Cache a response without letting a storage failure become a page failure.
+ *
+ * Awaiting cache.put is right — an un-awaited put can be cut short when the
+ * worker is killed — but an unguarded await turns a full quota into a thrown
+ * fetch: online users were served yesterday's page, or a broken chunk, with
+ * no indication why.
+ */
+async function storeQuietly(key, response) {
+  try {
+    const cache = await caches.open(RUNTIME_CACHE);
+    await cache.put(key, response.clone());
+  } catch {
+    /* Out of quota or evicted mid-write; the response still goes to the page. */
   }
 }
