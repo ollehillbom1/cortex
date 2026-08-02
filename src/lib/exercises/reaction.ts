@@ -69,8 +69,14 @@ export function scoreReaction(rounds: ReactionRound[]): ReactionScore {
 export const REACTION_DEADLINE_MS = 3000;
 
 /**
- * Below this, a press is anticipation rather than perception: simple visual
- * reaction times do not go under ~150 ms in adults, and a lucky guess timed
- * to the delay would otherwise land in the personal-best record.
+ * Below this, a press is anticipation rather than perception.
+ *
+ * 100 ms is the conventional anticipation threshold in reaction-time
+ * research; simple visual RT in adults centres around 200-250 ms, so 120 ms
+ * leaves headroom for a genuinely fast responder while still catching a guess
+ * timed to the delay, which would otherwise land in the personal-best record.
+ * Note that the clock starts on the painted frame, which can be up to one
+ * frame late — so a real 150 ms reaction can be recorded as ~135 ms, and the
+ * floor must stay well under that.
  */
 export const MIN_PLAUSIBLE_MS = 120;

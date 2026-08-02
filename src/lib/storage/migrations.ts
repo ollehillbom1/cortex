@@ -13,7 +13,7 @@ import { initialStreak } from "@/lib/progression/streak";
  * db.ts via the idb `upgrade` callback.
  */
 
-export const CURRENT_DATA_VERSION = 8;
+export const CURRENT_DATA_VERSION = 9;
 
 export type StoredProfile = Profile & { dataVersion?: number };
 
@@ -61,6 +61,19 @@ const MIGRATIONS: Migration[] = [
   (p) => {
     const preferences = (p.preferences ?? {}) as Record<string, unknown>;
     return { ...p, preferences: { aiCoach: false, ...preferences } };
+  },
+  // v8 -> v9: recentInputMs changed unit from per-round to per-item. Mixing
+  // the two makes the median meaningless — an old per-round value is several
+  // times any per-item one, so the baseline never trips and the latency
+  // damper is silently off until the buffer rolls over. Clearing it costs a
+  // few rounds of latency modulation and nothing else.
+  (p) => {
+    const skills = (p.skills ?? {}) as Record<string, Record<string, unknown>>;
+    const cleared: Record<string, Record<string, unknown>> = {};
+    for (const [id, skill] of Object.entries(skills)) {
+      cleared[id] = { ...skill, recentInputMs: [] };
+    }
+    return { ...p, skills: cleared };
   },
 ];
 

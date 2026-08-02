@@ -53,20 +53,15 @@ export function ReactionGame({
   );
 
   const finish = useCallback(
-    (round: { kind: "ok"; ms: number } | { kind: "false-start" } | { kind: "timeout" }) => {
+    (round: { kind: "ok"; ms: number } | { kind: "false-start" }) => {
       if (done.current) return;
       done.current = true;
-      const score = round.kind === "timeout" ? { accuracy: 0 } : scoreReaction([round]);
+      const score = scoreReaction([round]);
       onRoundComplete({
         accuracy: score.accuracy,
         perfect: round.kind === "ok" && round.ms < 250,
         responseMs: round.kind === "ok" ? round.ms : undefined,
-        detail:
-          round.kind === "ok"
-            ? `${round.ms} ms`
-            : round.kind === "timeout"
-              ? t("No answer")
-              : t("False start"),
+        detail: round.kind === "ok" ? `${round.ms} ms` : t("False start"),
         extras: round.kind === "false-start" ? { falseStarts: 1 } : {},
       });
     },
@@ -111,15 +106,16 @@ export function ReactionGame({
   // ever entered it.
   useEffect(() => {
     if (phase !== "go") return;
-    const deadline = setTimeout(() => {
-      setPhase("timeout");
-      finishTimer.current = setTimeout(() => finish({ kind: "timeout" }), 900);
-    }, REACTION_DEADLINE_MS);
+    // Nothing is reported: a round nobody answered is missing data, not a
+    // failure, and scoring it 0 would punish the user for a phone call or a
+    // lock screen. The deadline exists so the round does not hang — the user
+    // re-arms it when they are back.
+    const deadline = setTimeout(() => setPhase("timeout"), REACTION_DEADLINE_MS);
     return () => clearTimeout(deadline);
   }, [phase, finish]);
 
   const press = useCallback(() => {
-    if (phase === "ready") {
+    if (phase === "ready" || phase === "timeout") {
       arm();
     } else if (phase === "waiting") {
       if (timer.current) clearTimeout(timer.current);
@@ -164,7 +160,10 @@ export function ReactionGame({
     },
     "false-start": { text: t("Too early!"), cls: "bg-[#3a1a1a] border-[var(--color-bad)]/60" },
     result: { text: `${resultMs} ms`, cls: "bg-white/8 border-[var(--color-good)]/50" },
-    timeout: { text: t("No answer"), cls: "bg-[#3a1a1a] border-[var(--color-warn)]/60" },
+    timeout: {
+      text: t("No answer — tap to try again"),
+      cls: "bg-[#3a1a1a] border-[var(--color-warn)]/60",
+    },
   };
 
   return (
@@ -173,7 +172,7 @@ export function ReactionGame({
         {phase === "ready" && t("Tap the panel, then hold steady until it turns green.")}
         {phase === "waiting" && t("Steady… wait for GO.")}
         {phase === "go" && t("Now!")}
-        {phase === "false-start" && t("That was before the signal — it will not count.")}
+        {phase === "false-start" && t("Too fast to be a reaction — that round does not count.")}
         {phase === "result" && t("Nice. Next round coming up.")}
       </PhaseHint>
       <button

@@ -64,7 +64,7 @@ describe("ReactionGame", () => {
     expect(onRoundComplete.mock.calls[0][0]).toMatchObject({ extras: { falseStarts: 1 } });
   });
 
-  it("ends a round nobody answers instead of waiting for ever", () => {
+  it("ends a round nobody answers without scoring it", () => {
     const onRoundComplete = vi.fn();
     renderGame(onRoundComplete);
 
@@ -74,8 +74,10 @@ describe("ReactionGame", () => {
     }
     act(() => vi.advanceTimersByTime(REACTION_DEADLINE_MS + 1000));
 
-    expect(onRoundComplete).toHaveBeenCalledTimes(1);
-    expect(onRoundComplete.mock.calls[0][0].accuracy).toBe(0);
+    // Nothing is reported: an unanswered round is missing data, not a
+    // failure, and a lock screen or a phone call must not cost accuracy.
+    expect(onRoundComplete).not.toHaveBeenCalled();
+    expect(screen.getByText(/no answer/i)).toBeTruthy();
   });
 
   it("arms, shows GO after the delay, and reports the round on tap", () => {

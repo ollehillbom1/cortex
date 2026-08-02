@@ -11,7 +11,7 @@ import {
   type SessionRecord,
   type SkillState,
 } from "@/lib/domain/types";
-import { effectiveLevel, initialSkill, updateSkill } from "@/lib/adaptive/engine";
+import { FATIGUE_FULL_MS, effectiveLevel, initialSkill, updateSkill } from "@/lib/adaptive/engine";
 import { xpForRound } from "@/lib/progression/xp";
 import { planSession, type PlannedItem } from "@/lib/session/planner";
 import { parsePracticeParams } from "@/lib/session/practice";
@@ -175,8 +175,15 @@ export function SessionRunner() {
       // Active play time, not wall clock: the old measure counted instruction
       // screens, interruptions and time spent away as fatigue, so a session
       // read as exhausting because the user paused to read.
-      activePlayMs.current += result.responseMs ?? 0;
-      const fatigue = Math.min(1, activePlayMs.current / (15 * 60_000));
+      // Reaction rounds are excluded for the same reason their latency is:
+      // the response IS the measurement, ~250 ms against ~8 s of round, so
+      // counting it would understate the session's real effort.
+      if (id !== "reaction-time") activePlayMs.current += result.responseMs ?? 0;
+      // Calibrated to answering time, not wall clock. The 15-minute constant
+      // belonged to the old wall-clock measure; a whole session is at most
+      // ~7 minutes of it, so keeping 15 left fatigue near zero and silently
+      // removed the late-session softening it exists to provide.
+      const fatigue = Math.min(1, activePlayMs.current / FATIGUE_FULL_MS);
       const nextSkill = updateSkill(
         skill,
         {

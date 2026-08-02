@@ -45,6 +45,17 @@ export interface RoundOutcome {
   responseUnits?: number;
 }
 
+/**
+ * Answering time at which fatigue counts as full.
+ *
+ * Fatigue is time spent ANSWERING, not time in the session: instruction
+ * screens and interruptions are not effort. A whole session is at most about
+ * four minutes of answering, so the threshold sits below that — the old
+ * 15-minute constant belonged to the wall-clock measure and left fatigue near
+ * zero once the numerator changed.
+ */
+export const FATIGUE_FULL_MS = 4 * 60_000;
+
 /** Near-perfect rounds before this one needed to arm the hot streak. */
 export const HOT_STREAK_PRIOR_ROUNDS = 2;
 
