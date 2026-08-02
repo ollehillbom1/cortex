@@ -65,10 +65,17 @@ export default function WelcomePage() {
     setBusy(true);
     setRestoreError(null);
     try {
+      // Judge success by what ARRIVED, not by how many profiles this device
+      // happens to hold. Counting local profiles meant a mistyped passphrase
+      // on a device that already had data looked like a success: it created a
+      // brand-new group on the server and pushed this device's profiles into
+      // it, silently, with the undo below never running.
+      const before = new Set((await getStorage().listProfiles()).map((p) => p.id));
       await enableSync(getStorage(), passphrase);
       const status = await getSyncStatus(getStorage());
       const profiles = await getStorage().listProfiles();
-      if (profiles.length > 0) {
+      const arrived = profiles.filter((p) => !before.has(p.id));
+      if (arrived.length > 0) {
         await refresh();
         router.replace("/");
         return;
