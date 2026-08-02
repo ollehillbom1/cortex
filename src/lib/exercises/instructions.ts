@@ -18,7 +18,8 @@ export const INSTRUCTIONS: Record<ExerciseId, ExerciseInstructions> = {
       "When the digits disappear, enter them with the keypad — in the same order, or in reverse when the round asks for it.",
       "The sequence grows as you improve.",
     ],
-    scoring: "Each digit in the right position counts. A full sequence is a perfect round.",
+    scoring:
+      "Your run of correct digits from the start counts — the first mistake ends the round's score. The whole sequence is a perfect round.",
     accessibility:
       "This exercise needs sight — the digits are shown on screen. Sound Span is the same task by ear. Keyboard: digits, Backspace and Enter.",
   },
@@ -49,7 +50,7 @@ export const INSTRUCTIONS: Record<ExerciseId, ExerciseInstructions> = {
       "You start at 1-back (same as the previous step). Higher levels move to 2-back and 3-back.",
     ],
     scoring:
-      "Correct matches and correct passes both count. Tapping Match when there is no match (a false alarm) costs accuracy.",
+      "Catching the matches and leaving the non-matches alone count equally. Missing matches and false alarms cost the same, so never tapping scores no better than tapping every time.",
     accessibility:
       "This exercise needs sight — the stimulus is a square's position. Dual N-Back adds a spoken stream, and Sound Span is fully auditory. Keyboard: space bar instead of tapping Match.",
   },
@@ -59,7 +60,8 @@ export const INSTRUCTIONS: Record<ExerciseId, ExerciseInstructions> = {
       "When the voice stops, enter the digits you heard in the same order.",
       "If speech is not available, the exercise switches to tone sequences: listen to the melody and replay it on the four sound pads.",
     ],
-    scoring: "Each digit (or tone) in the right position counts.",
+    scoring:
+      "Your run of correct digits (or tones) from the start counts — the first mistake ends the round's score.",
     accessibility:
       "This exercise needs sound. Check your volume and silent-mode switch before starting — you can adjust volume in Profile.",
   },
@@ -70,7 +72,7 @@ export const INSTRUCTIONS: Record<ExerciseId, ExerciseInstructions> = {
       "Both, one, or neither can match on any step. Start calm — dual n-back is hard for everyone.",
     ],
     scoring:
-      "Each stream is scored separately (matches and false alarms); your result is the average of the two.",
+      "Each stream is scored separately — catching its matches counts as much as leaving its non-matches alone — and your result is the average of the two.",
     accessibility:
       "This exercise needs sound for the spoken letters. Keyboard: A for position, L for sound.",
   },
@@ -80,7 +82,8 @@ export const INSTRUCTIONS: Record<ExerciseId, ExerciseInstructions> = {
       "When it ends, replay it: tap the pads in the same order, by ear.",
       "More pads and longer melodies unlock as you improve.",
     ],
-    scoring: "Each note in the right position counts. The whole melody is a perfect round.",
+    scoring:
+      "Your run of correct notes from the start counts — the first wrong pad ends the round's score. The whole melody is a perfect round.",
     accessibility: "This exercise needs sound. Check your volume before starting.",
   },
   "rhythm-recall": {

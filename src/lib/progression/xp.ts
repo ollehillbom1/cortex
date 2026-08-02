@@ -16,9 +16,18 @@ export interface RoundXpInput {
   personalBest?: boolean;
 }
 
+/**
+ * XP for one round. Every term scales with what the player actually did:
+ * a level bonus paid regardless of accuracy meant a blank round at level 40
+ * out-earned a perfect round at level 1 (59 XP vs 15), rewarding failure at
+ * difficulty over success at the right level. A round with no accuracy —
+ * including a skipped or unavailable one — is worth nothing.
+ */
 export function xpForRound(input: RoundXpInput): number {
-  const base = XP_BASE_PER_ROUND * clamp01(input.accuracy);
-  const levelBonus = Math.max(0, input.level - 1) * 1.5;
+  const accuracy = clamp01(input.accuracy);
+  if (accuracy <= 0) return 0;
+  const base = XP_BASE_PER_ROUND * accuracy;
+  const levelBonus = Math.max(0, input.level - 1) * 1.5 * accuracy;
   const perfectBonus = input.perfect ? 5 : 0;
   const recordBonus = input.personalBest ? 10 : 0;
   return Math.round(base + levelBonus + perfectBonus + recordBonus);
