@@ -1,4 +1,4 @@
-import { randomUUID } from "node:crypto";
+import { createHash, randomUUID, timingSafeEqual } from "node:crypto";
 import { promises as fs } from "node:fs";
 import path from "node:path";
 
@@ -15,12 +15,40 @@ export interface StoredSyncRecord {
   blob: string;
   iv: string;
   updatedAt: string;
+  /**
+   * sha256 of the group's write capability, bound when the group is CREATED
+   * by a token-carrying client (SEC-02). The group id is a locator — it sits
+   * in URLs and therefore in access logs; this is the secret that does not.
+   * Records created by pre-token clients have no hash and stay writable
+   * without one: binding a token onto an existing group would let whoever
+   * writes first lock out the household's other, older devices.
+   */
+  writeTokenHash?: string;
 }
 
 export class RevConflictError extends Error {
   constructor(public currentRev: number) {
     super("revision conflict");
   }
+}
+
+/** The group has a bound write capability and the request did not prove it. */
+export class WriteForbiddenError extends Error {
+  constructor() {
+    super("write capability required");
+    this.name = "WriteForbiddenError";
+  }
+}
+
+function tokenHash(token: string): string {
+  return createHash("sha256").update(token, "utf8").digest("hex");
+}
+
+/** Constant-time comparison; the hashes are equal-length hex strings. */
+function hashMatches(bound: string, presented: string): boolean {
+  const a = Buffer.from(bound, "hex");
+  const b = Buffer.from(presented, "hex");
+  return a.length === b.length && timingSafeEqual(a, b);
 }
 
 /** Ciphertext cap (base64 chars): ~6 MB of encrypted state, plenty. */
@@ -158,10 +186,17 @@ function withGroupLock<T>(groupId: string, fn: () => Promise<T>): Promise<T> {
 export function writeRecord(
   dir: string,
   groupId: string,
-  input: { blob: string; iv: string; expectedRev: number },
+  input: { blob: string; iv: string; expectedRev: number; writeToken?: string },
 ): Promise<StoredSyncRecord> {
   return withGroupLock(groupId, async () => {
     const current = await readRecord(dir, groupId);
+    // Capability BEFORE revision: a caller without the token learns nothing,
+    // not even the current rev a 409 would hand them.
+    if (current?.writeTokenHash) {
+      if (!input.writeToken || !hashMatches(current.writeTokenHash, tokenHash(input.writeToken))) {
+        throw new WriteForbiddenError();
+      }
+    }
     const currentRev = current?.rev ?? 0;
     if (input.expectedRev !== currentRev) throw new RevConflictError(currentRev);
 
@@ -173,6 +208,15 @@ export function writeRecord(
       blob: input.blob,
       iv: input.iv,
       updatedAt: new Date().toISOString(),
+      // Bound at creation only; carried forward verbatim afterwards. An
+      // existing unbound record never gains a hash (see the field's doc).
+      ...(current
+        ? current.writeTokenHash
+          ? { writeTokenHash: current.writeTokenHash }
+          : {}
+        : input.writeToken
+          ? { writeTokenHash: tokenHash(input.writeToken) }
+          : {}),
     };
     const target = recordPath(dir, groupId);
     const nextSize = Buffer.byteLength(JSON.stringify(record), "utf8");
@@ -195,6 +239,28 @@ export function writeRecord(
       });
     }
     return persist(target, record);
+  });
+}
+
+/**
+ * Delete a group's record — the explicit-removal half of SEC-02.
+ *
+ * Deletion requires a BOUND, MATCHING capability: an unbound (pre-token)
+ * record cannot be deleted through the API at all, because for those the
+ * group id alone is the only credential anyone has, and the id leaks into
+ * logs. The operator can remove unbound records on disk.
+ *
+ * Returns false when no record exists.
+ */
+export function deleteRecord(dir: string, groupId: string, writeToken: string): Promise<boolean> {
+  return withGroupLock(groupId, async () => {
+    const current = await readRecord(dir, groupId);
+    if (!current) return false;
+    if (!current.writeTokenHash || !hashMatches(current.writeTokenHash, tokenHash(writeToken))) {
+      throw new WriteForbiddenError();
+    }
+    await fs.rm(recordPath(dir, groupId), { force: true });
+    return true;
   });
 }
 

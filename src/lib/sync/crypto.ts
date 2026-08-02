@@ -15,11 +15,13 @@ const PBKDF2_ITERATIONS = 310_000;
 const V2_SALT = "cortex-sync:v2";
 const V2_ID_INFO = "cortex-sync-id:v2";
 const V2_KEY_INFO = "cortex-sync-key:v2";
+const V2_WRITE_INFO = "cortex-sync-write:v2";
 
 /** v3: id and key come from a random seed (the sync code), not a passphrase. */
 const V3_SALT = "cortex-sync:v3";
 const V3_ID_INFO = "cortex-sync-id:v3";
 const V3_KEY_INFO = "cortex-sync-key:v3";
+const V3_WRITE_INFO = "cortex-sync-write:v3";
 
 /** Schema version of the credentials a device currently holds. */
 export const CURRENT_SYNC_SCHEMA = 3;
@@ -33,6 +35,13 @@ export interface SyncCredentials {
   groupId: string;
   /** AES-GCM key, exportable so it can be persisted locally as JWK. */
   key: CryptoKey;
+  /**
+   * 64 hex chars; sent on writes, never in a URL. The group id is a locator
+   * that lands in access logs — this is the capability that does not
+   * (SEC-02). The server stores only its hash, bound at group creation.
+   * Absent for v1 credentials, which predate the concept.
+   */
+  writeToken?: string;
 }
 
 /**
@@ -76,7 +85,7 @@ export async function deriveCredentials(passphrase: string): Promise<SyncCredent
   // HKDF is cheap; the PBKDF2 work above is what an attacker must repeat per
   // guess. Separate info strings keep the id and the key independent, so
   // publishing the id says nothing about the key.
-  return hkdfCredentials(master, new Uint8Array(0), V2_ID_INFO, V2_KEY_INFO);
+  return hkdfCredentials(master, new Uint8Array(0), V2_ID_INFO, V2_KEY_INFO, V2_WRITE_INFO);
 }
 
 /**
@@ -89,7 +98,13 @@ export async function deriveCredentials(passphrase: string): Promise<SyncCredent
  */
 export async function deriveCodeCredentials(seed: Uint8Array): Promise<SyncCredentials> {
   const copy = new Uint8Array(seed).buffer as ArrayBuffer;
-  return hkdfCredentials(copy, new TextEncoder().encode(V3_SALT), V3_ID_INFO, V3_KEY_INFO);
+  return hkdfCredentials(
+    copy,
+    new TextEncoder().encode(V3_SALT),
+    V3_ID_INFO,
+    V3_KEY_INFO,
+    V3_WRITE_INFO,
+  );
 }
 
 async function hkdfCredentials(
@@ -97,6 +112,7 @@ async function hkdfCredentials(
   salt: Uint8Array,
   idInfo: string,
   keyInfo: string,
+  writeInfo: string,
 ): Promise<SyncCredentials> {
   const encoder = new TextEncoder();
   const prk = await crypto.subtle.importKey("raw", master, "HKDF", false, ["deriveBits"]);
@@ -107,12 +123,20 @@ async function hkdfCredentials(
       256,
     );
 
-  const [idBits, keyBits] = await Promise.all([expand(idInfo), expand(keyInfo)]);
+  const [idBits, keyBits, writeBits] = await Promise.all([
+    expand(idInfo),
+    expand(keyInfo),
+    expand(writeInfo),
+  ]);
   const key = await crypto.subtle.importKey("raw", keyBits, { name: "AES-GCM" }, true, [
     "encrypt",
     "decrypt",
   ]);
-  return { groupId: toHex(new Uint8Array(idBits)), key };
+  return {
+    groupId: toHex(new Uint8Array(idBits)),
+    key,
+    writeToken: toHex(new Uint8Array(writeBits)),
+  };
 }
 
 /**

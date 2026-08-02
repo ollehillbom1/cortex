@@ -13,7 +13,14 @@ import {
   isValidGroupId,
 } from "./crypto";
 import { generateSyncSeed } from "./syncCode";
-import { readRecord, RevConflictError, writeRecord, type StoredSyncRecord } from "./serverStore";
+import {
+  deleteRecord,
+  readRecord,
+  RevConflictError,
+  WriteForbiddenError,
+  writeRecord,
+  type StoredSyncRecord,
+} from "./serverStore";
 import { createProfile } from "@/lib/storage/profileFactory";
 import { CURRENT_DATA_VERSION } from "@/lib/storage/migrations";
 import type { Profile, SessionRecord } from "@/lib/domain/types";
@@ -212,6 +219,21 @@ describe("sync crypto", () => {
     await expect(decryptJson(other.key, payload)).rejects.toThrow();
   });
 
+  it("derives a write token independent of the id and the key (SEC-02)", async () => {
+    const v3 = await deriveCodeCredentials(generateSyncSeed());
+    const v2 = await deriveCredentials("hemlig lösenfras");
+    for (const creds of [v3, v2]) {
+      expect(creds.writeToken).toMatch(/^[0-9a-f]{64}$/);
+      expect(creds.writeToken).not.toBe(creds.groupId);
+      const raw = Buffer.from(await crypto.subtle.exportKey("raw", creds.key)).toString("hex");
+      expect(creds.writeToken).not.toBe(raw);
+    }
+    // Deterministic per identity, distinct between identities.
+    const again = await deriveCredentials("hemlig lösenfras");
+    expect(again.writeToken).toBe(v2.writeToken);
+    expect(v3.writeToken).not.toBe(v2.writeToken);
+  });
+
   it("v3: the group id is not the seed, its hash, or key material", async () => {
     const seed = generateSyncSeed();
     const { groupId, key } = await deriveCodeCredentials(seed);
@@ -298,6 +320,75 @@ describe("sync server store", () => {
     expect(stored?.blob).toBe(winner.blob);
     expect(stored?.rev).toBe(winner.rev);
     expect(stored?.rev).toBe(2);
+  });
+
+  it("binds the write capability at creation and requires it ever after", async () => {
+    const dir = tempDir();
+    const token = "a".repeat(64);
+    await writeRecord(dir, GROUP, { blob: "AAAA", iv: "IV", expectedRev: 0, writeToken: token });
+
+    // Without the token: refused BEFORE the revision is disclosed.
+    await expect(
+      writeRecord(dir, GROUP, { blob: "EVIL", iv: "IV", expectedRev: 1 }),
+    ).rejects.toThrow(WriteForbiddenError);
+    await expect(
+      writeRecord(dir, GROUP, {
+        blob: "EVIL",
+        iv: "IV",
+        expectedRev: 1,
+        writeToken: "b".repeat(64),
+      }),
+    ).rejects.toThrow(WriteForbiddenError);
+    expect((await readRecord(dir, GROUP))?.blob).toBe("AAAA");
+
+    // With it: writes proceed, and the binding survives the rewrite.
+    const next = await writeRecord(dir, GROUP, {
+      blob: "BBBB",
+      iv: "IV",
+      expectedRev: 1,
+      writeToken: token,
+    });
+    expect(next.rev).toBe(2);
+    expect((await readRecord(dir, GROUP))?.writeTokenHash).toBeDefined();
+  });
+
+  it("legacy unbound records stay writable and never gain a binding", async () => {
+    // Records from before tokens existed have only the group id as a
+    // credential, on EVERY device in the household. Binding the first
+    // writer's token would lock out the others — the household splits, and
+    // the group id holder could already overwrite anyway. Their protection
+    // is the v3 upgrade, which mints a fresh, bound group.
+    const dir = tempDir();
+    await writeRecord(dir, GROUP, { blob: "OLD", iv: "IV", expectedRev: 0 });
+
+    const withToken = await writeRecord(dir, GROUP, {
+      blob: "NEW",
+      iv: "IV",
+      expectedRev: 1,
+      writeToken: "c".repeat(64),
+    });
+    expect(withToken.rev).toBe(2);
+    expect((await readRecord(dir, GROUP))?.writeTokenHash).toBeUndefined();
+
+    const tokenless = await writeRecord(dir, GROUP, { blob: "ALSO", iv: "IV", expectedRev: 2 });
+    expect(tokenless.rev).toBe(3);
+  });
+
+  it("deletes only with a bound, matching capability", async () => {
+    const dir = tempDir();
+    const token = "d".repeat(64);
+    await writeRecord(dir, GROUP, { blob: "AAAA", iv: "IV", expectedRev: 0, writeToken: token });
+
+    await expect(deleteRecord(dir, GROUP, "e".repeat(64))).rejects.toThrow(WriteForbiddenError);
+    expect(await deleteRecord(dir, GROUP, token)).toBe(true);
+    expect(await readRecord(dir, GROUP)).toBeNull();
+    // Gone means gone: a second delete reports nothing to delete.
+    expect(await deleteRecord(dir, GROUP, token)).toBe(false);
+
+    // An unbound record cannot be deleted through the API at all — for it,
+    // the log-leaking group id is the only credential anyone holds.
+    await writeRecord(dir, GROUP, { blob: "OLD", iv: "IV", expectedRev: 0 });
+    await expect(deleteRecord(dir, GROUP, token)).rejects.toThrow(WriteForbiddenError);
   });
 
   it("a burst of writes leaves one record per revision, none blended", async () => {

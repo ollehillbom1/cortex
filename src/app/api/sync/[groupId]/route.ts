@@ -2,11 +2,13 @@ import { NextResponse, type NextRequest } from "next/server";
 import { clientKey, createRateLimiter } from "@/lib/security/rateLimit";
 import { isValidGroupId } from "@/lib/sync/crypto";
 import {
+  deleteRecord,
   MAX_BLOB_CHARS,
   QuotaExceededError,
   readRecord,
   RevConflictError,
   syncDataDir,
+  WriteForbiddenError,
   writeRecord,
 } from "@/lib/sync/serverStore";
 
@@ -79,6 +81,16 @@ function rateLimited(retryAfterSeconds: number | undefined): NextResponse {
   );
 }
 
+/**
+ * The write capability (SEC-02): 64 hex chars in a header, never in the URL.
+ * Anything malformed is treated as absent rather than 400 — the server's
+ * decision is only ever "does this prove the bound capability".
+ */
+function writeTokenOf(request: NextRequest): string | undefined {
+  const raw = request.headers.get("x-sync-write-token");
+  return raw && /^[0-9a-f]{64}$/.test(raw) ? raw : undefined;
+}
+
 export async function GET(request: NextRequest, { params }: Params) {
   const verdict = readLimiter.check(clientKey(request.headers));
   if (!verdict.allowed) return rateLimited(verdict.retryAfterSeconds);
@@ -88,7 +100,10 @@ export async function GET(request: NextRequest, { params }: Params) {
   }
   const record = await readRecord(syncDataDir(), groupId);
   if (!record) return NextResponse.json({ error: "not found" }, { status: 404 });
-  return NextResponse.json(record);
+  // Never ship the bound hash to readers; it is the server's half of the
+  // capability check, not part of the record.
+  const { writeTokenHash: _bound, ...visible } = record;
+  return NextResponse.json(visible);
 }
 
 export async function PUT(request: NextRequest, { params }: Params) {
@@ -129,9 +144,17 @@ export async function PUT(request: NextRequest, { params }: Params) {
   }
 
   try {
-    const record = await writeRecord(syncDataDir(), groupId, { blob, iv, expectedRev });
+    const record = await writeRecord(syncDataDir(), groupId, {
+      blob,
+      iv,
+      expectedRev,
+      writeToken: writeTokenOf(request),
+    });
     return NextResponse.json({ rev: record.rev });
   } catch (err) {
+    if (err instanceof WriteForbiddenError) {
+      return NextResponse.json({ error: "write capability required" }, { status: 403 });
+    }
     if (err instanceof RevConflictError) {
       return NextResponse.json(
         { error: "revision conflict", rev: err.currentRev },
@@ -141,6 +164,30 @@ export async function PUT(request: NextRequest, { params }: Params) {
     if (err instanceof QuotaExceededError) {
       // 507: the request is well-formed, the store simply has no room.
       return NextResponse.json({ error: "sync storage full" }, { status: 507 });
+    }
+    return NextResponse.json({ error: "storage unavailable" }, { status: 500 });
+  }
+}
+
+export async function DELETE(request: NextRequest, { params }: Params) {
+  // Writes budget: deletion changes the store the way a write does.
+  const verdict = writeLimiter.check(clientKey(request.headers));
+  if (!verdict.allowed) return rateLimited(verdict.retryAfterSeconds);
+  const { groupId } = await params;
+  if (!isValidGroupId(groupId)) {
+    return NextResponse.json({ error: "invalid group id" }, { status: 400 });
+  }
+  const token = writeTokenOf(request);
+  if (!token) {
+    return NextResponse.json({ error: "write capability required" }, { status: 403 });
+  }
+  try {
+    const deleted = await deleteRecord(syncDataDir(), groupId, token);
+    if (!deleted) return NextResponse.json({ error: "not found" }, { status: 404 });
+    return NextResponse.json({ deleted: true });
+  } catch (err) {
+    if (err instanceof WriteForbiddenError) {
+      return NextResponse.json({ error: "write capability required" }, { status: 403 });
     }
     return NextResponse.json({ error: "storage unavailable" }, { status: 500 });
   }

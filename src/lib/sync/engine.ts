@@ -38,6 +38,8 @@ export const META_SYNC_LAST_ERROR = "syncLastError";
 export const META_SYNC_SCHEMA = "syncSchema";
 /** The v3 sync code, kept so the user can show it again and invite devices. */
 export const META_SYNC_CODE = "syncCode";
+/** Write capability sent on pushes; derived alongside the key (SEC-02). */
+export const META_SYNC_WRITE_TOKEN = "syncWriteToken";
 
 const MAX_PUSH_ATTEMPTS = 3;
 
@@ -176,6 +178,7 @@ async function persistCredentials(
   await storage.setMeta(META_SYNC_KEY_JWK, await exportKeyJwk(credentials.key));
   await storage.setMeta(META_SYNC_SCHEMA, String(schema));
   await storage.setMeta(META_SYNC_CODE, code);
+  await storage.setMeta(META_SYNC_WRITE_TOKEN, credentials.writeToken ?? "");
 }
 
 /**
@@ -192,10 +195,7 @@ async function persistCredentials(
  * record is left in place either way: other devices may still be reading it,
  * and deleting the old copy is not this function's call to make.
  */
-async function migrateLegacyGroup(
-  credentials: { groupId: string; key: CryptoKey },
-  passphrase: string,
-): Promise<void> {
+async function migrateLegacyGroup(credentials: SyncCredentials, passphrase: string): Promise<void> {
   const existing = await fetchRemote(credentials.groupId);
   if (existing.payload) return; // Someone already migrated this household.
 
@@ -206,8 +206,10 @@ async function migrateLegacyGroup(
   const state = await decryptJson<SyncState>(legacy.key, old.payload);
   const reencrypted = await encryptJson(credentials.key, state);
   // expectedRev 0: the group must still be empty. A 409 means another device
-  // migrated first and its copy stands, which is a fine outcome.
-  await pushRemote(credentials.groupId, reencrypted, 0);
+  // migrated first and its copy stands, which is a fine outcome. The v2
+  // token binds the fresh record; every v2 device derives the same one from
+  // the passphrase, so nobody in the household is locked out.
+  await pushRemote(credentials.groupId, reencrypted, 0, credentials.writeToken);
 }
 
 /** Forget credentials and status; local data is left untouched. */
@@ -218,6 +220,7 @@ export async function disableSync(storage: StorageAdapter): Promise<void> {
   await storage.setMeta(META_SYNC_LAST_ERROR, "");
   await storage.setMeta(META_SYNC_SCHEMA, "");
   await storage.setMeta(META_SYNC_CODE, "");
+  await storage.setMeta(META_SYNC_WRITE_TOKEN, "");
 }
 
 /** Record a profile deletion so it sticks across synced devices. */
@@ -246,6 +249,7 @@ export async function syncNow(storage: StorageAdapter): Promise<boolean> {
 
   try {
     const key = await importKeyJwk(keyJwk);
+    const writeToken = await loadWriteToken(storage);
 
     for (let attempt = 0; attempt < MAX_PUSH_ATTEMPTS; attempt++) {
       // 1. Pull.
@@ -289,7 +293,7 @@ export async function syncNow(storage: StorageAdapter): Promise<boolean> {
 
       // 4. Push, guarded by the revision we pulled.
       const payload = await encryptJson(key, merged);
-      const pushed = await pushRemote(groupId, payload, remote.rev);
+      const pushed = await pushRemote(groupId, payload, remote.rev, writeToken);
       if (pushed) {
         await storage.setMeta(META_SYNC_LAST_AT, new Date().toISOString());
         await storage.setMeta(META_SYNC_LAST_ERROR, "");
@@ -303,6 +307,26 @@ export async function syncNow(storage: StorageAdapter): Promise<boolean> {
     await storage.setMeta(META_SYNC_LAST_ERROR, message);
     return false;
   }
+}
+
+/**
+ * The write capability for this device's group, if it has one.
+ *
+ * Backfill: a device whose credentials were stored before tokens existed
+ * has no token in meta, but a v3 device DOES hold the sync code — the whole
+ * identity — so the token is re-derived from it once and persisted. A v2
+ * device cannot backfill (the passphrase is never stored); it sends nothing,
+ * which its unbound legacy record accepts, and gains a token when it joins
+ * or upgrades.
+ */
+async function loadWriteToken(storage: StorageAdapter): Promise<string | undefined> {
+  const stored = await storage.getMeta(META_SYNC_WRITE_TOKEN);
+  if (stored) return stored;
+  const code = await storage.getMeta(META_SYNC_CODE);
+  if (!code) return undefined;
+  const { writeToken } = await deriveCodeCredentials(parseSyncCode(code));
+  if (writeToken) await storage.setMeta(META_SYNC_WRITE_TOKEN, writeToken);
+  return writeToken;
 }
 
 async function readLocalState(storage: StorageAdapter): Promise<SyncState> {
@@ -409,10 +433,16 @@ async function pushRemote(
   groupId: string,
   payload: EncryptedBlob,
   expectedRev: number,
+  writeToken?: string,
 ): Promise<boolean> {
   const res = await fetch(`/api/sync/${groupId}`, {
     method: "PUT",
-    headers: { "Content-Type": "application/json" },
+    headers: {
+      "Content-Type": "application/json",
+      // In a header, never the URL: the group id already lands in access
+      // logs as a locator; the capability must not follow it there.
+      ...(writeToken ? { "x-sync-write-token": writeToken } : {}),
+    },
     body: JSON.stringify({ ...payload, expectedRev }),
   });
   if (res.status === 409) return false;
