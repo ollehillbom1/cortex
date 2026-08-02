@@ -14,9 +14,13 @@ docker compose up -d --build
 # → http://<host>:3000
 ```
 
-`docker-compose.yml` sets a restart policy, a 512 MB memory limit and a health
-check against `/api/health`. Override the published port with `PORT=8080
-docker compose up -d`.
+`docker-compose.yml` sets a restart policy, a 512 MB memory limit, a health
+check against `/api/health` — and a hardened runtime: read-only root
+filesystem (with `/tmp` as tmpfs and the data volume as the only writable
+mounts), all capabilities dropped, `no-new-privileges`, a PID limit and
+rotated logs. The app needs none of what is closed off; the settings were
+verified against the full surface (pages, health, sync writes). Override the
+published port with `PORT=8080 docker compose up -d`.
 
 ## Raspberry Pi 5 (ARM64, 64-bit OS)
 
@@ -26,10 +30,11 @@ watch). Resource notes:
 
 - Idle memory use is around 45 MiB, well under the 512 MB compose limit.
 
-> **The limit only applies if you start it with Compose.** The current public
-> deployment was started with `docker run`, which honours none of the
-> `deploy.resources` settings — verified with `docker inspect` (memory limit
-> `0`). Pass them explicitly when not using Compose:
+> **The limit and the hardening only apply if you start it with Compose.**
+> `docker run` honours none of the compose file's settings, so pass them
+> explicitly when not using Compose — this is exactly how the public
+> deployment runs since 2026-08-03 (verified with `docker inspect`: memory
+> 512 MiB, pids 256, read-only rootfs, all caps dropped):
 >
 > ```bash
 > docker run -d --name cortex --restart unless-stopped \

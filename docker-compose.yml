@@ -20,6 +20,22 @@ services:
     #   - .env
     volumes:
       - cortex-sync:/app/data
+    # Hardened by default: the server needs nothing beyond /tmp scratch and
+    # the data volume, so everything else is closed. Verified against the
+    # full app surface (pages, health, sync write path) 2026-08-03.
+    read_only: true
+    tmpfs:
+      - /tmp
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    pids_limit: 256
+    logging:
+      driver: json-file
+      options:
+        max-size: 10m
+        max-file: "3"
     # Resource-conscious defaults suitable for a Raspberry Pi 5.
     deploy:
       resources:
