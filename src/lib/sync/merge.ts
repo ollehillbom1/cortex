@@ -32,11 +32,21 @@ export function emptyTombstones(): SyncTombstones {
 export function mergeStates(a: SyncState, b: SyncState): SyncState {
   const tombstones = mergeTombstones(a.tombstones, b.tombstones);
 
-  // Profiles: LWW per id, then apply deletions (edits after deletion revive).
+  // Profiles: last-write-wins for the fields a user edits (name, avatar,
+  // preferences), but progression is merged field by field. Whole-profile
+  // LWW silently discarded the loser's XP, skills, records and achievements
+  // even though its sessions were kept, so history and summary disagreed
+  // whenever two devices finished a session from the same base.
   const profileMap = new Map<string, Profile>();
-  for (const p of [...a.profiles, ...b.profiles]) {
-    const existing = profileMap.get(p.id);
-    profileMap.set(p.id, existing ? pickNewer(existing, p) : p);
+  const seenIds = new Set([...a.profiles, ...b.profiles].map((p) => p.id));
+  for (const id of seenIds) {
+    const left = a.profiles.find((p) => p.id === id);
+    const right = b.profiles.find((p) => p.id === id);
+    if (!left || !right) {
+      profileMap.set(id, (left ?? right)!);
+      continue;
+    }
+    profileMap.set(id, mergeProfiles(left, right, a.sessions, b.sessions));
   }
   const profiles = [...profileMap.values()].filter((p) => {
     const deletedAt = tombstones.deletedProfiles[p.id];
@@ -86,6 +96,86 @@ function mergeTombstones(a: SyncTombstones, b: SyncTombstones): SyncTombstones {
  * Newer profile wins; equal timestamps fall back to comparing the serialised
  * form, which is arbitrary but symmetric — both devices pick the same one.
  */
+/**
+ * Merge two versions of the same profile.
+ *
+ * Identity and preferences follow last-write-wins on `updatedAt` — those are
+ * user edits, and the newest intent should win. Progression is different:
+ * both sides earned theirs, so nothing may be dropped.
+ *
+ * - **xp**: the winner's total plus the XP of sessions only the loser had.
+ *   Recomputing from all sessions would zero a profile whose history was not
+ *   imported alongside it; this counts exactly what the winner never saw.
+ * - **skills**: per exercise, the state with the newer `updatedAt`. Two
+ *   devices training different exercises both keep their progress.
+ * - **records**: the better value per key, which is what a record means.
+ * - **achievements**: union, keeping the earliest unlock timestamp.
+ * - **streak**: the longer `best`, the further `lastActiveDay`, and the
+ *   `current`/`freezes` belonging to that day — a streak is about days
+ *   trained, and both devices agree on the days once sessions have merged.
+ */
+export function mergeProfiles(
+  x: Profile,
+  y: Profile,
+  xSessions: SessionRecord[] = [],
+  ySessions: SessionRecord[] = [],
+): Profile {
+  const winner = pickNewer(x, y);
+  const loser = winner === x ? y : x;
+  const winnerSessions = winner === x ? xSessions : ySessions;
+  const loserSessions = winner === x ? ySessions : xSessions;
+
+  const winnerSessionIds = new Set(
+    winnerSessions.filter((s) => s.profileId === winner.id).map((s) => s.id),
+  );
+  const unaccountedXp = loserSessions
+    .filter((s) => s.profileId === winner.id && !winnerSessionIds.has(s.id))
+    .reduce((sum, s) => sum + (s.xpEarned ?? 0), 0);
+
+  const skills: Profile["skills"] = { ...winner.skills };
+  for (const [id, loserSkill] of Object.entries(loser.skills)) {
+    const mine = skills[id as keyof Profile["skills"]];
+    if (!loserSkill) continue;
+    if (!mine || (loserSkill.updatedAt ?? "") > (mine.updatedAt ?? "")) {
+      skills[id as keyof Profile["skills"]] = loserSkill;
+    }
+  }
+
+  const records: Profile["records"] = { ...winner.records };
+  for (const [key, theirs] of Object.entries(loser.records)) {
+    const mine = records[key];
+    if (!mine || betterRecord(key, theirs.value, mine.value)) records[key] = theirs;
+  }
+
+  const achievements: Profile["achievements"] = { ...winner.achievements };
+  for (const [id, at] of Object.entries(loser.achievements)) {
+    const mine = achievements[id];
+    if (!mine || at < mine) achievements[id] = at;
+  }
+
+  const aheadOnDays =
+    (loser.streak.lastActiveDay ?? "") > (winner.streak.lastActiveDay ?? "")
+      ? loser.streak
+      : winner.streak;
+
+  return {
+    ...winner,
+    xp: winner.xp + unaccountedXp,
+    skills,
+    records,
+    achievements,
+    streak: {
+      ...aheadOnDays,
+      best: Math.max(x.streak.best, y.streak.best),
+    },
+  };
+}
+
+/** Lower is better for millisecond keys; higher for everything else. */
+function betterRecord(key: string, candidate: number, current: number): boolean {
+  return key.endsWith("Ms") ? candidate < current : candidate > current;
+}
+
 function pickNewer(x: Profile, y: Profile): Profile {
   const xu = x.updatedAt ?? "";
   const yu = y.updatedAt ?? "";
