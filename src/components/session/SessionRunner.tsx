@@ -93,6 +93,11 @@ export function SessionRunner() {
   const [completed, setCompleted] = useState<ExerciseResult[]>([]);
   const [summaryData, setSummaryData] = useState<ReturnType<typeof applySession> | null>(null);
   const [quitPrompt, setQuitPrompt] = useState(false);
+  // The round in progress when the app went to the background. A hidden tab
+  // freezes timers, so the time away counts as reaction time and as fatigue:
+  // the round is discarded and replayed rather than scored.
+  const [interrupted, setInterrupted] = useState(false);
+  const [attempt, setAttempt] = useState(0);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [retrying, setRetrying] = useState(false);
 
@@ -375,6 +380,21 @@ export function SessionRunner() {
     practice,
   ]);
 
+  // One policy for every exercise: leaving the app abandons the current round
+  // instead of scoring whatever the frozen timers produced, and stops any
+  // audio that was scheduled. Restarting takes a deliberate tap, which also
+  // re-unlocks audio.
+  useEffect(() => {
+    if (phase !== "playing") return;
+    const onVisibility = () => {
+      if (document.visibilityState !== "hidden") return;
+      getAudioEngine().stopAll();
+      setInterrupted(true);
+    };
+    document.addEventListener("visibilitychange", onVisibility);
+    return () => document.removeEventListener("visibilitychange", onVisibility);
+  }, [phase]);
+
   // Auto-advance the feedback interstitial (a Continue button remains).
   useEffect(() => {
     if (phase !== "feedback") return;
@@ -612,8 +632,28 @@ export function SessionRunner() {
           </div>
         )}
 
-        {phase === "playing" && currentItem && currentDef && (
-          <div key={`${itemIndex}-${roundIndex}`}>
+        {phase === "playing" && interrupted && (
+          <div className="flex flex-col items-center gap-4 py-10 text-center">
+            <p className="text-lg font-semibold">{t("Round paused")}</p>
+            <p className="max-w-xs text-sm text-[var(--color-ink-dim)]">
+              {t(
+                "The app was in the background, so this round was not scored — timings there are not comparable. Play it again when you are ready.",
+              )}
+            </p>
+            <Button
+              onClick={async () => {
+                if (soundOn) await audio.unlock();
+                setAttempt((n) => n + 1);
+                setInterrupted(false);
+              }}
+            >
+              {t("Play this round again")}
+            </Button>
+          </div>
+        )}
+
+        {phase === "playing" && !interrupted && currentItem && currentDef && (
+          <div key={`${itemIndex}-${roundIndex}-${attempt}`}>
             <p className="mb-4 text-center text-xs font-semibold uppercase tracking-widest text-[var(--color-ink-faint)]">
               {t(currentDef.name)} ·{" "}
               {t("round {i}/{total}", { i: roundIndex + 1, total: currentItem.rounds })}

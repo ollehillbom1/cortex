@@ -52,6 +52,10 @@ export const SV: Record<string, string> = {
     "Inga pass ännu. Ditt första pass tar cirka {goal} minuter.",
   Session: "Pass",
   "Training insight": "Träningsinsikt",
+  "Round paused": "Rundan pausad",
+  "The app was in the background, so this round was not scored — timings there are not comparable. Play it again when you are ready.":
+    "Appen var i bakgrunden, så rundan poängsattes inte — tidtagning där går inte att jämföra. Spela den igen när du är redo.",
+  "Play this round again": "Spela rundan igen",
   "This session could not be saved.": "Passet kunde inte sparas.",
   "Try saving again": "Försök spara igen",
   "Saving…": "Sparar…",
