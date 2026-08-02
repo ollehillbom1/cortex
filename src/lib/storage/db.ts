@@ -1,7 +1,14 @@
 import { openDB, type DBSchema, type IDBPDatabase } from "idb";
 import type { Profile, SessionRecord } from "@/lib/domain/types";
 import type { StorageAdapter } from "@/lib/storage/adapter";
-import { CURRENT_DATA_VERSION, migrateProfile, type StoredProfile } from "@/lib/storage/migrations";
+import {
+  CURRENT_DATA_VERSION,
+  FutureDataVersionError,
+  isFutureDataVersion,
+  migrateProfile,
+  storedDataVersion,
+  type StoredProfile,
+} from "@/lib/storage/migrations";
 
 /**
  * IndexedDB adapter (the only storage implementation in the MVP).
@@ -53,9 +60,11 @@ export class IndexedDBAdapter implements StorageAdapter {
     const db = await this.db();
     const raw = await db.getAll("profiles");
     const migrated = raw.map((p) => migrateProfile(p as unknown as Record<string, unknown>));
-    // Persist any migrations so they run once, not on every read.
+    // Persist migrations so they run once, not on every read. Only ever write
+    // a record we actually moved forward: a record from a newer build is
+    // returned as-is and never rewritten (see isFutureDataVersion).
     for (let i = 0; i < raw.length; i++) {
-      if ((raw[i].dataVersion ?? 1) !== CURRENT_DATA_VERSION) {
+      if (storedDataVersion(raw[i] as unknown as Record<string, unknown>) < CURRENT_DATA_VERSION) {
         await db.put("profiles", migrated[i]);
       }
     }
@@ -67,7 +76,7 @@ export class IndexedDBAdapter implements StorageAdapter {
     const raw = await db.get("profiles", id);
     if (!raw) return undefined;
     const migrated = migrateProfile(raw as unknown as Record<string, unknown>);
-    if ((raw.dataVersion ?? 1) !== CURRENT_DATA_VERSION) {
+    if (storedDataVersion(raw as unknown as Record<string, unknown>) < CURRENT_DATA_VERSION) {
       await db.put("profiles", migrated);
     }
     return migrated;
@@ -75,6 +84,14 @@ export class IndexedDBAdapter implements StorageAdapter {
 
   async putProfile(profile: Profile): Promise<void> {
     const db = await this.db();
+    // Refuse to overwrite a record written by a newer build: this build does
+    // not know what its fields mean, and saving would silently discard them.
+    const existing = await db.get("profiles", profile.id);
+    if (existing && isFutureDataVersion(existing as unknown as Record<string, unknown>)) {
+      throw new FutureDataVersionError(
+        storedDataVersion(existing as unknown as Record<string, unknown>),
+      );
+    }
     await db.put("profiles", { ...profile, dataVersion: CURRENT_DATA_VERSION });
   }
 

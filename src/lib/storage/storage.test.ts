@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it } from "vitest";
 import { IDBFactory } from "fake-indexeddb";
 import { IndexedDBAdapter } from "./db";
 import { createProfile } from "./profileFactory";
-import { CURRENT_DATA_VERSION, migrateProfile } from "./migrations";
+import { CURRENT_DATA_VERSION, isFutureDataVersion, migrateProfile } from "./migrations";
 import { exportAll, importBundle, ImportError, parseExportBundle } from "./exportImport";
 import type { SessionRecord } from "@/lib/domain/types";
 
@@ -87,6 +87,35 @@ describe("migrations", () => {
     expect(migrated.streak.current).toBe(3);
     expect(migrated.preferences.reduceMotion).toBe(false);
     expect(migrated.preferences.audioEnabled).toBe(true);
+  });
+
+  it("leaves a record from a newer build untouched", () => {
+    // The old code stamped every record with CURRENT_DATA_VERSION on the way
+    // out, so a profile written by a newer build came back labelled as this
+    // build's version while keeping its newer shape. The migration chain
+    // would then replay on data already past it. Household sync reaches this
+    // whenever one device updates before another.
+    const future = {
+      ...createProfile({ id: "p", name: "P" }),
+      dataVersion: CURRENT_DATA_VERSION + 1,
+      somethingNew: { kept: true },
+    };
+    const out = migrateProfile(future as unknown as Record<string, unknown>);
+    expect(out.dataVersion).toBe(CURRENT_DATA_VERSION + 1);
+    expect((out as unknown as Record<string, unknown>).somethingNew).toEqual({ kept: true });
+    expect(isFutureDataVersion(future as unknown as Record<string, unknown>)).toBe(true);
+    expect(
+      isFutureDataVersion(
+        createProfile({ id: "q", name: "Q" }) as unknown as Record<string, unknown>,
+      ),
+    ).toBe(false);
+  });
+
+  it("stamps a record with the version it actually reached", () => {
+    // A record whose migration chain runs out mid-way must not claim to be
+    // current; it should carry the version the chain actually reached.
+    const out = migrateProfile({ dataVersion: CURRENT_DATA_VERSION } as Record<string, unknown>);
+    expect(out.dataVersion).toBe(CURRENT_DATA_VERSION);
   });
 
   it("migrates v2 skills to gain the latency ring buffer (v3)", () => {

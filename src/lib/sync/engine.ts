@@ -1,5 +1,5 @@
 import type { StorageAdapter } from "@/lib/storage/adapter";
-import { CURRENT_DATA_VERSION } from "@/lib/storage/migrations";
+import { CURRENT_DATA_VERSION, FutureDataVersionError } from "@/lib/storage/migrations";
 import { withLocalConsent } from "@/lib/storage/exportImport";
 import {
   CURRENT_SYNC_SCHEMA,
@@ -153,6 +153,16 @@ export async function syncNow(storage: StorageAdapter): Promise<boolean> {
       let remoteState: SyncState | null = null;
       if (remote.payload) {
         remoteState = await decryptJson<SyncState>(key, remote.payload);
+        // Another device in this group runs a newer build. Merging would
+        // apply fields this build does not understand and then push the
+        // result back stamped with THIS version — silently downgrading the
+        // whole group's data. Stop instead, and say why.
+        if (
+          typeof remoteState?.dataVersion === "number" &&
+          remoteState.dataVersion > CURRENT_DATA_VERSION
+        ) {
+          throw new FutureDataVersionError(remoteState.dataVersion);
+        }
       }
 
       // 2. Merge with the full local state.
