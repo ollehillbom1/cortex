@@ -21,6 +21,34 @@ describe("xp", () => {
     expect(xpForRound({ accuracy: 1, level: 1, personalBest: true })).toBe(20);
   });
 
+  it("pays nothing for a round with no accuracy, at any level", () => {
+    // The bug this pins: the level bonus used to be paid regardless of
+    // accuracy, so a blank round at level 40 earned 59 XP while a perfect
+    // level-1 round earned 15. Skips and unavailable rounds arrive here as
+    // accuracy 0 and must be worth nothing.
+    for (const level of [1, 20, 40]) {
+      expect(xpForRound({ accuracy: 0, level })).toBe(0);
+      expect(xpForRound({ accuracy: 0, level, perfect: true, personalBest: true })).toBe(0);
+    }
+  });
+
+  it("never pays more for a worse round at a higher level than a perfect one", () => {
+    const perfectLow = xpForRound({ accuracy: 1, level: 1, perfect: true });
+    for (const level of [10, 20, 40]) {
+      expect(xpForRound({ accuracy: 0, level })).toBeLessThan(perfectLow);
+      // Half-accuracy earns roughly half the level bonus, not all of it.
+      expect(xpForRound({ accuracy: 0.5, level })).toBeLessThan(
+        xpForRound({ accuracy: 1, level }) / 2 + 1,
+      );
+    }
+  });
+
+  it("keeps rewarding difficulty when the round is actually played", () => {
+    expect(xpForRound({ accuracy: 1, level: 40 })).toBeGreaterThan(
+      xpForRound({ accuracy: 1, level: 1 }),
+    );
+  });
+
   it("has a monotonic level curve starting at level 1 = 0 xp", () => {
     expect(xpForLevel(1)).toBe(0);
     for (let l = 2; l < 30; l++) {

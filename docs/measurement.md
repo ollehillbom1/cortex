@@ -5,17 +5,26 @@ rules every feature must follow. It is a compass, not a literature review.
 
 ## What each exercise measures — in-app, operationally
 
-| Exercise                 | Metric           | Operational definition                                                                     | Known confounds                                                            |
-| ------------------------ | ---------------- | ------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------- |
-| Number Span / Sound Span | span length      | longest digit sequence reproduced in order (forward/reverse) at the adaptive level reached | practice effects, chunking strategies, input modality (keypad vs keyboard) |
-| Sequence Memory          | sequence length  | longest tile order reproduced from the start                                               | motor slips on small screens                                               |
-| Pattern Recall           | pattern accuracy | hits minus wrong taps over pattern size at a timed exposure                                | screen size, viewing distance                                              |
-| N-Back                   | accuracy         | (hits + correct rejections) / scoreable trials; false alarms tracked separately            | response-strategy bias (conservative vs liberal responding)                |
-| Reaction                 | response time    | ms from stimulus change to pointer/key event via `performance.now()`                       | device/display latency, input method, time of day, caffeine, age           |
+| Exercise                 | Metric            | Operational definition                                                                           | Known confounds                                                            |
+| ------------------------ | ----------------- | ------------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------- |
+| Number Span / Sound Span | span length       | longest digit sequence reproduced in order (forward/reverse) at the adaptive level reached       | practice effects, chunking strategies, input modality (keypad vs keyboard) |
+| Sequence Memory          | sequence length   | longest tile order reproduced from the start                                                     | motor slips on small screens                                               |
+| Pattern Recall           | pattern accuracy  | hits minus wrong taps over pattern size at a timed exposure                                      | screen size, viewing distance                                              |
+| N-Back                   | balanced accuracy | mean of hit rate and specificity; hits, misses, false alarms and correct rejections all reported | small match counts make the hit rate coarse (a single miss moves it a lot) |
+| Reaction                 | response time     | ms from stimulus change to pointer/key event via `performance.now()`                             | device/display latency, input method, time of day, caffeine, age           |
 
 All metrics are **within-app observations**. They are affected by practice,
 device, environment and motivation, and improvements on an exercise primarily
 show you got better _at that exercise_.
+
+**Why n-back uses balanced accuracy.** Only about 30% of trials are matches,
+so plain accuracy — the share of trials answered correctly — pays a player who
+never responds around 70%. That sits inside the adaptive engine's target band,
+which means the estimate rises for a player who did nothing. Balanced accuracy
+averages the hit rate (of the matches, how many were caught) with specificity
+(of the non-matches, how many were correctly left alone), so every one-sided
+strategy scores 0.5 and only genuine discrimination scores higher. A metric
+that can be satisfied without performing the task is not a measurement.
 
 ## What Cortex does not claim
 
