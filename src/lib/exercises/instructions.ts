@@ -18,7 +18,8 @@ export const INSTRUCTIONS: Record<ExerciseId, ExerciseInstructions> = {
       "When the digits disappear, enter them with the keypad — in the same order, or in reverse when the round asks for it.",
       "The sequence grows as you improve.",
     ],
-    scoring: "Each digit in the right position counts. A full sequence is a perfect round.",
+    scoring:
+      "Your run of correct digits from the start counts — the first mistake ends the round's score. The whole sequence is a perfect round.",
     accessibility:
       "This exercise needs sight — the digits are shown on screen. Sound Span is the same task by ear. Keyboard: digits, Backspace and Enter.",
   },
@@ -59,7 +60,8 @@ export const INSTRUCTIONS: Record<ExerciseId, ExerciseInstructions> = {
       "When the voice stops, enter the digits you heard in the same order.",
       "If speech is not available, the exercise switches to tone sequences: listen to the melody and replay it on the four sound pads.",
     ],
-    scoring: "Each digit (or tone) in the right position counts.",
+    scoring:
+      "Your run of correct digits (or tones) from the start counts — the first mistake ends the round's score.",
     accessibility:
       "This exercise needs sound. Check your volume and silent-mode switch before starting — you can adjust volume in Profile.",
   },
@@ -80,7 +82,8 @@ export const INSTRUCTIONS: Record<ExerciseId, ExerciseInstructions> = {
       "When it ends, replay it: tap the pads in the same order, by ear.",
       "More pads and longer melodies unlock as you improve.",
     ],
-    scoring: "Each note in the right position counts. The whole melody is a perfect round.",
+    scoring:
+      "Your run of correct notes from the start counts — the first wrong pad ends the round's score. The whole melody is a perfect round.",
     accessibility: "This exercise needs sound. Check your volume before starting.",
   },
   "rhythm-recall": {

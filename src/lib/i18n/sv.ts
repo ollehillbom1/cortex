@@ -319,8 +319,8 @@ export const SV: Record<string, string> = {
   "When the digits disappear, enter them with the keypad — in the same order, or in reverse when the round asks for it.":
     "När siffrorna försvinner anger du dem med knappsatsen — i samma ordning, eller baklänges när rundan ber om det.",
   "The sequence grows as you improve.": "Sekvensen växer i takt med att du blir bättre.",
-  "Each digit in the right position counts. A full sequence is a perfect round.":
-    "Varje siffra på rätt plats räknas. En hel sekvens är en perfekt runda.",
+  "Your run of correct digits from the start counts — the first mistake ends the round's score. The whole sequence is a perfect round.":
+    "Din svit av rätta siffror från början räknas — första felet avslutar rundans poäng. Hela sekvensen är en perfekt runda.",
   "You can use your physical keyboard: digits, Backspace and Enter.":
     "Du kan använda ditt fysiska tangentbord: siffror, Backsteg och Enter.",
   "Watch the tiles light up in order.": "Titta när rutorna tänds i ordning.",
@@ -352,8 +352,8 @@ export const SV: Record<string, string> = {
     "När rösten tystnar anger du siffrorna du hörde i samma ordning.",
   "If speech is not available, the exercise switches to tone sequences: listen to the melody and replay it on the four sound pads.":
     "Om uppläsning inte är tillgänglig växlar övningen till tonsekvenser: lyssna på melodin och spela upp den på de fyra ljudplattorna.",
-  "Each digit (or tone) in the right position counts.":
-    "Varje siffra (eller ton) på rätt plats räknas.",
+  "Your run of correct digits (or tones) from the start counts — the first mistake ends the round's score.":
+    "Din svit av rätta siffror (eller toner) från början räknas — första felet avslutar rundans poäng.",
   "This exercise needs sound. Check your volume and silent-mode switch before starting — you can adjust volume in Profile.":
     "Den här övningen kräver ljud. Kontrollera volymen och ljudlös-läget innan du börjar — volymen justeras under Profil.",
   "Hold steady while the panel is dim — the wait is random on purpose.":
@@ -534,8 +534,8 @@ export const SV: Record<string, string> = {
     "När den är slut spelar du upp den igen: tryck på plattorna i samma ordning, på gehör.",
   "More pads and longer melodies unlock as you improve.":
     "Fler plattor och längre melodier låses upp när du blir bättre.",
-  "Each note in the right position counts. The whole melody is a perfect round.":
-    "Varje ton på rätt plats räknas. Hela melodin är en perfekt runda.",
+  "Your run of correct notes from the start counts — the first wrong pad ends the round's score. The whole melody is a perfect round.":
+    "Din svit av rätta toner från början räknas — första fel-plattan avslutar rundans poäng. Hela melodin är en perfekt runda.",
   "This exercise needs sound. Check your volume before starting.":
     "Övningen kräver ljud. Kontrollera volymen innan du börjar.",
   "Listen to a short rhythm — the pad pulses with every beat.":

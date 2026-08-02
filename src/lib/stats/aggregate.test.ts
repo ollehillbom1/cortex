@@ -1,5 +1,15 @@
 import { describe, expect, it } from "vitest";
-import { activityByDay, modalityBalance, shiftDay, timeOfDayPerformance } from "./aggregate";
+import {
+  activityByDay,
+  exerciseLevels,
+  exerciseProgress,
+  modalityBalance,
+  shiftDay,
+  strengthsAndFocus,
+  timeOfDayPerformance,
+} from "./aggregate";
+import { createProfile } from "@/lib/storage/profileFactory";
+import { initialSkill } from "@/lib/adaptive/engine";
 import type { SessionRecord } from "@/lib/domain/types";
 
 function session(id: string, startedAt: string, over: Partial<SessionRecord> = {}): SessionRecord {
@@ -95,5 +105,28 @@ describe("stats aggregation", () => {
     expect(morning?.accuracy).toBeCloseTo(0.8, 5);
     expect(evening?.sessions).toBe(2);
     expect(parts.find((p) => p.part === "night")).toBeUndefined();
+  });
+});
+
+describe("strengths and focus", () => {
+  it("ranks by progress within each exercise, not by raw level", () => {
+    // n-back tops out at 18 and number span at 39, so sorting by level
+    // ranked which exercise has the longer ramp. A user at n-back 15 (83% of
+    // its range) is further along than one at number span 15 (37%).
+    const profile = createProfile({ id: "p", name: "P" });
+    profile.skills["n-back"] = { ...initialSkill(), level: 15, attempts: 10 };
+    profile.skills["number-span"] = { ...initialSkill(), level: 15, attempts: 10 };
+    profile.skills["reaction-time"] = { ...initialSkill(), level: 2, attempts: 10 };
+
+    const { strengths, focus } = strengthsAndFocus(profile);
+    expect(strengths[0].exerciseId).toBe("n-back");
+    expect(focus[0].exerciseId).toBe("reaction-time");
+  });
+
+  it("expresses progress as a fraction of the exercise's own range", () => {
+    const profile = createProfile({ id: "p", name: "P" });
+    profile.skills["n-back"] = { ...initialSkill(), level: 18, attempts: 10 };
+    const [summary] = exerciseLevels(profile).filter((e) => e.exerciseId === "n-back");
+    expect(exerciseProgress(summary)).toBeCloseTo(1, 5);
   });
 });
