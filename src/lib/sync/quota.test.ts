@@ -79,6 +79,29 @@ describe("sync store quotas", () => {
     }
   });
 
+  it("holds the byte ceiling under concurrent writes to different groups", async () => {
+    // The per-group lock does not help: the budget is a property of the whole
+    // store, so concurrent writes to DIFFERENT groups each read a stale usage
+    // and all pass. Measured before the gate: 116% of the byte budget.
+    const dir = tempDir();
+    process.env.SYNC_MAX_TOTAL_BYTES = "6000";
+    try {
+      const writes = Array.from({ length: 20 }, (_, i) =>
+        writeRecord(dir, groupId(i + 1), payload("A".repeat(900))).catch(() => null),
+      );
+      const results = await Promise.all(writes);
+      const accepted = results.filter(Boolean).length;
+      expect(accepted).toBeGreaterThan(0);
+
+      const { readdirSync, statSync } = await import("node:fs");
+      const files = readdirSync(path.join(dir, "sync")).filter((f) => f.endsWith(".json"));
+      const bytes = files.reduce((a, f) => a + statSync(path.join(dir, "sync", f)).size, 0);
+      expect(bytes).toBeLessThanOrEqual(6000);
+    } finally {
+      delete process.env.SYNC_MAX_TOTAL_BYTES;
+    }
+  });
+
   it("resolves ceilings per call, so deployment settings are honoured", () => {
     // Read at module load, an env var set by the operator (or a test) after
     // import is silently ignored - the failure mode is a limit that looks

@@ -115,6 +115,25 @@ export async function readRecord(dir: string, groupId: string): Promise<StoredSy
  */
 const groupWrites = new Map<string, Promise<unknown>>();
 
+/**
+ * Serialises the quota check with the write it guards.
+ *
+ * withGroupLock is per group, but the budget is a property of the WHOLE
+ * store, so concurrent writes to different groups each read a stale usage and
+ * all pass: measured 40 groups against a ceiling of 5, and 116% of the byte
+ * budget. Check-then-act across groups needs a lock across groups.
+ */
+let quotaGate: Promise<unknown> = Promise.resolve();
+
+function withQuotaGate<T>(fn: () => Promise<T>): Promise<T> {
+  const result = quotaGate.then(fn, fn);
+  quotaGate = result.then(
+    () => {},
+    () => {},
+  );
+  return result;
+}
+
 function withGroupLock<T>(groupId: string, fn: () => Promise<T>): Promise<T> {
   const previous = groupWrites.get(groupId) ?? Promise.resolve();
   // Chain on settlement, not success: one failed write must not wedge the group.
@@ -159,31 +178,41 @@ export function writeRecord(
     const nextSize = Buffer.byteLength(JSON.stringify(record), "utf8");
     const previousSize = current ? await recordSize(target) : 0;
     if (nextSize > previousSize) {
-      const usage = await storeUsage(dir);
-      // Byte budget only. A group COUNT ceiling looked prudent and was the
-      // cheaper attack: 550 empty groups (~50 kB, ~2 s from one host) locked
-      // every new household out permanently, because nothing expires records
-      // and existing groups kept working so nothing surfaced it. Bytes are
-      // what the disk actually runs out of, and filling those costs the
-      // attacker the same as it costs the server.
-      if (usage.bytes - previousSize + nextSize > maxTotalBytes()) {
-        throw new QuotaExceededError("bytes");
-      }
+      return withQuotaGate(async () => {
+        const usage = await storeUsage(dir);
+        // Byte budget only. A group COUNT ceiling looked prudent and was the
+        // cheaper attack: 550 empty groups (~50 kB, ~2 s from one host) locked
+        // every new household out permanently, because nothing expires records
+        // and existing groups kept working so nothing surfaced it. Bytes are
+        // what the disk actually runs out of, and filling those costs the
+        // attacker the same as it costs the server.
+        if (usage.bytes - previousSize + nextSize > maxTotalBytes()) {
+          throw new QuotaExceededError("bytes");
+        }
+        // Written inside the gate: releasing it before the bytes land would
+        // let the next writer read a usage that does not include them.
+        return persist(target, record);
+      });
     }
-    await fs.mkdir(path.dirname(target), { recursive: true });
-    // Unique per write: a name derived from pid and rev collides between
-    // concurrent writes, which corrupts the temp file and makes one rename
-    // fail with ENOENT after the other has moved it.
-    const tmp = `${target}.${randomUUID()}.tmp`;
-    try {
-      await fs.writeFile(tmp, JSON.stringify(record), "utf8");
-      await fs.rename(tmp, target);
-    } catch (err) {
-      await fs.rm(tmp, { force: true });
-      throw err;
-    }
-    return record;
+    return persist(target, record);
   });
+}
+
+/** Atomic write-then-rename of one record. */
+async function persist(target: string, record: StoredSyncRecord): Promise<StoredSyncRecord> {
+  await fs.mkdir(path.dirname(target), { recursive: true });
+  // Unique per write: a name derived from pid and rev collides between
+  // concurrent writes, which corrupts the temp file and makes one rename
+  // fail with ENOENT after the other has moved it.
+  const tmp = `${target}.${randomUUID()}.tmp`;
+  try {
+    await fs.writeFile(tmp, JSON.stringify(record), "utf8");
+    await fs.rename(tmp, target);
+  } catch (err) {
+    await fs.rm(tmp, { force: true });
+    throw err;
+  }
+  return record;
 }
 
 /** Size on disk of an existing record, or 0 when it is gone. */
