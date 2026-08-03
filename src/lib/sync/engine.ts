@@ -212,6 +212,33 @@ async function migrateLegacyGroup(credentials: SyncCredentials, passphrase: stri
   await pushRemote(credentials.groupId, reencrypted, 0, credentials.writeToken);
 }
 
+/**
+ * Remove the group's record from the server, then turn sync off locally.
+ * Local data is untouched — this deletes the household's ENCRYPTED BACKUP,
+ * not anyone's training.
+ *
+ * Only v3 groups can do this: deletion requires the bound write capability
+ * (SEC-02), which passphrase-era groups never had. A 404 is success — the
+ * copy is gone, which is what was asked. Note for callers' copy: any OTHER
+ * device still syncing this group will upload a fresh record on its next
+ * cycle (same seed, same capability), so turn sync off there first.
+ */
+export async function deleteServerCopyAndDisable(storage: StorageAdapter): Promise<void> {
+  const groupId = await storage.getMeta(META_SYNC_GROUP_ID);
+  if (groupId) {
+    const token = await loadWriteToken(storage);
+    if (!token) {
+      throw new Error("this group predates delete capabilities — upgrade sync security first");
+    }
+    const res = await fetch(`/api/sync/${groupId}`, {
+      method: "DELETE",
+      headers: { "x-sync-write-token": token },
+    });
+    if (!res.ok && res.status !== 404) throw new Error(`sync server error ${res.status}`);
+  }
+  await disableSync(storage);
+}
+
 /** Forget credentials and status; local data is left untouched. */
 export async function disableSync(storage: StorageAdapter): Promise<void> {
   await storage.setMeta(META_SYNC_GROUP_ID, "");

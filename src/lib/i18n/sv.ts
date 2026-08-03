@@ -90,6 +90,17 @@ export const SV: Record<string, string> = {
   "I have saved my sync code": "Jag har sparat min synkkod",
   "Sync security upgraded.": "Synksäkerheten uppgraderad.",
   "Upgrade failed: {error}": "Uppgraderingen misslyckades: {error}",
+  "Delete server copy…": "Radera serverkopian …",
+  "Delete the server copy?": "Radera serverkopian?",
+  "This removes the household's encrypted backup from your server and turns sync off on this device. Training data stays on every device — nothing local is deleted.":
+    "Detta tar bort hushållets krypterade säkerhetskopia från din server och stänger av synk på den här enheten. Träningsdatan finns kvar på varje enhet — inget lokalt raderas.",
+  "After this, no device can restore from sync. A device that still has sync on will upload a fresh copy on its next sync — turn sync off there first.":
+    "Efter detta kan ingen enhet återställa från synk. En enhet som fortfarande har synk på laddar upp en ny kopia vid nästa synk — stäng av synk där först.",
+  "Delete server copy": "Radera serverkopian",
+  "Deleting…": "Raderar …",
+  "Server copy deleted. Sync is off; local data stays on every device.":
+    "Serverkopian raderad. Synk är av; lokal data finns kvar på varje enhet.",
+  "Could not delete the server copy: {error}": "Kunde inte radera serverkopian: {error}",
   "No answer — tap to try again": "Inget svar — tryck för att försöka igen",
   "Round paused": "Rundan pausad",
   "The app was in the background, so this round was not scored — timings there are not comparable. Play it again when you are ready.":

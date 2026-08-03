@@ -9,6 +9,7 @@ import { CURRENT_DATA_VERSION } from "@/lib/storage/migrations";
 import { SyncCodeFormatError } from "./syncCode";
 import {
   createSyncGroup,
+  deleteServerCopyAndDisable,
   getSyncStatus,
   joinSyncGroup,
   META_SYNC_GROUP_ID,
@@ -40,6 +41,12 @@ function mockServer() {
       const record = records.get(groupId);
       if (!record) return new Response(JSON.stringify({ error: "not found" }), { status: 404 });
       return new Response(JSON.stringify(record), { status: 200 });
+    }
+    if (init.method === "DELETE") {
+      if (!records.delete(groupId)) {
+        return new Response(JSON.stringify({ error: "not found" }), { status: 404 });
+      }
+      return new Response(JSON.stringify({ deleted: true }), { status: 200 });
     }
     const body = JSON.parse(String(init.body)) as {
       blob: string;
@@ -206,6 +213,39 @@ describe("v3 sync protocol", () => {
     expect(old).toBeDefined();
     const oldState = await decryptJson<SyncState>(v2.key, { blob: old.blob, iv: old.iv });
     expect(oldState.profiles.map((p) => p.name)).toContain("Farmor");
+  });
+
+  it("delete: removes the server record with the capability, then disables locally", async () => {
+    const records = mockServer();
+    const storage = await deviceWithProfile("Anna");
+    await createSyncGroup(storage);
+    expect(records.size).toBe(1);
+
+    await deleteServerCopyAndDisable(storage);
+
+    expect(records.size).toBe(0);
+    const status = await getSyncStatus(storage);
+    expect(status.enabled).toBe(false);
+    // The DELETE carried the capability header, and never put it in the URL.
+    const fetchMock = fetch as unknown as ReturnType<typeof vi.fn>;
+    const delCall = fetchMock.mock.calls.find(
+      (c) => (c[1] as RequestInit | undefined)?.method === "DELETE",
+    );
+    expect(delCall).toBeDefined();
+    const headers = (delCall![1] as RequestInit).headers as Record<string, string>;
+    expect(headers["x-sync-write-token"]).toMatch(/^[0-9a-f]{64}$/);
+    expect(String(delCall![0])).not.toContain(headers["x-sync-write-token"]);
+    // Local training data was never touched.
+    expect((await storage.listProfiles()).map((p) => p.name)).toContain("Anna");
+  });
+
+  it("delete: a passphrase-era group refuses and stays enabled", async () => {
+    const records = mockServer();
+    const { storage, v2 } = await v2Device(records);
+
+    await expect(deleteServerCopyAndDisable(storage)).rejects.toThrow(/upgrade sync security/i);
+    expect(records.get(v2.groupId)).toBeDefined();
+    expect((await getSyncStatus(storage)).enabled).toBe(true);
   });
 
   it("upgrade: an unreachable old group aborts the move with credentials intact", async () => {
