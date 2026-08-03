@@ -13,6 +13,12 @@ updates:
     groups:
       minor-and-patch:
         update-types: ["minor", "patch"]
+    ignore:
+      # Types track the RUNTIME, not npm's latest: the container and CI run
+      # Node 22, so @types/node majors beyond it are wrong by definition.
+      # Bump this together with the actual Node upgrade, deliberately.
+      - dependency-name: "@types/node"
+        update-types: ["version-update:semver-major"]
   - package-ecosystem: github-actions
     directory: /
     schedule:
