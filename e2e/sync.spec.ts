@@ -86,6 +86,35 @@ test.describe("device sync", () => {
     await deviceB.close();
   });
 
+  test("deleting the server copy makes restore impossible, and touches nothing local", async ({
+    page,
+    browser,
+  }) => {
+    await createProfile(page, "Elvira");
+    const code = await setUpSyncAndSaveCode(page);
+
+    await page.getByRole("button", { name: "Delete server copy…" }).click();
+    const confirm = page.getByRole("dialog");
+    await expect(confirm.getByText(/no device can restore/i)).toBeVisible();
+    await confirm.getByRole("button", { name: "Delete server copy", exact: true }).click();
+    await expect(page.getByText(/server copy deleted/i)).toBeVisible({ timeout: 20_000 });
+
+    // Local data is untouched, sync is off.
+    await expect(page.getByRole("heading", { name: "Elvira" })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Set up sync on this device" })).toBeVisible();
+
+    // The code that used to restore now finds nothing — the copy is gone.
+    const fresh = await browser.newContext({ ...devices["iPhone 13"] });
+    const freshPage = await fresh.newPage();
+    await freshPage.goto("/welcome");
+    await freshPage.getByRole("button", { name: /restore from sync/i }).click();
+    const restoreDialog = freshPage.getByRole("dialog");
+    await restoreDialog.getByLabel("Sync code or passphrase").fill(code);
+    await restoreDialog.getByRole("button", { name: "Restore", exact: true }).click();
+    await expect(restoreDialog.getByText(/no data found/i)).toBeVisible({ timeout: 20_000 });
+    await fresh.close();
+  });
+
   test("a wrong passphrase restores nothing and leaves sync off", async ({ browser }) => {
     const context = await browser.newContext({ ...devices["iPhone 13"] });
     const page = await context.newPage();

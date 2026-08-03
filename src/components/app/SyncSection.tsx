@@ -6,6 +6,7 @@ import { MIN_PASSPHRASE_LENGTH } from "@/lib/sync/crypto";
 import { looksLikeSyncCode, SyncCodeFormatError } from "@/lib/sync/syncCode";
 import {
   createSyncGroup,
+  deleteServerCopyAndDisable,
   disableSync,
   enableSync,
   getSyncStatus,
@@ -31,6 +32,7 @@ export function SyncSection() {
   /** Non-null while the save-your-code dialog is up. */
   const [shownCode, setShownCode] = useState<{ code: string; afterUpgrade: boolean } | null>(null);
   const [copied, setCopied] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
 
@@ -133,6 +135,26 @@ export function SyncSection() {
     await disableSync(getStorage());
     setMessage(t("Sync is off. Local data stays on this device."));
     await reload();
+  };
+
+  const doDeleteServerCopy = async () => {
+    if (busy) return;
+    setBusy(true);
+    try {
+      await deleteServerCopyAndDisable(getStorage());
+      setConfirmDelete(false);
+      setMessage(t("Server copy deleted. Sync is off; local data stays on every device."));
+    } catch (err) {
+      setConfirmDelete(false);
+      setMessage(
+        t("Could not delete the server copy: {error}", {
+          error: err instanceof Error ? err.message : "unknown error",
+        }),
+      );
+    } finally {
+      setBusy(false);
+      await reload();
+    }
   };
 
   const copyCode = async (code: string) => {
@@ -257,6 +279,16 @@ export function SyncSection() {
               {t("Disable sync")}
             </Button>
           </div>
+          {status.syncCode && (
+            <Button
+              variant="danger"
+              onClick={() => setConfirmDelete(true)}
+              disabled={busy}
+              className="mt-2.5 w-full"
+            >
+              {t("Delete server copy…")}
+            </Button>
+          )}
         </>
       )}
 
@@ -295,6 +327,35 @@ export function SyncSection() {
               className="flex-1"
             >
               {busy ? t("Syncing…") : t("Join")}
+            </Button>
+          </div>
+        </Dialog>
+      )}
+
+      {confirmDelete && (
+        <Dialog label={t("Delete the server copy?")} onClose={() => setConfirmDelete(false)}>
+          <p className="text-lg font-bold">{t("Delete the server copy?")}</p>
+          <p className="mt-2 text-sm text-[var(--color-ink-dim)]">
+            {t(
+              "This removes the household's encrypted backup from your server and turns sync off on this device. Training data stays on every device — nothing local is deleted.",
+            )}
+          </p>
+          <p className="mt-2 text-sm font-semibold text-[var(--color-warn)]">
+            {t(
+              "After this, no device can restore from sync. A device that still has sync on will upload a fresh copy on its next sync — turn sync off there first.",
+            )}
+          </p>
+          <div className="mt-4 flex gap-3">
+            <Button variant="ghost" onClick={() => setConfirmDelete(false)} className="flex-1">
+              {t("Cancel")}
+            </Button>
+            <Button
+              variant="danger"
+              onClick={() => void doDeleteServerCopy()}
+              disabled={busy}
+              className="flex-1"
+            >
+              {busy ? t("Deleting…") : t("Delete server copy")}
             </Button>
           </div>
         </Dialog>
