@@ -80,4 +80,3 @@
 - chore: scaffold Next.js 15 app with TypeScript, Tailwind and test tooling
 - Initialize Cortex repository
 - docs: add local development environment guide
-
