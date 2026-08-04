@@ -200,6 +200,10 @@ function sanitizeExerciseResult(raw: unknown): ExerciseResult | null {
   }
   const avg = num(raw.avgResponseMs, 0, 3_600_000);
   const best = num(raw.bestResponseMs, 0, 3_600_000);
+  // Carried through the allow-list deliberately: dropping it would relabel
+  // every imported or synced record as "unknown mapping", which is the one
+  // thing the stamp exists to prevent.
+  const measurementVersion = num(raw.measurementVersion, 0, 10_000);
   return {
     exerciseId: raw.exerciseId,
     rounds: Math.round(num(raw.rounds, 0, 1000) ?? 0),
@@ -210,6 +214,7 @@ function sanitizeExerciseResult(raw: unknown): ExerciseResult | null {
     ...(avg !== null ? { avgResponseMs: avg } : {}),
     ...(best !== null ? { bestResponseMs: best } : {}),
     ...(Object.keys(details).length > 0 ? { details } : {}),
+    ...(measurementVersion !== null ? { measurementVersion: Math.round(measurementVersion) } : {}),
   };
 }
 

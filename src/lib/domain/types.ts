@@ -120,6 +120,14 @@ export interface ExerciseResult {
   bestResponseMs?: number;
   /** Exercise-specific extras (e.g. n-back false alarms, max span reached). */
   details?: Record<string, number>;
+  /**
+   * Which difficulty mapping produced these numbers
+   * (`MEASUREMENT_VERSION[exerciseId]` at the time of recording). Absent on
+   * results written before versioning existed — those are "unknown", not
+   * "current", because assuming otherwise makes a chart tell a story that
+   * never happened. See lib/measurement/version.ts.
+   */
+  measurementVersion?: number;
 }
 
 export interface SessionRecord {

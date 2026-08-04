@@ -50,6 +50,13 @@ export interface TrendPoint {
   /** Session start ISO timestamp. */
   at: string;
   value: number;
+  /**
+   * Which difficulty mapping produced this number; undefined for results
+   * recorded before versioning existed. Two different values in one window
+   * mean the points are not on a comparable scale — see
+   * lib/measurement/version.ts.
+   */
+  measurementVersion?: number;
 }
 
 /** Accuracy per session for one exercise, oldest first. */
@@ -57,7 +64,11 @@ export function accuracyTrend(sessions: SessionRecord[], exerciseId: ExerciseId)
   return sortedAsc(sessions).flatMap((s) =>
     s.exercises
       .filter((e) => e.exerciseId === exerciseId)
-      .map((e) => ({ at: s.startedAt, value: e.accuracy })),
+      .map((e) => ({
+        at: s.startedAt,
+        value: e.accuracy,
+        measurementVersion: e.measurementVersion,
+      })),
   );
 }
 
@@ -74,7 +85,9 @@ export function levelTrend(sessions: SessionRecord[], exerciseId: ExerciseId): T
   return sortedAsc(sessions).flatMap((s) => {
     const blocks = s.exercises.filter((e) => e.exerciseId === exerciseId);
     const last = blocks[blocks.length - 1];
-    return last ? [{ at: s.startedAt, value: last.levelAfter }] : [];
+    return last
+      ? [{ at: s.startedAt, value: last.levelAfter, measurementVersion: last.measurementVersion }]
+      : [];
   });
 }
 

@@ -190,6 +190,8 @@ export const SV: Record<string, string> = {
   "{name} level": "Nivå i {name}",
   "Level per session. This is the progress signal: the difficulty adapts so accuracy stays near its target, and the level climbs when you do.":
     "Nivå per pass. Det är detta som visar framsteg: svårigheten anpassar sig så att träffsäkerheten ligger nära sitt mål, och nivån stiger när du gör det.",
+  "The difficulty of this exercise changed during this period, so a level here does not mean the same thing as a level earlier in the line. Compare within each stretch, not across the change.":
+    "Svårighetsgraden för den här övningen ändrades under perioden, så en nivå här betyder inte samma sak som en nivå tidigare i linjen. Jämför inom varje avsnitt, inte över förändringen.",
   "Only {n} session(s) with this exercise so far — read this as a first hint.":
     "Bara {n} pass med den här övningen hittills — läs det som en första fingervisning.",
   "Accuracy per session. Flat near 75% means the difficulty is tracking you — look at the level above for progress.":
