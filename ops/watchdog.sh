@@ -159,6 +159,24 @@ probe_container() {
   return 0
 }
 
+probe_backup() {
+  # A backup cron that dies quietly is indistinguishable from no backup at
+  # all — until the day it is needed. The backup script stamps a file on
+  # every SUCCESSFUL run; this alarms when that stamp goes stale.
+  local stamp="${CORTEX_BACKUP_STAMP:-$HOME/cortex-backups/.last-success}"
+  local max_age="${CORTEX_BACKUP_MAX_AGE_HOURS:-30}" # nightly + slack
+  [ -e "$stamp" ] || {
+    echo "no successful backup has ever been recorded ($stamp missing)"
+    return 1
+  }
+  local age_hours=$(((($(date +%s) - $(stat -c %Y "$stamp")) / 3600)))
+  if [ "$age_hours" -ge "$max_age" ]; then
+    echo "last successful backup was ${age_hours}h ago"
+    return 1
+  fi
+  return 0
+}
+
 probe_disk() {
   # The sync volume lives on the root partition; a full disk stops every write
   # and the app keeps answering 200 until it tries one.
@@ -186,6 +204,7 @@ run_probes() {
   if [ "${LOCAL_CHECKS:-0}" = 1 ]; then
     if ! out=$(probe_container); then reasons+=("$out"); fi
     if ! out=$(probe_disk); then reasons+=("$out"); fi
+    if ! out=$(probe_backup); then reasons+=("$out"); fi
   fi
   if [ ${#reasons[@]} -gt 0 ]; then
     local joined=""
