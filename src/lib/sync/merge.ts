@@ -18,11 +18,27 @@ export interface SyncTombstones {
   clearedSessions: Record<string, string>;
 }
 
+/**
+ * One device in the household's registry (ADR 0010 outcome). Lives INSIDE
+ * the encrypted state on purpose: the label is a household matter, not the
+ * server operator's. Entries are only ever added and updated — removal
+ * would need tombstones to survive the merge, which is protocol surface
+ * the ADR decision exists to avoid. A lost device simply stops updating,
+ * and the list says so honestly.
+ */
+export interface SyncDeviceEntry {
+  label: string;
+  /** ISO timestamp of the last completed sync from this device. */
+  lastSeenAt: string;
+}
+
 export interface SyncState {
   dataVersion: number;
   profiles: Profile[];
   sessions: SessionRecord[];
   tombstones: SyncTombstones;
+  /** deviceId -> entry. Absent in records written before the registry. */
+  devices?: Record<string, SyncDeviceEntry>;
 }
 
 export function emptyTombstones(): SyncTombstones {
@@ -85,7 +101,23 @@ export function mergeStates(a: SyncState, b: SyncState): SyncState {
     profiles: profiles.sort((x, y) => x.createdAt.localeCompare(y.createdAt)),
     sessions,
     tombstones,
+    devices: mergeDevices(a.devices, b.devices),
   };
+}
+
+/** Per device, the freshest sighting wins (its label comes along). */
+function mergeDevices(
+  a: Record<string, SyncDeviceEntry> | undefined,
+  b: Record<string, SyncDeviceEntry> | undefined,
+): Record<string, SyncDeviceEntry> {
+  const merged: Record<string, SyncDeviceEntry> = Object.create(null);
+  for (const source of [a ?? {}, b ?? {}]) {
+    for (const [id, entry] of Object.entries(source)) {
+      const mine = merged[id];
+      if (!mine || entry.lastSeenAt > mine.lastSeenAt) merged[id] = entry;
+    }
+  }
+  return merged;
 }
 
 function mergeTombstones(a: SyncTombstones, b: SyncTombstones): SyncTombstones {

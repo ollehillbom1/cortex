@@ -1,5 +1,10 @@
 import { sanitizeProfile, sanitizeSession } from "@/lib/storage/validate";
-import { emptyTombstones, type SyncState, type SyncTombstones } from "./merge";
+import {
+  emptyTombstones,
+  type SyncDeviceEntry,
+  type SyncState,
+  type SyncTombstones,
+} from "./merge";
 
 /**
  * Allow-listed projection of a decrypted sync payload.
@@ -13,6 +18,8 @@ import { emptyTombstones, type SyncState, type SyncTombstones } from "./merge";
 const MAX_PROFILES = 50;
 const MAX_SESSIONS = 50_000;
 const MAX_TOMBSTONES = 500;
+const MAX_DEVICES = 25;
+const MAX_DEVICE_LABEL = 40;
 
 function isRecord(v: unknown): v is Record<string, unknown> {
   return typeof v === "object" && v !== null && !Array.isArray(v);
@@ -38,6 +45,21 @@ function sanitizeTombstones(raw: unknown): SyncTombstones {
   };
 }
 
+function sanitizeDevices(raw: unknown): Record<string, SyncDeviceEntry> | undefined {
+  if (!isRecord(raw)) return undefined;
+  const out: Record<string, SyncDeviceEntry> = Object.create(null);
+  for (const [key, value] of Object.entries(raw).slice(0, MAX_DEVICES)) {
+    if (typeof key !== "string" || key.length === 0 || key.length > 64) continue;
+    if (key === "__proto__" || key === "constructor" || key === "prototype") continue;
+    if (!isRecord(value)) continue;
+    const label = typeof value.label === "string" ? value.label.slice(0, MAX_DEVICE_LABEL) : "";
+    const lastSeenAt = value.lastSeenAt;
+    if (typeof lastSeenAt !== "string" || Number.isNaN(Date.parse(lastSeenAt))) continue;
+    out[key] = { label, lastSeenAt: lastSeenAt.slice(0, 40) };
+  }
+  return Object.keys(out).length > 0 ? out : undefined;
+}
+
 export function sanitizeSyncState(raw: unknown): SyncState | null {
   if (!isRecord(raw)) return null;
   if (!Array.isArray(raw.profiles) || !Array.isArray(raw.sessions)) return null;
@@ -54,5 +76,11 @@ export function sanitizeSyncState(raw: unknown): SyncState | null {
   const sessions = raw.sessions.map(sanitizeSession).filter((s) => s !== null);
 
   const dataVersion = typeof raw.dataVersion === "number" ? raw.dataVersion : 1;
-  return { dataVersion, profiles, sessions, tombstones: sanitizeTombstones(raw.tombstones) };
+  return {
+    dataVersion,
+    profiles,
+    sessions,
+    tombstones: sanitizeTombstones(raw.tombstones),
+    devices: sanitizeDevices(raw.devices),
+  };
 }

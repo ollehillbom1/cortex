@@ -86,6 +86,54 @@ test.describe("device sync", () => {
     await deviceB.close();
   });
 
+  test("the lost-device flow makes the old code worthless and the new one whole", async ({
+    page,
+    browser,
+  }) => {
+    await createProfile(page, "Frida");
+    const oldCode = await setUpSyncAndSaveCode(page);
+
+    // The device registry shows this device, inside the household's data.
+    await expect(page.getByRole("list", { name: /devices in this sync group/i })).toBeVisible();
+    await expect(page.getByText(/this device — rename/i)).toBeVisible();
+
+    await page.getByRole("button", { name: "Lost a device?" }).click();
+    const confirm = page.getByRole("dialog");
+    await expect(confirm.getByText(/cannot be taken back/i)).toBeVisible();
+    await confirm.getByRole("button", { name: "Create a new code", exact: true }).click();
+
+    const codeDialog = page.getByRole("dialog");
+    await expect(codeDialog.getByText("Your sync code")).toBeVisible({ timeout: 20_000 });
+    const newCode = (await codeDialog.getByTestId("sync-code").textContent())!.trim();
+    expect(newCode).not.toBe(oldCode);
+    await codeDialog.getByRole("button", { name: "I have saved my sync code" }).click();
+    await expect(page.getByText(/old code no longer unlocks anything/i)).toBeVisible();
+
+    // The lost phone's code now restores nothing...
+    const thief = await browser.newContext({ ...devices["iPhone 13"] });
+    const thiefPage = await thief.newPage();
+    await thiefPage.goto("/welcome");
+    await thiefPage.getByRole("button", { name: /restore from sync/i }).click();
+    const thiefDialog = thiefPage.getByRole("dialog");
+    await thiefDialog.getByLabel("Sync code or passphrase").fill(oldCode);
+    await thiefDialog.getByRole("button", { name: "Restore", exact: true }).click();
+    await expect(thiefDialog.getByText(/no data found/i)).toBeVisible({ timeout: 20_000 });
+    await thief.close();
+
+    // ...while the household continues under the new one.
+    const family = await browser.newContext({ ...devices["iPhone 13"] });
+    const familyPage = await family.newPage();
+    await familyPage.goto("/welcome");
+    await familyPage.getByRole("button", { name: /restore from sync/i }).click();
+    const familyDialog = familyPage.getByRole("dialog");
+    await familyDialog.getByLabel("Sync code or passphrase").fill(newCode);
+    await familyDialog.getByRole("button", { name: "Restore", exact: true }).click();
+    await familyPage.waitForURL(/\/$/, { timeout: 20_000 });
+    await familyPage.getByRole("link", { name: "Profile", exact: true }).click();
+    await expect(familyPage.getByRole("heading", { name: "Frida" })).toBeVisible();
+    await family.close();
+  });
+
   test("deleting the server copy makes restore impossible, and touches nothing local", async ({
     page,
     browser,

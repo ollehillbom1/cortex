@@ -3,13 +3,16 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { IDBFactory } from "fake-indexeddb";
 import { IndexedDBAdapter } from "@/lib/storage/db";
 import { createProfile } from "@/lib/storage/profileFactory";
-import { decryptJson, deriveCredentials, encryptJson } from "./crypto";
+import { decryptJson, deriveCodeCredentials, deriveCredentials, encryptJson } from "./crypto";
 import { emptyTombstones, type SyncState } from "./merge";
 import { CURRENT_DATA_VERSION } from "@/lib/storage/migrations";
-import { SyncCodeFormatError } from "./syncCode";
+import { parseSyncCode, SyncCodeFormatError } from "./syncCode";
 import {
   createSyncGroup,
   deleteServerCopyAndDisable,
+  listSyncDevices,
+  rotateGroupAfterLoss,
+  setDeviceLabel,
   getSyncStatus,
   joinSyncGroup,
   META_SYNC_GROUP_ID,
@@ -213,6 +216,49 @@ describe("v3 sync protocol", () => {
     expect(old).toBeDefined();
     const oldState = await decryptJson<SyncState>(v2.key, { blob: old.blob, iv: old.iv });
     expect(oldState.profiles.map((p) => p.name)).toContain("Farmor");
+  });
+
+  it("registry: every completed sync stamps this device, inside the encryption", async () => {
+    const records = mockServer();
+    const storage = await deviceWithProfile("Anna");
+    await setDeviceLabel(storage, "Annas mobil");
+    const code = await createSyncGroup(storage);
+
+    // The pushed record carries the registry — decrypt like a household
+    // device would and find ourselves in it.
+    const seed = parseSyncCode(code);
+    const { key } = await deriveCodeCredentials(seed);
+    const [record] = [...records.values()];
+    const state = await decryptJson<SyncState>(key, { blob: record.blob, iv: record.iv });
+    const entries = Object.values(state.devices ?? {});
+    expect(entries).toHaveLength(1);
+    expect(entries[0].label).toBe("Annas mobil");
+    expect(Date.parse(entries[0].lastSeenAt)).not.toBeNaN();
+
+    // A second device joining appears beside it, and both see both.
+    const deviceB = freshDevice();
+    await joinSyncGroup(deviceB, code);
+    const both = await listSyncDevices(deviceB);
+    expect(both).toHaveLength(2);
+    expect(both.filter((d) => d.self)).toHaveLength(1);
+    expect(both.map((d) => d.label)).toContain("Annas mobil");
+  });
+
+  it("lost device: the old code stops working, the new one carries everything", async () => {
+    const records = mockServer();
+    const storage = await deviceWithProfile("Anna");
+    const oldCode = await createSyncGroup(storage);
+
+    const { code: newCode, oldCopyDeleted } = await rotateGroupAfterLoss(storage);
+
+    expect(newCode).not.toBe(oldCode);
+    expect(oldCopyDeleted).toBe(true);
+    // The lost phone's code now unlocks nothing...
+    await expect(joinSyncGroup(freshDevice(), oldCode)).rejects.toThrow(SyncGroupNotFoundError);
+    // ...while the household's data lives on under the new one.
+    const follower = freshDevice();
+    await joinSyncGroup(follower, newCode);
+    expect((await follower.listProfiles()).map((p) => p.name)).toContain("Anna");
   });
 
   it("delete: removes the server record with the capability, then disables locally", async () => {
