@@ -1,6 +1,9 @@
 # ADR 0010: Per-device sync keys (v4), device list and revocation
 
-- **Status**: proposed — decision needed before any code is written
+- **Status**: decided 2026-08-04 — the "keep v3" alternative was chosen,
+  strengthened with a device registry and a guided lost-device flow; the
+  per-device key protocol below is DEFERRED, kept as the design to reach
+  for when a trigger fires
 - **Date**: 2026-08-04
 - **Supersedes parts of**: [ADR 0007](0007-sync-backend.md) (v2), and the v3
   protocol shipped in #58
@@ -156,12 +159,33 @@ access, server-enforced device limits, and any form of account.
   product: no accounts is a design promise, and it would make the operator
   able to lock users out.
 
-## Open questions for the decision
+## Outcome (decided with Olle, 2026-08-04)
 
-1. Is the lost-phone case worth tripling the protocol surface, given the
-   household is currently four devices and the server is on your own LAN?
-2. Should the legacy v3 slot expire automatically after some period, or only
-   ever be removed deliberately? (Automatic expiry protects the forgetful
-   household and can strand a device that was simply off for a month.)
-3. Device labels are user-supplied and visible to the operator. Free text,
-   or a fixed list ("phone", "tablet", "laptop") to limit what leaks?
+1. **Not now.** v3 plus what already shipped covers the realistic threat,
+   manually: new group on a surviving device → others join with the new
+   code → delete the old server copy (#81). After that the old code is
+   worthless except for data already on the lost device — which no
+   protocol, v4 included, can recall. What v4 buys over that ritual is
+   convenience, a device list and expiring invites; not worth the largest
+   risk increase the security core has seen. Instead, with today's
+   protocol: a **device registry inside the encrypted sync state** (name +
+   last seen; zero crypto change) and a **guided "lost a device?" flow**
+   that performs the ritual. Revisit when: more than ~5 devices, a second
+   household on the server, or an actual incident.
+2. **Deliberate revocation only, never a timer.** Automatic expiry is
+   silent access loss on a clock, and it hits exactly the wrong household —
+   the summer-house tablet that was simply off for a month. A nagging card
+   until the user acts, in line with every transition this project ships.
+   This answer stands if the deferred protocol is ever built.
+3. **The question dissolved on inspection: free text, encrypted.** The
+   dilemma assumed labels must live in the server-visible keyslot. They
+   need not: slots require only an opaque id and key material; names live
+   in the encrypted state, so users get real labels ("Farmors iPad") and
+   the operator sees nothing. The registry in (1) is built inside the
+   encryption from day one for the same reason.
+
+Registry semantics worth recording: entries are only ever added and
+updated (newest lastSeenAt wins per device), never removed — removal
+would need tombstones to survive merge, which is protocol surface this
+decision exists to avoid. A lost device simply stops updating, and the
+list says so honestly ("has not synced since …").
