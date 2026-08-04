@@ -198,15 +198,22 @@ occasionally use **Profile → Your data → Export JSON** and keep the file.
 different software with the same name, and neither can be rolled back to.
 
 ```bash
-ops/release.sh 1.2.3                        # gates, changelog, git tag, image
+ops/release.sh prepare 1.2.3                # changelog + version bump, as a PR
+# …merge that PR…
+ops/release.sh tag 1.2.3                    # verify green CI, tag, build image
 ops/deploy.sh --env staging --tag v1.2.3    # loopback :9923, its own volume
 ops/deploy.sh --env prod    --tag v1.2.3    # :9922, the live sync volume
 ops/deploy.sh --env prod    --tag v1.2.2    # rollback = a deliberate choice
 ```
 
-`release.sh` refuses to tag a dirty tree, a branch other than main, a commit
-that is not on origin, or a commit whose CI is not green — the tag has to
-mean "this passed". `deploy.sh` holds the hardened runtime flags (one place,
+The release is prepared **as a pull request** rather than committed straight
+to main: main is protected, everything goes through review, and a release
+commit is not an exception (the first version of this script did commit
+directly, which branch protection rejects — a brand-new commit has no
+passing checks yet). `release.sh tag` then refuses a dirty tree, a branch
+other than main, a commit that is not on origin, a version with no changelog
+entry, or a commit whose CI is not green — the tag has to mean "this
+passed". `deploy.sh` holds the hardened runtime flags (one place,
 pinned by `deployContract.test.ts`) and accepts a deploy only when the new
 container **actually answers on its port**; anything else rolls back to the
 previous image and verifies that the rollback serves.
