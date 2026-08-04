@@ -1,5 +1,10 @@
 # Changelog
 
+## v1.2.0 — 2026-08-05
+
+- ci(e2e): give WebKit one paced retry of only its failures (#93)
+- feat(stats): personal records carry their measurement era (#92)
+
 ## v1.1.0 — 2026-08-04
 
 - feat(sync): device registry and a guided lost-device flow (ADR 0010 outcome) (#90)
