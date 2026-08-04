@@ -121,7 +121,7 @@ idempotent cron line. It records the commit it was installed from in
 
 What it checks: the public `/api/health` endpoint (which exercises the whole
 chain — proxy, TLS, app), certificate expiry, and — with `--local-checks`, on
-the Docker host — container state/health and disk space. It pages on the
+the Docker host — container state/health, disk space, and backup freshness. It pages on the
 second consecutive failure (a single blip during a redeploy is not an
 outage), repeats every six hours while still down, and announces recovery.
 
@@ -163,17 +163,53 @@ welcome screen. All payloads are encrypted in the browser before upload; the
 server (you) only ever stores ciphertext. See `docs/adr/0007-sync-backend.md`
 for the design and PRIVACY.md for the guarantees.
 
-Backing up the server therefore means backing up one directory:
+Backing up the server therefore means backing up one volume, and
+`ops/backup-sync.sh` does it properly:
 
 ```bash
-docker run --rm -v cortex_cortex-sync:/data -v "$PWD":/backup alpine \
-  tar czf /backup/cortex-sync-backup.tar.gz -C /data .
+ops/backup-sync.sh --init             # once: generates the encryption passphrase
+ops/install-backup.sh                 # nightly backup + weekly restore check
+ops/backup-sync.sh --verify-restore   # any time: restore into a throwaway
+                                      # volume and diff it against live
 ```
 
-For households with sync enabled that covers everything; the encrypted blobs
-are only readable with the household passphrase. Users who never enable sync
-should still occasionally use **Profile → Your data → Export JSON** and keep
-the file.
+Each run streams the volume out through a helper container, encrypts with
+gpg (AES-256) and then **decrypts its own output to confirm the archive is
+readable** — an unreadable backup is worse than none, because you only find
+out on the day you need it. The watchdog alarms if no successful run has been
+recorded for 30 hours, so a cron that dies quietly cannot masquerade as a
+backup.
+
+> An earlier version of this document told you to `tar` a volume called
+> `cortex_cortex-sync`. This deployment's volume is `cortex-sync`; the
+> command produced a valid, empty, useless archive and said nothing was
+> wrong. `backup-sync.sh` refuses to run against a volume that does not
+> exist for exactly that reason.
+
+Keep the passphrase (`~/.config/cortex/backup.key`) somewhere other than this
+machine — it is the machine the backups exist to survive. For households with
+sync enabled the backup covers everything; the blobs stay readable only with
+the household's sync code. Users who never enable sync should still
+occasionally use **Profile → Your data → Export JSON** and keep the file.
+
+## Releases and rollback
+
+"Deploy main" is not a release: two deploys of `main` an hour apart are
+different software with the same name, and neither can be rolled back to.
+
+```bash
+ops/release.sh 1.2.3                        # gates, changelog, git tag, image
+ops/deploy.sh --env staging --tag v1.2.3    # loopback :9923, its own volume
+ops/deploy.sh --env prod    --tag v1.2.3    # :9922, the live sync volume
+ops/deploy.sh --env prod    --tag v1.2.2    # rollback = a deliberate choice
+```
+
+`release.sh` refuses to tag a dirty tree, a branch other than main, a commit
+that is not on origin, or a commit whose CI is not green — the tag has to
+mean "this passed". `deploy.sh` holds the hardened runtime flags (one place,
+pinned by `deployContract.test.ts`) and accepts a deploy only when the new
+container **actually answers on its port**; anything else rolls back to the
+previous image and verifies that the rollback serves.
 
 ## Running without Docker
 
