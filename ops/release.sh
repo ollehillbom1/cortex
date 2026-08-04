@@ -118,6 +118,12 @@ pkg.version = process.argv[1];
 fs.writeFileSync("package.json", JSON.stringify(pkg, null, 2) + "\n");
 ' "$VERSION"
 
+  # Format what we just generated, or the release PR fails its own format
+  # gate — a changelog written straight from `git log` does not match
+  # prettier's list wrapping, and the first v1.0.0 attempt died on exactly
+  # that. The release must clear the same gates as any other change.
+  npx prettier --write CHANGELOG.md package.json >/dev/null
+
   git add CHANGELOG.md package.json
   git commit -q -m "chore(release): $TAG"
   git push -q -u origin "$RELEASE_BRANCH"
