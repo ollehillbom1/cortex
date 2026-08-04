@@ -1,3 +1,4 @@
+import { betterPersonalRecord } from "@/lib/measurement/records";
 import type { ExerciseResult, Profile, SessionRecord } from "@/lib/domain/types";
 import { evaluateAchievements } from "@/lib/progression/achievements";
 import { dayKey, recordActiveDay } from "@/lib/progression/streak";
@@ -73,28 +74,36 @@ function mergeRecords(
   const newRecords: string[] = [];
   const stamp = now.toISOString();
 
-  const consider = (key: string, value: number | undefined, lowerIsBetter = false) => {
+  const consider = (
+    key: string,
+    value: number | undefined,
+    measurementVersion: number | undefined,
+    lowerIsBetter = false,
+  ) => {
     if (value === undefined || !Number.isFinite(value)) return;
-    const prev = records[key]?.value;
-    const better = prev === undefined || (lowerIsBetter ? value < prev : value > prev);
-    if (better) {
-      records[key] = { value, achievedAt: stamp };
+    const prev = records[key];
+    const candidate = { value, achievedAt: stamp, measurementVersion };
+    if (betterPersonalRecord(key, candidate, prev)) {
+      records[key] = candidate;
       if (prev !== undefined) newRecords.push(key);
       else if (!lowerIsBetter || value > 0) newRecords.push(key);
     }
   };
 
   for (const e of exercises) {
-    consider(`${e.exerciseId}:level`, e.levelAfter);
+    // The version travels from the result, not from MEASUREMENT_VERSION:
+    // apply also runs on merged/synced sessions from other devices, whose
+    // results were produced under THEIR mapping.
+    consider(`${e.exerciseId}:level`, e.levelAfter, e.measurementVersion);
     if (e.exerciseId === "reaction-time") {
-      consider("reaction-time:bestMs", e.bestResponseMs, true);
+      consider("reaction-time:bestMs", e.bestResponseMs, e.measurementVersion, true);
     }
     if (e.details) {
       if (e.details.maxSpan !== undefined) {
-        consider(`${e.exerciseId}:maxSpan`, e.details.maxSpan);
+        consider(`${e.exerciseId}:maxSpan`, e.details.maxSpan, e.measurementVersion);
       }
       if (e.details.maxSequence !== undefined) {
-        consider(`${e.exerciseId}:maxSequence`, e.details.maxSequence);
+        consider(`${e.exerciseId}:maxSequence`, e.details.maxSequence, e.measurementVersion);
       }
     }
   }

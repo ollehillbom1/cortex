@@ -77,6 +77,14 @@ export interface ProfilePreferences {
 export interface PersonalRecord {
   value: number;
   achievedAt: string;
+  /**
+   * The measurement version of the exercise when this was set; absent for
+   * records from before versioning (an UNKNOWN era, not the current one).
+   * Count records (span, beats, level) stay comparable across eras; a
+   * millisecond record from another era never blocks the current one —
+   * see lib/measurement/records.ts for the one place that rule lives.
+   */
+  measurementVersion?: number;
 }
 
 export interface Profile {

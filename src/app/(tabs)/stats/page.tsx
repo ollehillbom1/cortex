@@ -21,7 +21,7 @@ import {
   responseTimeTrend,
   timeOfDayPerformance,
 } from "@/lib/stats/aggregate";
-import { spansMeasurementBreak } from "@/lib/measurement/version";
+import { MEASUREMENT_VERSION, spansMeasurementBreak } from "@/lib/measurement/version";
 import { ACHIEVEMENTS } from "@/lib/progression/achievements";
 import { useT } from "@/lib/i18n/useT";
 import { useProfiles } from "@/components/app/ProfileProvider";
@@ -263,17 +263,27 @@ export default function StatsPage() {
             {t("Personal records")}
           </h2>
           <ul className="grid grid-cols-2 gap-3">
-            {records.map(([key, rec]) => (
-              <li key={key} className="rounded-xl bg-white/5 p-3">
-                <p className="text-lg font-bold tabular-nums">
-                  {rec.value}{" "}
-                  <span className="text-xs font-normal">{t(RECORD_LABELS[key].unit)}</span>
-                </p>
-                <p className="text-xs text-[var(--color-ink-faint)]">
-                  {t(RECORD_LABELS[key].label)}
-                </p>
-              </li>
-            ))}
+            {records.map(([key, rec]) => {
+              const exercise = key.split(":")[0] as keyof typeof MEASUREMENT_VERSION;
+              const olderEra =
+                (rec.measurementVersion ?? 0) !== (MEASUREMENT_VERSION[exercise] ?? 0);
+              return (
+                <li key={key} className="rounded-xl bg-white/5 p-3">
+                  <p className="text-lg font-bold tabular-nums">
+                    {rec.value}{" "}
+                    <span className="text-xs font-normal">{t(RECORD_LABELS[key].unit)}</span>
+                  </p>
+                  <p className="text-xs text-[var(--color-ink-faint)]">
+                    {t(RECORD_LABELS[key].label)}
+                    {olderEra && (
+                      <span className="ml-1 text-[var(--color-warn)]">
+                        {t("· set under an older measurement")}
+                      </span>
+                    )}
+                  </p>
+                </li>
+              );
+            })}
           </ul>
         </section>
       )}
