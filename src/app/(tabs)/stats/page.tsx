@@ -21,6 +21,7 @@ import {
   responseTimeTrend,
   timeOfDayPerformance,
 } from "@/lib/stats/aggregate";
+import { spansMeasurementBreak } from "@/lib/measurement/version";
 import { ACHIEVEMENTS } from "@/lib/progression/achievements";
 import { useT } from "@/lib/i18n/useT";
 import { useProfiles } from "@/components/app/ProfileProvider";
@@ -58,6 +59,12 @@ export default function StatsPage() {
   const balance = useMemo(() => modalityBalance(sessions), [sessions]);
   const trend = useMemo(() => accuracyTrend(sessions, selected).slice(-20), [sessions, selected]);
   const levels20 = useMemo(() => levelTrend(sessions, selected).slice(-20), [sessions, selected]);
+  // A ramp change makes "level N" mean something different; plotting both
+  // sides as one line is the chart telling a story that never happened.
+  const brokenScale = useMemo(
+    () => spansMeasurementBreak(levels20.map((p) => p.measurementVersion)),
+    [levels20],
+  );
   const latency = useMemo(
     () => responseTimeTrend(sessions, selected).slice(-20),
     [sessions, selected],
@@ -145,6 +152,16 @@ export default function StatsPage() {
                 "Level per session. This is the progress signal: the difficulty adapts so accuracy stays near its target, and the level climbs when you do.",
               )}
             </p>
+            {brokenScale && (
+              <p
+                role="note"
+                className="mb-3 -mt-1 rounded-xl bg-[var(--color-warn)]/10 p-2.5 text-xs text-[var(--color-warn)]"
+              >
+                {t(
+                  "The difficulty of this exercise changed during this period, so a level here does not mean the same thing as a level earlier in the line. Compare within each stretch, not across the change.",
+                )}
+              </p>
+            )}
           </>
         )}
         <Sparkline

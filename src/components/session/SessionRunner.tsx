@@ -26,6 +26,7 @@ import {
   sessionTargetMinutes,
   type PlannedItem,
 } from "@/lib/session/planner";
+import { MEASUREMENT_VERSION } from "@/lib/measurement/version";
 import { dayKey } from "@/lib/progression/streak";
 import { parsePracticeParams } from "@/lib/session/practice";
 import { applySession } from "@/lib/session/apply";
@@ -231,6 +232,9 @@ export function SessionRunner() {
           : undefined,
       bestResponseMs: responseTimes.length > 0 ? Math.min(...responseTimes) : undefined,
       details: Object.keys(details).length > 0 ? details : undefined,
+      // Stamp what "level N" meant when this was played, so a later ramp
+      // change cannot be plotted as if it were the same task.
+      measurementVersion: MEASUREMENT_VERSION[id],
     };
   }, [currentItem, skills, practice]);
 

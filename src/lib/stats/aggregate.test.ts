@@ -9,6 +9,7 @@ import {
   strengthsAndFocus,
   timeOfDayPerformance,
 } from "./aggregate";
+import { spansMeasurementBreak } from "@/lib/measurement/version";
 import { createProfile } from "@/lib/storage/profileFactory";
 import { initialSkill } from "@/lib/adaptive/engine";
 import type { SessionRecord } from "@/lib/domain/types";
@@ -127,6 +128,19 @@ describe("level trend", () => {
       session("a", "2026-07-29T10:00:00Z", { exercises: [block(4), block(5)] }),
     ];
     expect(levelTrend(sessions, "number-span").map((p) => p.value)).toEqual([5, 6]);
+  });
+
+  it("carries the measurement version so a broken scale can be spotted", () => {
+    // The chart must be able to say "these points are not on one scale".
+    const sessions = [
+      session("a", "2026-07-29T10:00:00Z", {
+        exercises: [{ ...block(4), measurementVersion: undefined }],
+      }),
+      session("b", "2026-07-30T10:00:00Z", { exercises: [{ ...block(5), measurementVersion: 1 }] }),
+    ];
+    const points = levelTrend(sessions, "number-span");
+    expect(points.map((p) => p.measurementVersion)).toEqual([undefined, 1]);
+    expect(spansMeasurementBreak(points.map((p) => p.measurementVersion))).toBe(true);
   });
 
   it("skips sessions without the exercise, and other exercises' blocks", () => {

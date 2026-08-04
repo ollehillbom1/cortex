@@ -110,6 +110,39 @@ describe("untrusted record projection", () => {
     expect(out!.exercises[0].exerciseId).toBe("number-span");
   });
 
+  it("carries the measurement version through, and only as a sane number", () => {
+    const session = (measurementVersion: unknown) =>
+      sanitizeSession({
+        id: "s",
+        profileId: "p",
+        startedAt: "2026-07-01T10:00:00.000Z",
+        endedAt: "2026-07-01T10:10:00.000Z",
+        durationMs: 600_000,
+        xpEarned: 10,
+        exercises: [
+          {
+            exerciseId: "number-span",
+            rounds: 4,
+            accuracy: 0.8,
+            levelBefore: 2,
+            levelAfter: 3,
+            xp: 5,
+            measurementVersion,
+          },
+        ],
+      })!.exercises[0];
+
+    // Dropping it on the way in would relabel every synced or imported
+    // record as "unknown mapping" — the exact confusion the stamp prevents.
+    expect(session(1).measurementVersion).toBe(1);
+    // Absent stays absent: unstamped means unknown, never "assume current".
+    expect(session(undefined).measurementVersion).toBeUndefined();
+    expect(session("2").measurementVersion).toBeUndefined();
+    // Clamped like every other number that crosses this boundary.
+    expect(session(-5).measurementVersion).toBe(0);
+    expect(session(1e9).measurementVersion).toBe(10_000);
+  });
+
   it("projects a decrypted sync payload and leaves orphan filtering to the merge", () => {
     const profile = validProfile();
     const state = sanitizeSyncState({
