@@ -1,5 +1,11 @@
 # Changelog
 
+## v1.1.0 — 2026-08-04
+
+- feat(sync): device registry and a guided lost-device flow (ADR 0010 outcome) (#90)
+- docs(adr): propose v4 sync — per-device keys, device list, revocation (#89)
+- feat(stats): version what a level means, and refuse to plot across a change (#88)
+
 ## v1.0.0 — 2026-08-04
 
 - ops(release): prepare releases as a PR, tag only what main actually got (#85)
