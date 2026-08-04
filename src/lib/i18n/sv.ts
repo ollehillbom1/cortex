@@ -90,6 +90,22 @@ export const SV: Record<string, string> = {
   "I have saved my sync code": "Jag har sparat min synkkod",
   "Sync security upgraded.": "Synksäkerheten uppgraderad.",
   "Upgrade failed: {error}": "Uppgraderingen misslyckades: {error}",
+  "Devices in this sync group": "Enheter i synkgruppen",
+  "Device name": "Enhetsnamn",
+  "Unnamed device": "Namnlös enhet",
+  "this device — rename": "den här enheten — byt namn",
+  "last sync {when}": "senaste synk {when}",
+  "Lost a device?": "Tappat en enhet?",
+  "A lost device knows your sync code, and a code cannot be taken back — but it can be made worthless. This moves the household to a fresh group under a NEW code and removes the old server copy. The lost device keeps only what was already on it.":
+    "En tappad enhet kan din synkkod, och en kod går inte att ta tillbaka — men den går att göra värdelös. Detta flyttar hushållet till en ny grupp med en NY kod och tar bort den gamla serverkopian. Den tappade enheten behåller bara det som redan fanns på den.",
+  "Your other devices must then join again with the new code. Do this from the device you trust most.":
+    "Dina andra enheter måste sedan gå med igen via den nya koden. Gör detta från den enhet du litar mest på.",
+  "Create a new code": "Skapa en ny kod",
+  "New sync group created. The old code no longer unlocks anything.":
+    "Ny synkgrupp skapad. Den gamla koden låser inte längre upp någonting.",
+  "New sync group created, but the old server copy could not be removed — it is frozen and holds nothing new.":
+    "Ny synkgrupp skapad, men den gamla serverkopian kunde inte tas bort — den är frusen och innehåller inget nytt.",
+  "Could not rotate the sync group: {error}": "Kunde inte byta synkgrupp: {error}",
   "Delete server copy…": "Radera serverkopian …",
   "Delete the server copy?": "Radera serverkopian?",
   "This removes the household's encrypted backup from your server and turns sync off on this device. Training data stays on every device — nothing local is deleted.":

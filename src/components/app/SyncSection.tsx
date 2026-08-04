@@ -11,9 +11,13 @@ import {
   enableSync,
   getSyncStatus,
   joinSyncGroup,
+  listSyncDevices,
+  rotateGroupAfterLoss,
+  setDeviceLabel,
   SyncGroupNotFoundError,
   syncNow,
   upgradeSyncToV3,
+  type SyncDeviceView,
   type SyncStatus,
 } from "@/lib/sync/engine";
 import { useT } from "@/lib/i18n/useT";
@@ -33,16 +37,28 @@ export function SyncSection() {
   const [shownCode, setShownCode] = useState<{ code: string; afterUpgrade: boolean } | null>(null);
   const [copied, setCopied] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [confirmLost, setConfirmLost] = useState(false);
+  const [devices, setDevices] = useState<SyncDeviceView[]>([]);
+  const [labelDraft, setLabelDraft] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
 
-  const reload = async () => setStatus(await getSyncStatus(getStorage()));
+  const reload = async () => {
+    setStatus(await getSyncStatus(getStorage()));
+    setDevices(await listSyncDevices(getStorage()));
+  };
 
   useEffect(() => {
     let cancelled = false;
     void (async () => {
-      const initial = await getSyncStatus(getStorage());
-      if (!cancelled) setStatus(initial);
+      const [initial, initialDevices] = await Promise.all([
+        getSyncStatus(getStorage()),
+        listSyncDevices(getStorage()),
+      ]);
+      if (!cancelled) {
+        setStatus(initial);
+        setDevices(initialDevices);
+      }
     })();
     return () => {
       cancelled = true;
@@ -157,6 +173,42 @@ export function SyncSection() {
     }
   };
 
+  const doRotateAfterLoss = async () => {
+    if (busy) return;
+    setBusy(true);
+    try {
+      const { code, oldCopyDeleted } = await rotateGroupAfterLoss(getStorage());
+      setConfirmLost(false);
+      setMessage(
+        oldCopyDeleted
+          ? t("New sync group created. The old code no longer unlocks anything.")
+          : t(
+              "New sync group created, but the old server copy could not be removed — it is frozen and holds nothing new.",
+            ),
+      );
+      setShownCode({ code, afterUpgrade: true });
+    } catch (err) {
+      setConfirmLost(false);
+      setMessage(
+        t("Could not rotate the sync group: {error}", {
+          error: err instanceof Error ? err.message : "unknown error",
+        }),
+      );
+    } finally {
+      setBusy(false);
+      await reload();
+    }
+  };
+
+  const saveLabel = async () => {
+    if (labelDraft === null) return;
+    await setDeviceLabel(getStorage(), labelDraft);
+    setLabelDraft(null);
+    // The new name travels with the next sync; refresh the local view now.
+    await syncNow(getStorage());
+    await reload();
+  };
+
   const copyCode = async (code: string) => {
     try {
       await navigator.clipboard.writeText(code);
@@ -262,6 +314,52 @@ export function SyncSection() {
               </span>
             )}
           </p>
+          {devices.length > 0 && (
+            <ul className="mt-3 space-y-1.5" aria-label={t("Devices in this sync group")}>
+              {devices.map((d) => (
+                <li
+                  key={d.id}
+                  className="flex items-center justify-between rounded-xl bg-white/5 px-3 py-2 text-sm"
+                >
+                  {d.self && labelDraft !== null ? (
+                    <input
+                      autoFocus
+                      value={labelDraft}
+                      maxLength={40}
+                      onChange={(e) => setLabelDraft(e.target.value)}
+                      onBlur={() => void saveLabel()}
+                      onKeyDown={(e) => e.key === "Enter" && void saveLabel()}
+                      aria-label={t("Device name")}
+                      className="w-40 rounded-lg border border-white/10 bg-white/5 px-2 py-1 outline-none focus:border-[var(--color-accent-2)]"
+                    />
+                  ) : (
+                    <span>
+                      {d.label || t("Unnamed device")}
+                      {d.self && (
+                        <button
+                          type="button"
+                          onClick={() => setLabelDraft(d.label)}
+                          className="ml-2 text-xs text-[var(--color-accent-2)] underline"
+                        >
+                          {t("this device — rename")}
+                        </button>
+                      )}
+                    </span>
+                  )}
+                  <span className="text-xs text-[var(--color-ink-faint)]">
+                    {t("last sync {when}", {
+                      when: new Date(d.lastSeenAt).toLocaleString(undefined, {
+                        month: "short",
+                        day: "numeric",
+                        hour: "2-digit",
+                        minute: "2-digit",
+                      }),
+                    })}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          )}
           {status.syncCode && (
             <Button
               variant="ghost"
@@ -269,6 +367,16 @@ export function SyncSection() {
               className="mt-3 w-full"
             >
               {t("Show sync code")}
+            </Button>
+          )}
+          {status.syncCode && (
+            <Button
+              variant="ghost"
+              onClick={() => setConfirmLost(true)}
+              disabled={busy}
+              className="mt-2 w-full"
+            >
+              {t("Lost a device?")}
             </Button>
           )}
           <div className="mt-3 grid grid-cols-2 gap-2.5">
@@ -327,6 +435,35 @@ export function SyncSection() {
               className="flex-1"
             >
               {busy ? t("Syncing…") : t("Join")}
+            </Button>
+          </div>
+        </Dialog>
+      )}
+
+      {confirmLost && (
+        <Dialog label={t("Lost a device?")} onClose={() => setConfirmLost(false)}>
+          <p className="text-lg font-bold">{t("Lost a device?")}</p>
+          <p className="mt-2 text-sm text-[var(--color-ink-dim)]">
+            {t(
+              "A lost device knows your sync code, and a code cannot be taken back — but it can be made worthless. This moves the household to a fresh group under a NEW code and removes the old server copy. The lost device keeps only what was already on it.",
+            )}
+          </p>
+          <p className="mt-2 text-sm font-semibold text-[var(--color-warn)]">
+            {t(
+              "Your other devices must then join again with the new code. Do this from the device you trust most.",
+            )}
+          </p>
+          <div className="mt-4 flex gap-3">
+            <Button variant="ghost" onClick={() => setConfirmLost(false)} className="flex-1">
+              {t("Cancel")}
+            </Button>
+            <Button
+              variant="danger"
+              onClick={() => void doRotateAfterLoss()}
+              disabled={busy}
+              className="flex-1"
+            >
+              {busy ? t("Syncing…") : t("Create a new code")}
             </Button>
           </div>
         </Dialog>

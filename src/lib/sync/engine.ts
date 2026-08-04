@@ -19,7 +19,13 @@ import {
   type EncryptedBlob,
 } from "./crypto";
 import { formatSyncCode, generateSyncSeed, parseSyncCode } from "./syncCode";
-import { emptyTombstones, mergeStates, type SyncState, type SyncTombstones } from "./merge";
+import {
+  emptyTombstones,
+  mergeStates,
+  type SyncDeviceEntry,
+  type SyncState,
+  type SyncTombstones,
+} from "./merge";
 import { sanitizeSyncState } from "./validateState";
 
 /**
@@ -40,6 +46,11 @@ export const META_SYNC_SCHEMA = "syncSchema";
 export const META_SYNC_CODE = "syncCode";
 /** Write capability sent on pushes; derived alongside the key (SEC-02). */
 export const META_SYNC_WRITE_TOKEN = "syncWriteToken";
+/** This device's stable identity in the household registry (ADR 0010). */
+export const META_SYNC_DEVICE_ID = "syncDeviceId";
+export const META_SYNC_DEVICE_LABEL = "syncDeviceLabel";
+/** The merged registry, persisted like tombstones between cycles. */
+export const META_SYNC_DEVICES = "syncDevices";
 
 const MAX_PUSH_ATTEMPTS = 3;
 
@@ -213,6 +224,65 @@ async function migrateLegacyGroup(credentials: SyncCredentials, passphrase: stri
 }
 
 /**
+ * The lost-device ritual as one guided operation (ADR 0010 outcome).
+ *
+ * A lost phone holds the sync code, and a code cannot be unshared — but it
+ * can be made worthless: pull the latest state, move the household to a
+ * FRESH group under a new code, and delete the old record. The lost device
+ * then knows a code that unlocks nothing, and the only data it retains is
+ * what was already on it — which no protocol, v4 included, could recall.
+ *
+ * Order matters: the new group must exist and hold everything BEFORE the
+ * old record is deleted, so a failure at any step leaves a working group.
+ * Deleting the old copy is best-effort hygiene — `oldCopyDeleted: false`
+ * means the caller should say the old record lingers (frozen: nothing new
+ * is ever written to it) rather than pretend it is gone.
+ *
+ * v3 groups only: the deletion needs the bound capability, and a
+ * passphrase-era group should upgrade first anyway.
+ */
+export async function rotateGroupAfterLoss(
+  storage: StorageAdapter,
+): Promise<{ code: string; oldCopyDeleted: boolean }> {
+  const oldGroupId = await storage.getMeta(META_SYNC_GROUP_ID);
+  if (!oldGroupId) throw new Error("sync is not enabled");
+  const oldCode = await storage.getMeta(META_SYNC_CODE);
+  if (!oldCode) {
+    throw new Error("this group predates sync codes — upgrade sync security first");
+  }
+  const oldToken = await loadWriteToken(storage);
+
+  // Pull what the household has that this device has not seen. Mandatory:
+  // rotating without it strands remote-only history in the record we are
+  // about to delete.
+  if (!(await syncNow(storage))) {
+    const reason = await storage.getMeta(META_SYNC_LAST_ERROR);
+    throw new Error(reason || "could not reach the current sync group");
+  }
+
+  const seed = generateSyncSeed();
+  const code = formatSyncCode(seed);
+  await persistCredentials(storage, await deriveCodeCredentials(seed), code);
+  await syncNow(storage);
+
+  let oldCopyDeleted = false;
+  if (oldToken) {
+    try {
+      const res = await fetch(`/api/sync/${oldGroupId}`, {
+        method: "DELETE",
+        headers: { "x-sync-write-token": oldToken },
+      });
+      oldCopyDeleted = res.ok || res.status === 404;
+    } catch {
+      // Network hiccup: the new group is already live; the old record is
+      // frozen and can be deleted later from any upgraded device... except
+      // its token has rotated away here. Report honestly instead.
+    }
+  }
+  return { code, oldCopyDeleted };
+}
+
+/**
  * Remove the group's record from the server, then turn sync off locally.
  * Local data is untouched — this deletes the household's ENCRYPTED BACKUP,
  * not anyone's training.
@@ -248,6 +318,9 @@ export async function disableSync(storage: StorageAdapter): Promise<void> {
   await storage.setMeta(META_SYNC_SCHEMA, "");
   await storage.setMeta(META_SYNC_CODE, "");
   await storage.setMeta(META_SYNC_WRITE_TOKEN, "");
+  // The registry belongs to the group; the device's own id and label stay,
+  // so rejoining later keeps a stable identity.
+  await storage.setMeta(META_SYNC_DEVICES, "");
 }
 
 /** Record a profile deletion so it sticks across synced devices. */
@@ -277,6 +350,7 @@ export async function syncNow(storage: StorageAdapter): Promise<boolean> {
   try {
     const key = await importKeyJwk(keyJwk);
     const writeToken = await loadWriteToken(storage);
+    const device = await ensureDeviceIdentity(storage);
 
     for (let attempt = 0; attempt < MAX_PUSH_ATTEMPTS; attempt++) {
       // 1. Pull.
@@ -306,7 +380,7 @@ export async function syncNow(storage: StorageAdapter): Promise<boolean> {
       }
 
       // 2. Merge with the full local state.
-      const local = await readLocalState(storage);
+      const local = await readLocalState(storage, device);
       const merged = remoteState ? mergeStates(local, remoteState) : local;
 
       // 3. Apply the merged state locally. The snapshot's session ids come
@@ -317,6 +391,7 @@ export async function syncNow(storage: StorageAdapter): Promise<boolean> {
       const snapshotSessionIds = new Set(local.sessions.map((s) => s.id));
       await applyLocally(storage, merged, snapshotSessionIds);
       await storage.setMeta(META_SYNC_TOMBSTONES, JSON.stringify(merged.tombstones));
+      await storage.setMeta(META_SYNC_DEVICES, JSON.stringify(merged.devices ?? {}));
 
       // 4. Push, guarded by the revision we pulled.
       const payload = await encryptJson(key, merged);
@@ -334,6 +409,65 @@ export async function syncNow(storage: StorageAdapter): Promise<boolean> {
     await storage.setMeta(META_SYNC_LAST_ERROR, message);
     return false;
   }
+}
+
+/**
+ * This device's stable identity, created on first use. The default label is
+ * a coarse platform guess — it is DATA that syncs to the household (inside
+ * the encryption), so it is plain text the user can edit, not a t() key.
+ */
+async function ensureDeviceIdentity(
+  storage: StorageAdapter,
+): Promise<{ id: string; label: string }> {
+  let id = await storage.getMeta(META_SYNC_DEVICE_ID);
+  if (!id) {
+    id = crypto.randomUUID();
+    await storage.setMeta(META_SYNC_DEVICE_ID, id);
+  }
+  let label = await storage.getMeta(META_SYNC_DEVICE_LABEL);
+  if (!label) {
+    label = defaultDeviceLabel();
+    await storage.setMeta(META_SYNC_DEVICE_LABEL, label);
+  }
+  return { id, label };
+}
+
+function defaultDeviceLabel(): string {
+  const ua = typeof navigator !== "undefined" ? navigator.userAgent : "";
+  if (/iPhone/.test(ua)) return "iPhone";
+  if (/iPad/.test(ua)) return "iPad";
+  if (/Android/.test(ua)) return "Android";
+  return "Computer";
+}
+
+export interface SyncDeviceView extends SyncDeviceEntry {
+  id: string;
+  /** True for the device this code is running on. */
+  self: boolean;
+}
+
+/** The household's device registry, freshest first, from the last merge. */
+export async function listSyncDevices(storage: StorageAdapter): Promise<SyncDeviceView[]> {
+  const [raw, ownId] = await Promise.all([
+    storage.getMeta(META_SYNC_DEVICES),
+    storage.getMeta(META_SYNC_DEVICE_ID),
+  ]);
+  let devices: Record<string, SyncDeviceEntry> = {};
+  try {
+    devices = raw ? (JSON.parse(raw) as Record<string, SyncDeviceEntry>) : {};
+  } catch {
+    devices = {};
+  }
+  return Object.entries(devices)
+    .map(([id, entry]) => ({ id, ...entry, self: id === ownId }))
+    .sort((a, b) => b.lastSeenAt.localeCompare(a.lastSeenAt));
+}
+
+/** Rename this device; the next sync carries it to the household. */
+export async function setDeviceLabel(storage: StorageAdapter, label: string): Promise<void> {
+  const trimmed = label.trim().slice(0, 40);
+  if (!trimmed) return;
+  await storage.setMeta(META_SYNC_DEVICE_LABEL, trimmed);
 }
 
 /**
@@ -356,10 +490,21 @@ async function loadWriteToken(storage: StorageAdapter): Promise<string | undefin
   return writeToken;
 }
 
-async function readLocalState(storage: StorageAdapter): Promise<SyncState> {
+async function readLocalState(
+  storage: StorageAdapter,
+  device?: { id: string; label: string },
+): Promise<SyncState> {
   const profiles = await storage.listProfiles();
   const sessions = [];
   for (const p of profiles) sessions.push(...(await storage.listSessions(p.id)));
+
+  // Stamp this device into the registry it is about to push: label as the
+  // user set it, lastSeenAt = now. The merge keeps the freshest entry per
+  // device, so every completed cycle refreshes ours.
+  const devices = await loadDevices(storage);
+  if (device) {
+    devices[device.id] = { label: device.label, lastSeenAt: new Date().toISOString() };
+  }
   // The envelope must describe what is INSIDE it, not what this build is.
   // Hard-coding CURRENT meant a device holding a future-stamped record — a
   // rolled-back PWA with newer IndexedDB still present, which is the exact
@@ -377,7 +522,18 @@ async function readLocalState(storage: StorageAdapter): Promise<SyncState> {
     profiles,
     sessions,
     tombstones: await loadTombstones(storage),
+    devices,
   };
+}
+
+async function loadDevices(storage: StorageAdapter): Promise<Record<string, SyncDeviceEntry>> {
+  const raw = await storage.getMeta(META_SYNC_DEVICES);
+  if (!raw) return {};
+  try {
+    return JSON.parse(raw) as Record<string, SyncDeviceEntry>;
+  } catch {
+    return {};
+  }
 }
 
 async function applyLocally(
