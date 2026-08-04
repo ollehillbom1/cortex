@@ -110,6 +110,40 @@ behalf of whoever can reach it, it is rate limited per client and per instance,
 and you should keep a coach-enabled instance on your LAN or behind a VPN
 rather than exposed publicly.
 
+## Monitoring
+
+`ops/watchdog.sh` probes a running deployment and pages a human when it
+breaks. Install it with `ops/install-watchdog.sh`, which copies the script to
+`~/.local/lib/cortex-ops/` (a stable path — the git checkout changes branches,
+and a monitor that disappears with a branch fails silently) and writes an
+idempotent cron line. It records the commit it was installed from in
+`~/.local/lib/cortex-ops/INSTALLED`.
+
+What it checks: the public `/api/health` endpoint (which exercises the whole
+chain — proxy, TLS, app), certificate expiry, and — with `--local-checks`, on
+the Docker host — container state/health and disk space. It pages on the
+second consecutive failure (a single blip during a redeploy is not an
+outage), repeats every six hours while still down, and announces recovery.
+
+Alarms go to the SMS gateway configured in `~/.hermes/.env`, with a WhatsApp
+DM as fallback. Cron does not export that file, so the script sources it
+itself.
+
+Prove it rather than assume it:
+
+```bash
+ops/watchdog.sh --self-test    # state machine, offline, no SMS (also runs in CI)
+ops/watchdog.sh --test-alarm   # one real message, so you know the path works
+```
+
+> **A watchdog on the Docker host cannot report that the Docker host is
+> down.** The install supports `--remote-only` for exactly this: run it on a
+> second machine (the reverse-proxy RPi is the natural home) and it probes the
+> public URL, catching failures that a host-local watchdog can never see. Until
+> that exists, host-side monitoring covers the common failures — container
+> exited, app unhealthy, proxy or certificate broken, disk full — and nothing
+> covers a dead host.
+
 ## Updating
 
 ```bash
