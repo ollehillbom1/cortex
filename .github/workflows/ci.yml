@@ -64,9 +64,22 @@ jobs:
       - name: Install Playwright webkit
         run: npx playwright install --with-deps webkit
       - name: Run e2e tests on WebKit
+        # One paced second attempt of only the failures. WebKit on shared
+        # runners intermittently starves for minutes at a stretch — observed
+        # three times in two days as timeouts across UNRELATED tests, each
+        # time green on a plain rerun — which outlasts Playwright's own
+        # per-test retries (they fire seconds apart, inside the same
+        # starvation window). The pause gives the runner a different moment;
+        # --last-failed keeps the second attempt honest and fast. A real
+        # regression fails twice and still fails the job.
         run: |
           rm -rf .sync-test-data
-          npx playwright test --project=webkit-mobile
+          npx playwright test --project=webkit-mobile || {
+            echo "::warning::WebKit run failed; retrying only the failures after a pause (known runner-starvation flake)"
+            sleep 90
+            rm -rf .sync-test-data
+            npx playwright test --project=webkit-mobile --last-failed
+          }
         env:
           NEXT_TELEMETRY_DISABLED: "1"
           E2E_WEBKIT: "1"
