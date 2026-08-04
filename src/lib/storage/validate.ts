@@ -147,7 +147,17 @@ export function sanitizeProfile(raw: unknown): Profile | null {
       const short = safeKey(key);
       const val = num(value.value, -1e9, 1e9);
       const achievedAt = isoDate(value.achievedAt);
-      if (short && val !== null && achievedAt) records[short] = { value: val, achievedAt };
+      // The era stamp survives the projection: stripping it would demote a
+      // synced record to "unknown era", which the Ms-era rule then treats
+      // as beatable-by-anything — silently un-earning it on every device.
+      const era = num(value.measurementVersion, 0, 10_000);
+      if (short && val !== null && achievedAt) {
+        records[short] = {
+          value: val,
+          achievedAt,
+          ...(era !== null ? { measurementVersion: Math.round(era) } : {}),
+        };
+      }
     }
   }
 

@@ -90,6 +90,7 @@ export const SV: Record<string, string> = {
   "I have saved my sync code": "Jag har sparat min synkkod",
   "Sync security upgraded.": "Synksäkerheten uppgraderad.",
   "Upgrade failed: {error}": "Uppgraderingen misslyckades: {error}",
+  "· set under an older measurement": "· satt under äldre mätning",
   "Devices in this sync group": "Enheter i synkgruppen",
   "Device name": "Enhetsnamn",
   "Unnamed device": "Namnlös enhet",

@@ -1,4 +1,5 @@
 import type { Profile, SessionRecord } from "@/lib/domain/types";
+import { betterPersonalRecord } from "@/lib/measurement/records";
 
 /**
  * Pure merge logic for sync (issue #2).
@@ -205,8 +206,10 @@ export function mergeProfiles(
   const records: Profile["records"] = { ...winner.records };
   if (!loserWasCleared) {
     for (const [key, theirs] of Object.entries(loser.records)) {
-      const mine = records[key];
-      if (!mine || betterRecord(key, theirs.value, mine.value)) records[key] = theirs;
+      // Same era rule as session apply (betterPersonalRecord): without it, a
+      // device still writing old-era millisecond records would re-instate on
+      // every merge exactly what apply retired.
+      if (betterPersonalRecord(key, theirs, records[key])) records[key] = theirs;
     }
   }
 
@@ -234,11 +237,6 @@ export function mergeProfiles(
       best: Math.max(x.streak.best, y.streak.best),
     },
   };
-}
-
-/** Lower is better for millisecond keys; higher for everything else. */
-function betterRecord(key: string, candidate: number, current: number): boolean {
-  return key.endsWith("Ms") ? candidate < current : candidate > current;
 }
 
 function pickNewer(x: Profile, y: Profile): Profile {
