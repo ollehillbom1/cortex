@@ -53,6 +53,7 @@ const STEPS = [
       "Your training lives on your device — in your browser, not in a cloud. No account, no tracking, and nothing leaves your phone unless you choose it.",
       "Optional family sync is end-to-end encrypted: your own server stores only ciphertext, and the key never leaves your devices — not even the server's owner can read your training.",
       "You hold every key. Export your data as a file whenever you like, remove the server copy with one tap, and train fully offline from your home screen.",
+      "Do not take our word for it: Cortex is open source. Every line — the encryption, the storage, what is sent and what is not — is public at github.com/ollehillbom1/cortex.",
     ],
   },
 ] as const;

@@ -103,7 +103,15 @@ Since 2026-08-03:
 - **Dependabot** keeps the pins moving (npm, github-actions, docker —
   weekly), with alerts and automated security fixes enabled; its PRs go
   through the same required gates as everything else.
-- Deliberately not in place: GitHub secret scanning (not available on this
-  repo's plan — no secrets are committed, and `.env` is gitignored) and
-  SBOM/registry scanning (images are built and run on the same host and
-  never pushed to a registry).
+- **Secret scanning and push protection** are enabled (2026-08-05, when the
+  repository became public — they are unavailable on private repositories
+  without an advanced-security plan). Push protection is the valuable half:
+  it refuses a credential _before_ it reaches the remote, rather than
+  reporting one that is already public.
+- **No deployment details in the repository.** This code is public, so a
+  personal host name here would hand a reader a live target alongside a
+  complete map of the app's endpoints, limits and history. `ops/` scripts
+  take the deployment's URL from the environment; `install-watchdog.sh`
+  writes it into the operator's crontab, never into git.
+- Deliberately not in place: SBOM and registry scanning (images are built
+  and run on the same host and never pushed to a registry).

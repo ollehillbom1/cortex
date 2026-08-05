@@ -7,7 +7,7 @@
 #
 # WHERE THIS SHOULD RUN
 #   Ideally on a machine that is NOT the Docker host, because a watchdog on
-#   oh-III cannot report that oh-III is down. The public probe below goes
+#   the Docker host cannot report that it is itself down. The public probe goes
 #   through the reverse proxy, so running it from the RPi (or any other
 #   tailnet host) covers the whole chain. Running it ON the Docker host still
 #   catches the failures that actually happen most — container exited, app
@@ -27,7 +27,12 @@
 
 set -uo pipefail
 
-PROBE_URL="${CORTEX_PROBE_URL:-https://ohillbo.se:9922/api/health}"
+# No default: this repo is public, and a personal host name baked into it
+# hands a reader a live target next to a full map of the app. The installer
+# writes the real URL into the cron line instead.
+# Required at probe time, not at load time: --self-test and --test-alarm
+# need no URL, and CI runs the self-test on every push.
+PROBE_URL="${CORTEX_PROBE_URL:-}"
 CONTAINER="${CORTEX_CONTAINER:-cortex}"
 # Two consecutive failures before paging: a single blip during a redeploy is
 # not an outage, and an alarm that cries wolf gets muted by its reader.
@@ -112,6 +117,10 @@ except Exception: print(0)' 2>/dev/null)
 
 probe_http() {
   local body code
+  if [ -z "$PROBE_URL" ]; then
+    echo "CORTEX_PROBE_URL is not set (ops/install-watchdog.sh writes it into cron)"
+    return 1
+  fi
   body=$(curl -s --max-time 15 -o /tmp/cortex-watchdog-body.$$ -w '%{http_code}' "$PROBE_URL" 2>/dev/null)
   code="$body"
   body=$(cat /tmp/cortex-watchdog-body.$$ 2>/dev/null); rm -f /tmp/cortex-watchdog-body.$$
@@ -127,6 +136,7 @@ probe_http() {
 
 probe_cert() {
   local host port end days
+  [ -n "$PROBE_URL" ] || return 0
   host=$(printf '%s' "$PROBE_URL" | sed -E 's#https?://([^:/]+).*#\1#')
   port=$(printf '%s' "$PROBE_URL" | sed -nE 's#https?://[^:/]+:([0-9]+).*#\1#p'); port="${port:-443}"
   case "$PROBE_URL" in https://*) ;; *) return 0 ;; esac
