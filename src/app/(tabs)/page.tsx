@@ -24,6 +24,7 @@ import { coachLocaleOf, rephraseInsight } from "@/lib/coach/client";
 import { useT } from "@/lib/i18n/useT";
 import { useProfiles } from "@/components/app/ProfileProvider";
 import { Button } from "@/components/ui/Button";
+import { InstallHint } from "@/components/app/InstallHint";
 import { ProgressBar } from "@/components/ui/ProgressBar";
 import { BoltIcon, ChevronRightIcon, ClockIcon, FlameIcon } from "@/components/ui/icons";
 
@@ -174,6 +175,8 @@ export default function HomePage() {
           </Link>
         </div>
       </header>
+
+      <InstallHint />
 
       {/* Backup reminder (calm, dismissible, snoozes for 14 days) */}
       {backupHint && (

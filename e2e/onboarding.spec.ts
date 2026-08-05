@@ -2,6 +2,24 @@ import { expect, test } from "@playwright/test";
 import { createProfile } from "./helpers";
 
 test.describe("onboarding and profiles", () => {
+  test("a phone visitor is shown how to put Cortex on the home screen", async ({ page }) => {
+    // The e2e browser presents an iPhone UA, so the welcome page must show
+    // the Safari share-sheet steps — Apple offers no API, instructions are
+    // the ceiling. Dismissal must stick across reloads: a hint that nags
+    // after "don't show this again" teaches people to ignore hints.
+    await page.goto("/welcome");
+    const hint = page.getByRole("region", { name: /install cortex on your home screen/i });
+    await expect(hint).toBeVisible();
+    await expect(hint.getByText(/add to home screen/i)).toBeVisible();
+
+    await hint.getByRole("button", { name: /don't show this again/i }).click();
+    await expect(hint).toBeHidden();
+    await page.reload();
+    await expect(
+      page.getByRole("region", { name: /install cortex on your home screen/i }),
+    ).toBeHidden();
+  });
+
   test("new user completes onboarding and the profile persists after reload", async ({ page }) => {
     await createProfile(page, "Nova");
 

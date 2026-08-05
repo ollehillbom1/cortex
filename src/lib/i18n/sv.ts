@@ -137,6 +137,21 @@ export const SV: Record<string, string> = {
   "Open Profile": "Öppna Profil",
   "Dismiss insight for today": "Dölj insikten för idag",
 
+  // Install hint
+  "Install Cortex on your home screen": "Lägg Cortex på din hemskärm",
+  "It opens full-screen like an app and works offline.":
+    "Den öppnas i helskärm som en app och fungerar offline.",
+  "Tap the Share button in Safari (the square with an arrow).":
+    "Tryck på dela-knappen i Safari (fyrkanten med en pil).",
+  "Scroll down and tap “Add to Home Screen”.":
+    "Skrolla ner och tryck på ”Lägg till på hemskärmen”.",
+  "Tap Add in the top corner.": "Tryck på Lägg till i övre hörnet.",
+  "Open the browser menu (the ⋮ in the top corner).": "Öppna webbläsarens meny (⋮ i övre hörnet).",
+  "Tap “Add to Home screen” or “Install app”.":
+    "Tryck på ”Lägg till på startskärmen” eller ”Installera appen”.",
+  "Install app": "Installera appen",
+  "Don't show this again": "Visa inte det här igen",
+
   // Backup reminder
   "Backup reminder": "Påminnelse om säkerhetskopia",
   "Back up your progress?": "Säkerhetskopiera dina framsteg?",
