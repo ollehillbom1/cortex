@@ -1,5 +1,10 @@
 # Changelog
 
+## v1.5.0 — 2026-08-05
+
+- feat(welcome): say out loud what the privacy design actually delivers (#99)
+- build(deps): bump actions/setup-node from 4.4.0 to 7.0.0 (#79)
+
 ## v1.4.0 — 2026-08-05
 
 - feat(pwa): show phone visitors how to put Cortex on the home screen (#97)
