@@ -10,6 +10,7 @@ import { parseSyncCode, SyncCodeFormatError } from "./syncCode";
 import {
   createSyncGroup,
   deleteServerCopyAndDisable,
+  isDeviceStale,
   listSyncDevices,
   rotateGroupAfterLoss,
   setDeviceLabel,
@@ -242,6 +243,16 @@ describe("v3 sync protocol", () => {
     expect(both).toHaveLength(2);
     expect(both.filter((d) => d.self)).toHaveLength(1);
     expect(both.map((d) => d.label)).toContain("Annas mobil");
+  });
+
+  it("staleness: a quiet device is called stale, a fresh one is not", async () => {
+    const now = new Date("2026-08-05T12:00:00.000Z");
+    expect(isDeviceStale("2026-08-04T12:00:00.000Z", now)).toBe(false);
+    expect(isDeviceStale("2026-07-22T12:00:00.000Z", now)).toBe(true); // exactly 14d
+    expect(isDeviceStale("2026-06-01T12:00:00.000Z", now)).toBe(true);
+    // Unparseable is stale, not fresh: a broken timestamp must not look
+    // like a healthy backup.
+    expect(isDeviceStale("not a date", now)).toBe(true);
   });
 
   it("lost device: the old code stops working, the new one carries everything", async () => {

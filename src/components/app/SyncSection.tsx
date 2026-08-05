@@ -10,6 +10,7 @@ import {
   disableSync,
   enableSync,
   getSyncStatus,
+  isDeviceStale,
   joinSyncGroup,
   listSyncDevices,
   rotateGroupAfterLoss,
@@ -346,15 +347,26 @@ export function SyncSection() {
                       )}
                     </span>
                   )}
-                  <span className="text-xs text-[var(--color-ink-faint)]">
-                    {t("last sync {when}", {
-                      when: new Date(d.lastSeenAt).toLocaleString(undefined, {
-                        month: "short",
-                        day: "numeric",
-                        hour: "2-digit",
-                        minute: "2-digit",
-                      }),
-                    })}
+                  <span
+                    className={`text-xs ${
+                      isDeviceStale(d.lastSeenAt)
+                        ? "font-semibold text-[var(--color-warn)]"
+                        : "text-[var(--color-ink-faint)]"
+                    }`}
+                  >
+                    {t(
+                      isDeviceStale(d.lastSeenAt)
+                        ? "has not synced since {when}"
+                        : "last sync {when}",
+                      {
+                        when: new Date(d.lastSeenAt).toLocaleString(undefined, {
+                          month: "short",
+                          day: "numeric",
+                          hour: "2-digit",
+                          minute: "2-digit",
+                        }),
+                      },
+                    )}
                   </span>
                 </li>
               ))}

@@ -463,6 +463,20 @@ export async function listSyncDevices(storage: StorageAdapter): Promise<SyncDevi
     .sort((a, b) => b.lastSeenAt.localeCompare(a.lastSeenAt));
 }
 
+/**
+ * A device that has not completed a sync in this long is worth pointing
+ * at: its owner thinks they are backed up, and they are not. This is the
+ * warning half of the retention decision — nothing expires, a human is
+ * told (ADR 0010's principle: deliberate action over timers).
+ */
+export const DEVICE_STALE_DAYS = 14;
+
+export function isDeviceStale(lastSeenAt: string, now: Date = new Date()): boolean {
+  const parsed = Date.parse(lastSeenAt);
+  if (Number.isNaN(parsed)) return true;
+  return now.getTime() - parsed >= DEVICE_STALE_DAYS * 86_400_000;
+}
+
 /** Rename this device; the next sync carries it to the household. */
 export async function setDeviceLabel(storage: StorageAdapter, label: string): Promise<void> {
   const trimmed = label.trim().slice(0, 40);

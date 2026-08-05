@@ -186,6 +186,15 @@ backup.
 > wrong. `backup-sync.sh` refuses to run against a volume that does not
 > exist for exactly that reason.
 
+**Retention is a human decision, never a timer.** Nothing in the sync store
+expires automatically — the disaster case a TTL invites is an inactive
+household's only backup deleted on schedule, silently. Instead: the
+watchdog warns when the NEWEST record has gone quiet (default 21 days,
+`CORTEX_SYNC_STALE_DAYS`), the app marks devices that have not synced in
+two weeks, and `ops/sync-store.sh` lets the operator `list` the store and
+`reap --older-than-days N` deliberately — dry-run by default, and the most
+recent record is never reaped regardless of age.
+
 Keep the passphrase (`~/.config/cortex/backup.key`) somewhere other than this
 machine — it is the machine the backups exist to survive. For households with
 sync enabled the backup covers everything; the blobs stay readable only with
