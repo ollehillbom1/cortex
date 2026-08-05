@@ -86,7 +86,7 @@ export default function StatsPage() {
       <header>
         <h1 className="text-2xl font-bold">{t("Statistics")}</h1>
         <p className="mt-1 text-sm text-[var(--color-ink-dim)]">
-          {t("In-app training performance — not a medical or IQ measurement.")}
+          {t("In-app training performance — what you did here, nothing more.")}
         </p>
       </header>
 

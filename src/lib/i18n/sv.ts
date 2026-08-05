@@ -204,13 +204,13 @@ export const SV: Record<string, string> = {
   "Play any exercise on its own — results still count towards your progress.":
     "Spela valfri övning för sig — resultaten räknas ändå in i dina framsteg.",
   recent: "senaste",
-  "Levels adapt to keep each exercise challenging but doable. Scores reflect in-app performance only — they are not medical or IQ measurements.":
-    "Nivåerna anpassas så att varje övning är utmanande men görbar. Poängen speglar bara prestation i appen — de är inga medicinska eller IQ-mått.",
+  "Levels adapt to keep each exercise challenging but doable. Scores reflect in-app performance only.":
+    "Nivåerna anpassas så att varje övning är utmanande men görbar. Poängen speglar bara prestation i appen.",
 
   // Stats page
   Statistics: "Statistik",
-  "In-app training performance — not a medical or IQ measurement.":
-    "Träningsresultat i appen — inget medicinskt mått eller IQ-mått.",
+  "In-app training performance — what you did here, nothing more.":
+    "Träningsresultat i appen — vad du gjorde här, inget mer.",
   Totals: "Totalt",
   Sessions: "Pass",
   Minutes: "Minuter",
@@ -272,8 +272,8 @@ export const SV: Record<string, string> = {
   "Train your mind, a few minutes a day": "Träna hjärnan, några minuter om dagen",
   "Cortex is a personal trainer for memory, attention and speed: short, focused exercises designed for daily 5–20 minute sessions.":
     "Cortex är en personlig tränare för minne, uppmärksamhet och snabbhet: korta, fokuserade övningar för dagliga pass på 5–20 minuter.",
-  "It measures your in-app performance — accuracy, span, reaction time — and shows how it develops. It does not measure IQ, and it makes no medical claims.":
-    "Den mäter din prestation i appen — träffsäkerhet, spann, reaktionstid — och visar hur den utvecklas. Den mäter inte IQ och gör inga medicinska anspråk.",
+  "It measures your in-app performance — accuracy, span, reaction time — and shows how it develops. The numbers describe practice inside this app, and nothing beyond it.":
+    "Den mäter din prestation i appen — träffsäkerhet, spann, reaktionstid — och visar hur den utvecklas. Siffrorna beskriver träning i den här appen, inget därutöver.",
   "Why train working memory?": "Varför träna arbetsminnet?",
   "Working memory is what holds a phone number while you dial, a recipe step while you stir, the thread of a conversation while you listen. Like most skills, the abilities you practise are the ones that grow.":
     "Arbetsminnet är det som håller ett telefonnummer medan du slår det, ett receptsteg medan du rör i grytan, tråden i ett samtal medan du lyssnar. Som med de flesta färdigheter är det förmågorna du övar som växer.",
