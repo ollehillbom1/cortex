@@ -19,6 +19,7 @@ import { useProfiles } from "@/components/app/ProfileProvider";
 import { Button } from "@/components/ui/Button";
 import { Dialog } from "@/components/ui/Dialog";
 import { BoltIcon, CheckIcon, FlameIcon, StatsIcon, TrainIcon } from "@/components/ui/icons";
+import { InstallHint } from "@/components/app/InstallHint";
 
 const STEPS = [
   {
@@ -253,6 +254,10 @@ export default function WelcomePage() {
             </Button>
           </>
         )}
+      </div>
+
+      <div className="pb-6">
+        <InstallHint />
       </div>
 
       {showRestore && (
