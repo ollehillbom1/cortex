@@ -1,5 +1,11 @@
 # Changelog
 
+## v1.6.0 — 2026-08-05
+
+- fix(games): measure the finger, not the click — the tap was the bug (#103)
+- fix(pwa): the install hint reached neither iPads nor Android owners (#102)
+- docs(public): promote the open source, and stop shipping the address (#101)
+
 ## v1.5.0 — 2026-08-05
 
 - feat(welcome): say out loud what the privacy design actually delivers (#99)
