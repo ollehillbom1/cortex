@@ -60,6 +60,18 @@ Exercises needing sound already state so on their instructions screen and
 refuse to start silently — Sound Span shows an "audio unavailable" panel
 instead of degrading into a visual exercise.
 
+## What the automated audit now covers (issue #6)
+
+The e2e suite fails CI on any serious/critical axe violation across: the
+onboarding steps, all four tabs, the privacy page, exercise instructions,
+LIVE game phases (an armed reaction round, the number-span keypad), the
+quit and profile-confirm dialogs, every sync dialog (join, sync-code,
+lost-device), the offline fallback, and the session summary. Dialogs are
+tested for the full keyboard contract — trap, Escape, and focus
+restoration to the trigger. Token contrast is pinned in a unit test
+(`src/lib/a11yContrast.test.ts`), because axe only measures the pages it
+visits while a token change moves every caption in the app at once.
+
 ## Still open
 
 - **VoiceOver on iOS** (the primary target) has not been walked through on a

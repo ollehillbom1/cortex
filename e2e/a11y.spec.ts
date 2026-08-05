@@ -1,6 +1,6 @@
 import AxeBuilder from "@axe-core/playwright";
 import { expect, test, type Page } from "@playwright/test";
-import { createProfile } from "./helpers";
+import { createProfile, playReactionBlock } from "./helpers";
 
 /**
  * Automated accessibility audit (issue #6). Fails on serious/critical axe
@@ -103,11 +103,12 @@ test.describe("axe accessibility audit", () => {
     await expect(plan.getByText(/Pattern Recall|Sequence Memory|N-Back|Reaction/)).toHaveCount(0);
   });
 
-  test("quit dialog traps focus and closes on Escape", async ({ page }) => {
+  test("quit dialog traps focus, closes on Escape, and RESTORES focus", async ({ page }) => {
     await createProfile(page, "Trap");
     await page.goto("/session?exercise=reaction-time");
     await page.getByRole("button", { name: /start reaction/i }).waitFor();
-    await page.getByRole("button", { name: /end session/i }).click();
+    const trigger = page.getByRole("button", { name: /end session/i });
+    await trigger.click();
     const dialog = page.getByRole("dialog");
     await dialog.waitFor();
 
@@ -120,5 +121,77 @@ test.describe("axe accessibility audit", () => {
 
     await page.keyboard.press("Escape");
     await expect(dialog).toHaveCount(0);
+    // Restoration is half the contract (issue #6 names it): a keyboard user
+    // dismissed back to nowhere has to Tab in from the top of the page.
+    await expect(trigger).toBeFocused();
+  });
+
+  test("profile confirm dialogs trap, escape, and restore too", async ({ page }) => {
+    // Issue #6 names the reset/delete confirms specifically — they share the
+    // Dialog component, but a shared component is an implementation detail
+    // and this is the contract.
+    await createProfile(page, "Bekr");
+    await page.goto("/profile");
+    const trigger = page.getByRole("button", { name: /reset progression/i });
+    await trigger.scrollIntoViewIfNeeded();
+    await trigger.click();
+    const dialog = page.getByRole("dialog");
+    await dialog.waitFor();
+    await expectNoSeriousViolations(page, "reset-progression confirm");
+
+    await page.keyboard.press("Escape");
+    await expect(dialog).toHaveCount(0);
+    await expect(trigger).toBeFocused();
+  });
+
+  test("a running game round is free of serious violations", async ({ page }) => {
+    // "Every page + game phase": the audits above see instructions and
+    // dialogs, but never a live round — the screens a player actually
+    // spends their time on.
+    await createProfile(page, "Spelare");
+    await page.goto("/session?exercise=reaction-time");
+    await page.getByRole("button", { name: /start reaction/i }).click();
+    await page.getByRole("button", { name: /tap to arm/i }).waitFor();
+    await expectNoSeriousViolations(page, "reaction round (armed)");
+
+    await page.goto("/session?exercise=number-span");
+    await page.getByRole("button", { name: /start number span/i }).click();
+    await page.getByRole("group", { name: "Digit keypad" }).waitFor({ timeout: 15_000 });
+    await expectNoSeriousViolations(page, "number-span input phase");
+  });
+
+  test("sync dialogs and the device flow are free of serious violations", async ({ page }) => {
+    // These dialogs did not exist when the issue was filed; the audit grows
+    // with the app or it rots.
+    await createProfile(page, "Synka");
+    await page.goto("/profile");
+
+    await page.getByRole("button", { name: "Join with a sync code or passphrase" }).click();
+    await expectNoSeriousViolations(page, "sync join dialog");
+    await page.keyboard.press("Escape");
+
+    await page.getByRole("button", { name: "Set up sync on this device" }).click();
+    const codeDialog = page.getByRole("dialog");
+    await codeDialog.getByText("Your sync code").waitFor({ timeout: 20_000 });
+    await expectNoSeriousViolations(page, "sync code dialog");
+    await codeDialog.getByRole("button", { name: "I have saved my sync code" }).click();
+
+    // Device registry list + the lost-device confirm.
+    await page.getByRole("list", { name: /devices in this sync group/i }).waitFor();
+    await page.getByRole("button", { name: "Lost a device?" }).click();
+    await expectNoSeriousViolations(page, "lost-device confirm");
+    await page.keyboard.press("Escape");
+  });
+
+  test("the offline page is free of serious violations", async ({ page }) => {
+    await page.goto("/offline");
+    await expectNoSeriousViolations(page, "offline fallback");
+  });
+
+  test("the session summary is free of serious violations", async ({ page }) => {
+    await createProfile(page, "Summering");
+    await playReactionBlock(page);
+    await page.getByRole("heading", { name: /session complete/i }).waitFor();
+    await expectNoSeriousViolations(page, "session summary");
   });
 });
