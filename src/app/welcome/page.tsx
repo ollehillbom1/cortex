@@ -137,7 +137,7 @@ export default function WelcomePage() {
   const isForm = step === STEPS.length;
 
   return (
-    <div className="mx-auto flex min-h-dvh w-full max-w-md flex-col px-6 pb-safe pt-safe">
+    <div className="mx-auto flex h-dvh w-full max-w-md flex-col overflow-y-auto px-6 pb-safe pt-safe">
       <div className="flex flex-1 flex-col justify-center gap-8 py-10">
         <div
           role="group"

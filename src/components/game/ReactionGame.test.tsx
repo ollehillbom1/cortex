@@ -28,6 +28,12 @@ function renderGame(onRoundComplete: (r: unknown) => void) {
 
 const surface = () => screen.getByRole("button");
 
+/**
+ * The surface answers to pointerdown, not click: on touch, `click` waits for
+ * the browser to rule out a scroll and is dropped when it rules one in, so
+ * the measurement would carry arbitration delay or land on the user's second
+ * attempt. These tests press the way a finger does.
+ */
 describe("ReactionGame", () => {
   beforeEach(() => {
     vi.useFakeTimers();
@@ -52,12 +58,12 @@ describe("ReactionGame", () => {
     const onRoundComplete = vi.fn();
     renderGame(onRoundComplete);
 
-    fireEvent.click(surface());
+    fireEvent.pointerDown(surface());
     for (let i = 0; i < 60 && !screen.queryByText("GO!"); i++) {
       act(() => vi.advanceTimersByTime(100));
     }
     // No frame advance: react in the same tick the phase changed.
-    fireEvent.click(surface());
+    fireEvent.pointerDown(surface());
     act(() => vi.advanceTimersByTime(900));
 
     expect(onRoundComplete).toHaveBeenCalledTimes(1);
@@ -68,7 +74,7 @@ describe("ReactionGame", () => {
     const onRoundComplete = vi.fn();
     renderGame(onRoundComplete);
 
-    fireEvent.click(surface());
+    fireEvent.pointerDown(surface());
     for (let i = 0; i < 60 && !screen.queryByText("GO!"); i++) {
       act(() => vi.advanceTimersByTime(100));
     }
@@ -84,7 +90,7 @@ describe("ReactionGame", () => {
     const onRoundComplete = vi.fn();
     renderGame(onRoundComplete);
 
-    fireEvent.click(surface()); // arm
+    fireEvent.pointerDown(surface()); // arm
     expect(screen.getByText("Wait for it…")).toBeTruthy();
 
     // Step to GO rather than jumping past it: the round now has a deadline,
@@ -100,7 +106,7 @@ describe("ReactionGame", () => {
     act(() => vi.advanceTimersByTime(50));
     act(() => vi.advanceTimersByTime(300));
 
-    fireEvent.click(surface()); // react
+    fireEvent.pointerDown(surface()); // react
     act(() => vi.advanceTimersByTime(900)); // result interstitial
     expect(onRoundComplete).toHaveBeenCalledTimes(1);
     const result = onRoundComplete.mock.calls[0][0];
@@ -111,8 +117,8 @@ describe("ReactionGame", () => {
     const onRoundComplete = vi.fn();
     renderGame(onRoundComplete);
 
-    fireEvent.click(surface()); // arm
-    fireEvent.click(surface()); // too early
+    fireEvent.pointerDown(surface()); // arm
+    fireEvent.pointerDown(surface()); // too early
     expect(screen.getByText("Too early!")).toBeTruthy();
 
     act(() => vi.advanceTimersByTime(900));
@@ -127,8 +133,8 @@ describe("ReactionGame", () => {
     const onRoundComplete = vi.fn();
     const { unmount } = renderGame(onRoundComplete);
 
-    fireEvent.click(surface()); // arm
-    fireEvent.click(surface()); // false start -> finish scheduled in 900 ms
+    fireEvent.pointerDown(surface()); // arm
+    fireEvent.pointerDown(surface()); // false start -> finish scheduled in 900 ms
 
     unmount(); // user quits before the timer fires
     act(() => vi.advanceTimersByTime(2_000));
@@ -139,9 +145,9 @@ describe("ReactionGame", () => {
     const onRoundComplete = vi.fn();
     const { unmount } = renderGame(onRoundComplete);
 
-    fireEvent.click(surface()); // arm
+    fireEvent.pointerDown(surface()); // arm
     act(() => vi.advanceTimersByTime(10_000)); // -> GO
-    fireEvent.click(surface()); // react -> finish scheduled in 900 ms
+    fireEvent.pointerDown(surface()); // react -> finish scheduled in 900 ms
 
     unmount();
     act(() => vi.advanceTimersByTime(2_000));

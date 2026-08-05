@@ -178,9 +178,14 @@ export function ReactionGame({
       </PhaseHint>
       <button
         type="button"
-        onClick={press}
+        // pointerdown, not click: on touch, `click` is only dispatched once
+        // the browser has decided the gesture was not a scroll — it arrives
+        // tens to hundreds of milliseconds late, and is dropped entirely
+        // when the browser guesses "scroll". Both outcomes corrupt the one
+        // number this exercise exists to produce.
+        onPointerDown={press}
         aria-label={surface[phase].text}
-        className={`touch-target mx-auto flex aspect-square w-full max-w-xs select-none items-center justify-center rounded-[2rem] border text-4xl font-extrabold transition-colors duration-100 ${surface[phase].cls}`}
+        className={`play-surface touch-target mx-auto flex aspect-square w-full max-w-xs select-none items-center justify-center rounded-[2rem] border text-4xl font-extrabold transition-colors duration-100 ${surface[phase].cls}`}
       >
         {surface[phase].text}
       </button>

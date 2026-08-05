@@ -58,7 +58,7 @@ describe("RhythmGame deadlines", () => {
     await reachTapPhase();
 
     await act(async () => {
-      fireEvent.click(screen.getByRole("button", { name: /tap the rhythm here/i }));
+      fireEvent.pointerDown(screen.getByRole("button", { name: /tap the rhythm here/i }));
     });
     expect(onRoundComplete).not.toHaveBeenCalled();
 
@@ -109,13 +109,13 @@ describe("RhythmGame deadlines", () => {
     await reachTapPhase();
 
     await act(async () => {
-      fireEvent.click(screen.getByRole("button", { name: /tap the rhythm here/i }));
+      fireEvent.pointerDown(screen.getByRole("button", { name: /tap the rhythm here/i }));
     });
     await act(async () => {
       await vi.advanceTimersByTimeAsync(RHYTHM_IDLE_SUBMIT_MS - 500);
     });
     await act(async () => {
-      fireEvent.click(screen.getByRole("button", { name: /tap the rhythm here/i }));
+      fireEvent.pointerDown(screen.getByRole("button", { name: /tap the rhythm here/i }));
     });
     // The second tap re-armed the window: the original deadline passing
     // must not have submitted.

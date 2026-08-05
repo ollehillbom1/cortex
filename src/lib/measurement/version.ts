@@ -42,6 +42,15 @@ export const UNKNOWN_MEASUREMENT_VERSION = 0;
  *   1 (2026-08-04) first stamped version. Mappings as of the span-ramp fix
  *     (#62), the auditory pacing fix (#77), painted-frame reaction timing
  *     (#51) and the per-exercise ceilings (#48).
+ *   2 (2026-08-05) reaction-time and rhythm-recall only: responses are now
+ *     timestamped on pointerdown instead of click. On touch devices `click`
+ *     waits for the browser to rule out a scroll — and is discarded when it
+ *     rules one in — so every earlier touch measurement carries the
+ *     browser's arbitration delay on top of the person's reaction, and some
+ *     rounds recorded a tap that was actually the SECOND attempt. Era 1
+ *     numbers are therefore systematically slow and cannot be compared with
+ *     era 2. Nothing about the difficulty changed, so the fingerprints do
+ *     not move.
  */
 export const MEASUREMENT_VERSION: Record<ExerciseId, number> = {
   "number-span": 1,
@@ -51,8 +60,8 @@ export const MEASUREMENT_VERSION: Record<ExerciseId, number> = {
   "dual-n-back": 1,
   "auditory-digits": 1,
   "tone-pattern": 1,
-  "rhythm-recall": 1,
-  "reaction-time": 1,
+  "rhythm-recall": 2,
+  "reaction-time": 2,
 };
 
 /**

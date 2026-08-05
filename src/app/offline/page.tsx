@@ -9,7 +9,7 @@ export const metadata = { title: "Offline" };
  */
 export default function OfflinePage() {
   return (
-    <div className="mx-auto flex min-h-dvh w-full max-w-md flex-col items-center justify-center gap-4 px-6 text-center">
+    <div className="mx-auto flex h-dvh overflow-y-auto w-full max-w-md flex-col items-center justify-center gap-4 px-6 text-center">
       <p className="text-5xl" aria-hidden>
         📡
       </p>
