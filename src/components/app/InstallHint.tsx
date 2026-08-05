@@ -6,7 +6,7 @@ import { useT } from "@/lib/i18n/useT";
 import { Button } from "@/components/ui/Button";
 
 /**
- * Install-on-home-screen guidance for mobile browser visitors.
+ * Install-on-home-screen guidance for browser visitors.
  *
  * A family member who types the URL into a phone browser gets a working app
  * and no idea it can live on the home screen — nothing on iOS ever tells
@@ -15,8 +15,13 @@ import { Button } from "@/components/ui/Button";
  * on Android, a real install button when the browser hands us the
  * `beforeinstallprompt` event, with menu instructions as the fallback.
  *
- * Renders nothing when already installed (standalone display mode) or on
- * desktop, and stays away for good once dismissed.
+ * Detection decides what to show FIRST, never what is reachable: it is
+ * guesswork built on user-agent strings, and a visitor who lands on the
+ * wrong branch must not be stuck there. Both platforms' steps are always
+ * one tap away.
+ *
+ * Renders nothing when already installed (standalone display mode), and
+ * stays away for good once dismissed.
  */
 
 export const META_INSTALL_HINT_DISMISSED = "installHintDismissed";
@@ -43,25 +48,30 @@ export function InstallHint() {
     if (standalone) return;
 
     const ua = navigator.userAgent;
-    const detected: Platform = /iPhone|iPad|iPod/.test(ua)
-      ? "ios"
-      : /Android/.test(ua)
-        ? "android"
-        : null;
-    if (!detected) return;
+    // iPadOS 13+ Safari reports a MACINTOSH user agent by default, so the
+    // obvious /iPad/ test silently excludes every iPad — a household device
+    // that got no hint at all. Touch points are what tells them apart.
+    const isIpad = /Macintosh/.test(ua) && navigator.maxTouchPoints > 1;
+    const detected: Platform =
+      /iPhone|iPad|iPod/.test(ua) || isIpad ? "ios" : /Android/.test(ua) ? "android" : null;
 
     let cancelled = false;
     void (async () => {
       const dismissed = await getStorage().getMeta(META_INSTALL_HINT_DISMISSED);
-      if (!cancelled && !dismissed) {
-        setPlatform(detected);
-        setVisible(true);
-      }
+      if (cancelled || dismissed) return;
+      setPlatform(detected);
+      // Shown for a recognised phone/tablet, and also on a desktop browser
+      // that offers a real install (Chrome and Edge do) — but never as bare
+      // home-screen instructions on a desktop, where they mean nothing.
+      if (detected) setVisible(true);
     })();
 
     const onPrompt = (e: Event) => {
       e.preventDefault();
       setInstallEvent(e as BeforeInstallPromptEvent);
+      // A browser offering the native prompt is installable by definition,
+      // whatever its user agent claimed.
+      setVisible(true);
     };
     window.addEventListener("beforeinstallprompt", onPrompt);
     return () => {
@@ -85,7 +95,12 @@ export function InstallHint() {
     setInstallEvent(null);
   };
 
-  if (!visible || !platform) return null;
+  // Detection picks the default; the visitor picks the truth. An Android
+  // owner whose browser lied — or an iPhone owner reading over their
+  // shoulder — reaches the other instructions without leaving the page.
+  const shown: Platform = platform ?? (installEvent ? "android" : null);
+  if (!visible || !shown) return null;
+  const other: Exclude<Platform, null> = shown === "ios" ? "android" : "ios";
 
   return (
     <section
@@ -101,7 +116,7 @@ export function InstallHint() {
           <p className="mt-0.5 text-[var(--color-ink-dim)]">
             {t("It opens full-screen like an app and works offline.")}
           </p>
-          {platform === "ios" ? (
+          {shown === "ios" ? (
             <ol className="mt-2 list-decimal space-y-1 pl-4 text-[var(--color-ink-dim)]">
               <li>{t("Tap the Share button in Safari (the square with an arrow).")}</li>
               <li>{t("Scroll down and tap “Add to Home Screen”.")}</li>
@@ -117,13 +132,22 @@ export function InstallHint() {
               <li>{t("Tap “Add to Home screen” or “Install app”.")}</li>
             </ol>
           )}
-          <button
-            type="button"
-            onClick={() => void dismiss()}
-            className="mt-2 text-xs text-[var(--color-ink-faint)] underline"
-          >
-            {t("Don't show this again")}
-          </button>
+          <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1">
+            <button
+              type="button"
+              onClick={() => setPlatform(other)}
+              className="text-xs text-[var(--color-accent-2)] underline"
+            >
+              {t(other === "ios" ? "On an iPhone or iPad?" : "On an Android phone?")}
+            </button>
+            <button
+              type="button"
+              onClick={() => void dismiss()}
+              className="text-xs text-[var(--color-ink-faint)] underline"
+            >
+              {t("Don't show this again")}
+            </button>
+          </div>
         </div>
       </div>
     </section>

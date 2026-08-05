@@ -12,6 +12,13 @@ test.describe("onboarding and profiles", () => {
     await expect(hint).toBeVisible();
     await expect(hint.getByText(/add to home screen/i)).toBeVisible();
 
+    // Detection picks the default, never what is reachable: an Android
+    // owner landing here must find their own steps without leaving.
+    await hint.getByRole("button", { name: /on an android phone/i }).click();
+    await expect(hint.getByText(/add to home screen.*or.*install app/i)).toBeVisible();
+    await hint.getByRole("button", { name: /on an iphone or ipad/i }).click();
+    await expect(hint.getByText(/tap the share button in safari/i)).toBeVisible();
+
     await hint.getByRole("button", { name: /don't show this again/i }).click();
     await expect(hint).toBeHidden();
     await page.reload();

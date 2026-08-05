@@ -150,6 +150,8 @@ export const SV: Record<string, string> = {
   "Tap “Add to Home screen” or “Install app”.":
     "Tryck på ”Lägg till på startskärmen” eller ”Installera appen”.",
   "Install app": "Installera appen",
+  "On an iPhone or iPad?": "På en iPhone eller iPad?",
+  "On an Android phone?": "På en Android-telefon?",
   "Don't show this again": "Visa inte det här igen",
 
   // Backup reminder
