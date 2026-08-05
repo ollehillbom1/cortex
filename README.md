@@ -9,6 +9,15 @@ Cortex measures **in-app performance** (accuracy, span, reaction time) and shows
 it develops over time. It does not measure IQ and makes no medical claims — see
 [docs/measurement.md](docs/measurement.md) for exactly what is and is not measured.
 
+**Your data stays yours, and you can check that claim yourself.** Training lives in
+your browser's IndexedDB — no account, no cloud, no analytics, no third-party
+requests at runtime. Optional family sync goes through a server _you_ host and is
+end-to-end encrypted: it stores ciphertext only, the key never leaves your devices,
+and one tap removes the server copy. Every line of that is in this repository, and
+the properties are pinned by tests rather than asserted in prose — the sync tests
+decrypt a pushed record the way a household device would, and the delete test proves
+the code that restored a moment earlier then finds nothing.
+
 | Onboarding                                     | Today                                 | Exercise intro                                        | Reaction                                         | Statistics                              |
 | ---------------------------------------------- | ------------------------------------- | ----------------------------------------------------- | ------------------------------------------------ | --------------------------------------- |
 | ![Onboarding](docs/screenshots/01-welcome.png) | ![Home](docs/screenshots/03-home.png) | ![Instructions](docs/screenshots/06-instructions.png) | ![Reaction](docs/screenshots/08-reaction-go.png) | ![Stats](docs/screenshots/09-stats.png) |
@@ -42,7 +51,8 @@ band with smooth, capped steps — see [docs/adaptive-difficulty.md](docs/adapti
 - **Statistics**: 4-week activity, accuracy and reaction-time trends, per-exercise
   levels, modality balance and records — dependency-free SVG charts.
 - **Real PWA**: installable (standalone display), offline after first load,
-  update prompt, iPhone home-screen guidance in the app.
+  update prompt, and in-app home-screen guidance for iPhone, iPad and Android
+  (with a one-tap native install where the browser offers it).
 - **Accessibility**: keyboard play for core exercises, visible focus, ARIA labels
   and live regions, focus-trapped dialogs, large-text and reduce-motion settings,
   ≥44 px touch targets, no colour-only outcomes — enforced by an axe-core audit
@@ -55,10 +65,17 @@ band with smooth, capped steps — see [docs/adaptive-difficulty.md](docs/adapti
 - **Two languages**: English and Swedish (per-profile setting, follows the
   browser by default; spoken digits switch voice language too). Adding a locale
   is one dictionary file in `src/lib/i18n/`.
-- **Optional device sync** through your own server: end-to-end encrypted with a
-  household passphrase (AES-GCM-256; the server only stores ciphertext), with
-  a "Restore from sync" path for new devices. Off by default, fully offline
-  capable either way — see [docs/adr/0007-sync-backend.md](docs/adr/0007-sync-backend.md).
+- **Optional device sync** through your own server, end-to-end encrypted
+  (AES-GCM-256; the server stores ciphertext only). A group's identity is a
+  random 128-bit **sync code** — never anything a person chose, so two
+  households cannot collide — which doubles as the invite for a new device and
+  the only recovery if every device is lost. Writes need a separate capability
+  sent in a header, so the group id in the URL is a locator and not a key. The
+  app shows which devices are in the group, flags ones that have gone quiet,
+  and offers a guided flow that makes a lost device's code worthless. Off by
+  default, fully offline capable either way — see
+  [docs/adr/0007-sync-backend.md](docs/adr/0007-sync-backend.md) and
+  [ADR 0010](docs/adr/0010-per-device-sync-keys.md) for the road not taken.
 - **Grounded insights**, rule-based and deterministic ("your accuracy tends to
   dip late in sessions"), with optional rewording by a language model _you_
   host. That option sends only the numbers behind an insight, never names, and
@@ -123,11 +140,28 @@ npm run test         # vitest unit tests (pure logic)
 npm run e2e          # Playwright e2e (production build; run `npm run build` first)
 ```
 
-## Docker
+## Running it yourself
 
 ```bash
 docker compose up -d --build     # serves on :3000, non-root, healthchecked
 ```
+
+Compose ships a hardened runtime by default: read-only root filesystem, all
+capabilities dropped, `no-new-privileges`, a PID limit, a memory limit and
+rotated logs. The app needs none of what is closed off.
+
+For an ongoing deployment there is a small operations toolkit in `ops/`:
+
+| Script           | What it does                                                                                                                      |
+| ---------------- | --------------------------------------------------------------------------------------------------------------------------------- |
+| `release.sh`     | changelog + version + git tag + image, gated on clean main and green CI                                                           |
+| `deploy.sh`      | run a named tag in prod or staging; accepts a deploy only when it actually serves, otherwise rolls back and verifies the rollback |
+| `watchdog.sh`    | probe health, TLS expiry, container, disk, backup freshness; page a human on the second consecutive failure                       |
+| `backup-sync.sh` | encrypted backup of the sync volume that decrypts its own output, plus a restore drill that diffs against live                    |
+
+Everything deployment-specific — hostnames, alarm targets — is read from the
+environment. None of it belongs in a public repository, and a test fails the
+build if any of it reappears.
 
 Or manually:
 
