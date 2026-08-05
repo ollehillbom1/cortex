@@ -1,5 +1,9 @@
 # Changelog
 
+## v1.4.0 — 2026-08-05
+
+- feat(pwa): show phone visitors how to put Cortex on the home screen (#97)
+
 ## v1.3.0 — 2026-08-05
 
 - feat(sync): retention that warns humans instead of deleting their backup (#95)
