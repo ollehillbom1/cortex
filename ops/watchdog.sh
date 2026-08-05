@@ -177,6 +177,27 @@ probe_backup() {
   return 0
 }
 
+probe_sync_freshness() {
+  # "The family silently stopped syncing" is invisible until the day a
+  # restore is needed — the exact failure retention policies auto-delete
+  # into. Nothing here expires anything: this only tells a human that the
+  # NEWEST record has gone quiet. The legacy/frozen records a household
+  # leaves behind never trip it, because only the freshest matters.
+  local days="${CORTEX_SYNC_STALE_DAYS:-21}"
+  command -v docker >/dev/null 2>&1 || return 0
+  # The volume is root-owned on the host, so look through the container.
+  local newest mtime age_days
+  newest=$(docker exec "$CONTAINER" sh -c 'ls -t /app/data/sync/*.json 2>/dev/null | head -1' 2>/dev/null)
+  [ -n "$newest" ] || return 0 # nobody uses sync: nothing to protect
+  mtime=$(docker exec "$CONTAINER" stat -c %Y "$newest" 2>/dev/null) || return 0
+  age_days=$((($(date +%s) - mtime) / 86400))
+  if [ "$age_days" -ge "$days" ]; then
+    echo "no device has synced for ${age_days} days — the household's backup is going stale"
+    return 1
+  fi
+  return 0
+}
+
 probe_disk() {
   # The sync volume lives on the root partition; a full disk stops every write
   # and the app keeps answering 200 until it tries one.
@@ -205,6 +226,7 @@ run_probes() {
     if ! out=$(probe_container); then reasons+=("$out"); fi
     if ! out=$(probe_disk); then reasons+=("$out"); fi
     if ! out=$(probe_backup); then reasons+=("$out"); fi
+    if ! out=$(probe_sync_freshness); then reasons+=("$out"); fi
   fi
   if [ ${#reasons[@]} -gt 0 ]; then
     local joined=""

@@ -96,6 +96,7 @@ export const SV: Record<string, string> = {
   "Unnamed device": "Namnlös enhet",
   "this device — rename": "den här enheten — byt namn",
   "last sync {when}": "senaste synk {when}",
+  "has not synced since {when}": "har inte synkat sedan {when}",
   "Lost a device?": "Tappat en enhet?",
   "A lost device knows your sync code, and a code cannot be taken back — but it can be made worthless. This moves the household to a fresh group under a NEW code and removes the old server copy. The lost device keeps only what was already on it.":
     "En tappad enhet kan din synkkod, och en kod går inte att ta tillbaka — men den går att göra värdelös. Detta flyttar hushållet till en ny grupp med en NY kod och tar bort den gamla serverkopian. Den tappade enheten behåller bara det som redan fanns på den.",
