@@ -6,8 +6,9 @@ speed through nine adaptive exercises. Everything runs in your browser, installs
 your home screen, works offline, and stores data only on your device.
 
 Cortex measures **in-app performance** (accuracy, span, reaction time) and shows how
-it develops over time. It does not measure IQ and makes no medical claims — see
-[docs/measurement.md](docs/measurement.md) for exactly what is and is not measured.
+it develops over time. The numbers describe practice inside the app and nothing
+beyond it — see [docs/measurement.md](docs/measurement.md) for exactly what is and
+is not measured, in detail.
 
 **Your data stays yours, and you can check that claim yourself.** Training lives in
 your browser's IndexedDB — no account, no cloud, no analytics, no third-party

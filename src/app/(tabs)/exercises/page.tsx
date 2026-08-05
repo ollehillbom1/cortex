@@ -109,7 +109,7 @@ export default function ExercisesPage() {
       )}
       <p className="text-xs leading-relaxed text-[var(--color-ink-faint)]">
         {t(
-          "Levels adapt to keep each exercise challenging but doable. Scores reflect in-app performance only — they are not medical or IQ measurements.",
+          "Levels adapt to keep each exercise challenging but doable. Scores reflect in-app performance only.",
         )}
       </p>
 

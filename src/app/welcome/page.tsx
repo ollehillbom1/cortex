@@ -27,7 +27,7 @@ const STEPS = [
     icon: TrainIcon,
     body: [
       "Cortex is a personal trainer for memory, attention and speed: short, focused exercises designed for daily 5–20 minute sessions.",
-      "It measures your in-app performance — accuracy, span, reaction time — and shows how it develops. It does not measure IQ, and it makes no medical claims.",
+      "It measures your in-app performance — accuracy, span, reaction time — and shows how it develops. The numbers describe practice inside this app, and nothing beyond it.",
     ],
   },
   {
