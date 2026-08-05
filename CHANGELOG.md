@@ -1,5 +1,9 @@
 # Changelog
 
+## v1.7.0 — 2026-08-05
+
+- docs(copy): stop naming IQ in order to deny it (#105)
+
 ## v1.6.0 — 2026-08-05
 
 - fix(games): measure the finger, not the click — the tap was the bug (#103)
