@@ -484,7 +484,7 @@ export function SessionRunner() {
   // down.
   if (items.length === 0) {
     return (
-      <div className="mx-auto flex min-h-dvh w-full max-w-md flex-col justify-center gap-4 px-6 text-center">
+      <div className="mx-auto flex h-dvh w-full max-w-md flex-col justify-center gap-4 overflow-y-auto px-6 text-center">
         <h1 className="text-xl font-bold">{t("Nothing to play right now")}</h1>
         <p className="text-sm text-[var(--color-ink-dim)]">
           {t(
@@ -531,7 +531,7 @@ export function SessionRunner() {
   }
 
   return (
-    <div className="mx-auto flex min-h-dvh w-full max-w-md flex-col px-4 pb-safe pt-safe">
+    <div className="mx-auto flex h-dvh w-full max-w-md flex-col overflow-y-auto px-4 pb-safe pt-safe">
       {/* Header: progress + quit */}
       <header className="mb-4 flex items-center gap-3 py-2">
         <div

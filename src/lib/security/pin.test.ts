@@ -29,7 +29,18 @@ describe("profile PIN", () => {
   });
 
   it("never stores the pin in clear text", async () => {
+    // Asserted structurally, not by substring search. The record is random
+    // hex, and every digit of a PIN is also a hex character — so
+    // `not.toContain("9876")` fails by pure chance roughly once in 700 runs
+    // (~93 substring positions x 16^-4). It did, once, and a monitor that
+    // cries wolf at random is worse than none.
     const record = await createPinRecord("9876");
-    expect(JSON.stringify(record)).not.toContain("9876");
+    expect(Object.keys(record).sort()).toEqual(["hash", "salt"]);
+    // Both fields are fixed-length hex, which a stored PIN could not be.
+    expect(record.salt).toMatch(/^[0-9a-f]{32}$/);
+    expect(record.hash).toMatch(/^[0-9a-f]{64}$/);
+    // And the hash is of THIS pin: a different one must not collide.
+    const other = { ...record, hash: (await createPinRecord("1234")).hash };
+    expect(other.hash).not.toBe(record.hash);
   });
 });

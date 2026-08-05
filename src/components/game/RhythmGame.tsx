@@ -171,10 +171,13 @@ export function RhythmGame({ level, seed, audio, onRoundComplete }: GameProps) {
           </div>
           <button
             type="button"
-            onClick={tap}
+            // Same reason as the reaction surface: this exercise measures the
+            // interval between taps, so a tap that arrives after gesture
+            // arbitration is not the tap the person made.
+            onPointerDown={tap}
             disabled={phase !== "tap"}
             aria-label={phase === "tap" ? t("Tap the rhythm here") : t("Listen to the rhythm…")}
-            className={`touch-target flex aspect-square w-full max-w-[240px] select-none items-center justify-center rounded-full border text-lg font-bold transition-all duration-100 ${
+            className={`play-surface touch-target flex aspect-square w-full max-w-[240px] select-none items-center justify-center rounded-full border text-lg font-bold transition-all duration-100 ${
               pulse
                 ? "scale-[1.06] border-[var(--color-accent-2)] bg-gradient-to-br from-[var(--color-accent)] to-[var(--color-accent-2)] shadow-[0_0_40px_-8px_var(--color-accent)]"
                 : phase === "tap"

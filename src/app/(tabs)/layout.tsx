@@ -17,8 +17,8 @@ export default function TabsLayout({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const { t } = useT();
   return (
-    <div className="mx-auto flex min-h-dvh w-full max-w-md flex-col">
-      <main className="flex-1 px-4 pb-28 pt-safe">{children}</main>
+    <div className="mx-auto flex h-dvh w-full max-w-md flex-col">
+      <main className="flex-1 overflow-y-auto px-4 pb-28 pt-safe">{children}</main>
       <nav
         aria-label="Main"
         className="fixed inset-x-0 bottom-0 z-40 border-t border-white/8 bg-[#0a101d]/90 backdrop-blur-xl"

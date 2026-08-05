@@ -26,7 +26,7 @@ function Section({ title, children }: { title: string; children: React.ReactNode
 
 export default function PrivacyPage() {
   return (
-    <main className="mx-auto w-full max-w-2xl px-5 pb-16 pt-10">
+    <main className="mx-auto h-dvh w-full max-w-2xl overflow-y-auto px-5 pb-16 pt-10">
       <h1 className="text-2xl font-bold">Privacy</h1>
       <p className="mt-2 text-sm text-[var(--color-ink-dim)]">
         Cortex is local-first by design. This page says exactly what is stored, where, and what
