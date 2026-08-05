@@ -38,6 +38,12 @@ jobs:
     name: End-to-end tests (mobile viewport)
     runs-on: ubuntu-latest
     needs: verify
+    # A hung runner is not a slow runner. Without a bound, a stuck step sits
+    # at GitHub's 6-hour default while a release waits on it — observed on
+    # the WebKit install, which normally takes a minute and once took 30+
+    # before being cancelled by hand. Fail fast and visibly instead; the
+    # whole job (build + Chromium + WebKit + its retry) fits in 45 minutes.
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
@@ -62,8 +68,12 @@ jobs:
       # WebKit failure now fails the job, which is the point: Safari's engine
       # is what the primary target actually runs.
       - name: Install Playwright webkit
+        # Normally ~1 minute. Anything near this bound is a sick runner, and
+        # the retry below cannot help with a download that never finishes.
+        timeout-minutes: 8
         run: npx playwright install --with-deps webkit
       - name: Run e2e tests on WebKit
+        timeout-minutes: 25
         # One paced second attempt of only the failures. WebKit on shared
         # runners intermittently starves for minutes at a stretch — observed
         # three times in two days as timeouts across UNRELATED tests, each
