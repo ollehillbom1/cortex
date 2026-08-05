@@ -1,5 +1,9 @@
 # Changelog
 
+## v1.3.0 — 2026-08-05
+
+- feat(sync): retention that warns humans instead of deleting their backup (#95)
+
 ## v1.2.0 — 2026-08-05
 
 - ci(e2e): give WebKit one paced retry of only its failures (#93)
