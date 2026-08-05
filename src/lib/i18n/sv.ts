@@ -283,10 +283,12 @@ export const SV: Record<string, string> = {
   "Cortex aims for the zone where you succeed about three times out of four — hard enough to be worth doing, never punishing.":
     "Cortex siktar på zonen där du lyckas ungefär tre gånger av fyra — svårt nog att vara värt det, aldrig straffande.",
   "Yours. Private. Offline.": "Ditt. Privat. Offline.",
-  "Everything is stored on this device, in your browser. No account, no cloud, no tracking.":
-    "Allt sparas på den här enheten, i din webbläsare. Inget konto, inget moln, ingen spårning.",
-  "You can export your data as a file any time, and install Cortex on your home screen to train offline.":
-    "Du kan när som helst exportera din data som en fil, och installera Cortex på hemskärmen för att träna offline.",
+  "Your training lives on your device — in your browser, not in a cloud. No account, no tracking, and nothing leaves your phone unless you choose it.":
+    "Din träning bor på din enhet — i webbläsaren, inte i något moln. Inget konto, ingen spårning, och ingenting lämnar din telefon om du inte själv väljer det.",
+  "Optional family sync is end-to-end encrypted: your own server stores only ciphertext, and the key never leaves your devices — not even the server's owner can read your training.":
+    "Den valfria familjesynken är totalsträckskrypterad: din egen server lagrar bara chiffertext, och nyckeln lämnar aldrig dina enheter — inte ens serverns ägare kan läsa din träning.",
+  "You hold every key. Export your data as a file whenever you like, remove the server copy with one tap, and train fully offline from your home screen.":
+    "Du håller i varje nyckel. Exportera din data som en fil när du vill, ta bort serverkopian med ett tryck, och träna helt offline från hemskärmen.",
   "Create your profile": "Skapa din profil",
   "Profiles keep training separate for each person in your household.":
     "Profiler håller träningen åtskild för varje person i hushållet.",
