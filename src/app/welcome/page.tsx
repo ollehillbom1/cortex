@@ -50,8 +50,9 @@ const STEPS = [
     title: "Yours. Private. Offline.",
     icon: StatsIcon,
     body: [
-      "Everything is stored on this device, in your browser. No account, no cloud, no tracking.",
-      "You can export your data as a file any time, and install Cortex on your home screen to train offline.",
+      "Your training lives on your device — in your browser, not in a cloud. No account, no tracking, and nothing leaves your phone unless you choose it.",
+      "Optional family sync is end-to-end encrypted: your own server stores only ciphertext, and the key never leaves your devices — not even the server's owner can read your training.",
+      "You hold every key. Export your data as a file whenever you like, remove the server copy with one tap, and train fully offline from your home screen.",
     ],
   },
 ] as const;
