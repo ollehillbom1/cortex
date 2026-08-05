@@ -287,6 +287,8 @@ export const SV: Record<string, string> = {
     "Din träning bor på din enhet — i webbläsaren, inte i något moln. Inget konto, ingen spårning, och ingenting lämnar din telefon om du inte själv väljer det.",
   "Optional family sync is end-to-end encrypted: your own server stores only ciphertext, and the key never leaves your devices — not even the server's owner can read your training.":
     "Den valfria familjesynken är totalsträckskrypterad: din egen server lagrar bara chiffertext, och nyckeln lämnar aldrig dina enheter — inte ens serverns ägare kan läsa din träning.",
+  "Do not take our word for it: Cortex is open source. Every line — the encryption, the storage, what is sent and what is not — is public at github.com/ollehillbom1/cortex.":
+    "Ta inte vårt ord för det: Cortex är öppen källkod. Varje rad — krypteringen, lagringen, vad som skickas och inte — är publik på github.com/ollehillbom1/cortex.",
   "You hold every key. Export your data as a file whenever you like, remove the server copy with one tap, and train fully offline from your home screen.":
     "Du håller i varje nyckel. Exportera din data som en fil när du vill, ta bort serverkopian med ett tryck, och träna helt offline från hemskärmen.",
   "Create your profile": "Skapa din profil",

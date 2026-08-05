@@ -2,7 +2,7 @@
 
 **Datum:** 2026-08-02  
 **Granskad kod:** `8709a1a09ca47ee78b6eb7f128e0f7dab5c81186` på `main` och `origin/main`  
-**Drift:** `https://ohillbo.se:9922`  
+**Drift:** en publik self-hosted instans (adressen utelämnad avsiktligt)  
 **Målgrupp:** vuxna först  
 **Produktprincip:** jämn balans mellan spelglädje och ärlig mätning
 
@@ -144,7 +144,7 @@ grupper. Det motsvarar ungefär 4,8 GB/timme per accepterad limiteridentitet.
 `rateLimit.ts:32-58,94-99` har en 10 000-nycklars sweep och ett proxyantagande som
 inte gäller för råporten.
 
-Driftcontainern binder `0.0.0.0:9922`, har `Memory=0`, inget PID-tak, skrivbart
+Driftcontainern binder publikt, har `Memory=0`, inget PID-tak, skrivbart
 rootfs, inga cap drops, inget `no-new-privileges` och obegränsad `json-file`-logg.
 
 **Åtgärd:** bytebegränsa kroppen före JSON-parse, inför global byte-/gruppkvot,

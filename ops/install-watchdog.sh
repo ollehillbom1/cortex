@@ -24,6 +24,19 @@ SOURCE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/watchdog.sh"
 
 MODE=host
 [ "${1:-}" = "--remote-only" ] && MODE=remote
+
+# The deployment's own URL lives here, in the operator's crontab — never in
+# the repo, which is public. Reuse of a previously installed value keeps
+# re-installs a one-word command.
+# `|| true`: with set -e + pipefail, a grep that finds nothing (the first
+# install, or an older line without the variable) would abort the script.
+PREVIOUS_URL=$(crontab -l 2>/dev/null | grep -F "$TAG" | grep -oE 'CORTEX_PROBE_URL=[^ ]+' | head -1 | cut -d= -f2- || true)
+PROBE_URL="${CORTEX_PROBE_URL:-$PREVIOUS_URL}"
+if [ -z "${PROBE_URL:-}" ] && [ "${1:-}" != "--uninstall" ]; then
+  echo "set CORTEX_PROBE_URL to the deployment's health endpoint, e.g." >&2
+  echo "  CORTEX_PROBE_URL=https://cortex.example.com/api/health $0" >&2
+  exit 2
+fi
 if [ "${1:-}" = "--uninstall" ]; then
   crontab -l 2>/dev/null | grep -v -F "$TAG" | crontab - || true
   echo "watchdog cron removed (files left in $TARGET_DIR)"
@@ -41,7 +54,7 @@ install -m 0755 "$SOURCE" "$TARGET"
 
 FLAGS="--quiet"
 [ "$MODE" = host ] && FLAGS="--local-checks --quiet"
-LINE="$SCHEDULE $TARGET $FLAGS >>$STATE_DIR/log 2>&1 $TAG"
+LINE="$SCHEDULE CORTEX_PROBE_URL=$PROBE_URL $TARGET $FLAGS >>$STATE_DIR/log 2>&1 $TAG"
 
 # Idempotent: replace any previous managed line, leave everything else alone.
 {
