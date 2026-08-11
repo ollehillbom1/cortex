@@ -1,5 +1,11 @@
 # Changelog
 
+## v1.8.0 — 2026-08-11
+
+- build(deps): bump the minor-and-patch group with 2 updates (#110)
+- feat(a11y): audit the screens players live on, and pin what axe cannot see (#108)
+- ci(e2e): bound the job, so a hung runner fails fast instead of blocking (#107)
+
 ## v1.7.0 — 2026-08-05
 
 - docs(copy): stop naming IQ in order to deny it (#105)
