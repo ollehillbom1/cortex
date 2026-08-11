@@ -108,11 +108,16 @@ describe("streak", () => {
     expect(update.streak.best).toBe(9);
   });
 
-  it("earns a freeze every 7 days, capped at 2", () => {
+  it("earns a freeze every 7 days, capped at 2, and reports the earning", () => {
     let s = initialStreak();
     let day = "2026-07-01";
     for (let i = 0; i < 7; i++) {
-      s = recordActiveDay(s, day).streak;
+      const update = recordActiveDay(s, day);
+      // The earning is reported exactly on the milestone day, so the UI can
+      // say so at the moment it happens rather than leave the safety net a
+      // surprise.
+      expect(update.freezeEarned).toBe(i === 6);
+      s = update.streak;
       day = nextDay(day);
     }
     expect(s.current).toBe(7);
@@ -123,7 +128,9 @@ describe("streak", () => {
     }
     expect(s.freezes).toBe(2);
     for (let i = 0; i < 7; i++) {
-      s = recordActiveDay(s, day).streak;
+      const update = recordActiveDay(s, day);
+      expect(update.freezeEarned).toBe(false); // capped: nothing to earn
+      s = update.streak;
       day = nextDay(day);
     }
     expect(s.freezes).toBe(2);

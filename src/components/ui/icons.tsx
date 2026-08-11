@@ -69,6 +69,13 @@ export const BoltIcon = (p: IconProps) => (
   </Svg>
 );
 
+export const SnowflakeIcon = (p: IconProps) => (
+  <Svg {...p}>
+    <path d="M12 3v18M4.2 7.5l15.6 9M19.8 7.5l-15.6 9" />
+    <path d="M12 3l-2 2m2-2 2 2m-2 14-2-2m2 2 2-2M4.2 7.5l2.7.7m-2.7-.7.7 2.7m14.2 5.6-2.7-.7m2.7.7-.7-2.7M19.8 7.5l-2.7.7m2.7-.7-.7 2.7M4.9 16.8l.7-2.7m-.7 2.7 2.7-.7" />
+  </Svg>
+);
+
 export const TrophyIcon = (p: IconProps) => (
   <Svg {...p}>
     <path d="M7 4h10v4a5 5 0 0 1-10 0V4Z" />

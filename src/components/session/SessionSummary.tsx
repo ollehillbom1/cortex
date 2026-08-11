@@ -3,11 +3,11 @@
 import Link from "next/link";
 import { EXERCISES, type ExerciseResult, type SkillState } from "@/lib/domain/types";
 import type { applySession } from "@/lib/session/apply";
-import { levelProgress } from "@/lib/progression/xp";
+import { levelForXp, levelProgress } from "@/lib/progression/xp";
 import { achievementById } from "@/lib/progression/achievements";
 import { ProgressBar } from "@/components/ui/ProgressBar";
 import { Button } from "@/components/ui/Button";
-import { FlameIcon, TrophyIcon } from "@/components/ui/icons";
+import { BoltIcon, FlameIcon, SnowflakeIcon, TrophyIcon } from "@/components/ui/icons";
 import { useT } from "@/lib/i18n/useT";
 
 const RECORD_LABELS: Record<string, string> = {
@@ -33,7 +33,19 @@ export function SessionSummary({
     completed.length > 0 ? completed.reduce((a, e) => a + e.accuracy, 0) / completed.length : 0;
   const progress = applied ? levelProgress(applied.profile.xp) : null;
   const unlocked = applied?.unlocked ?? [];
-  const newRecords = applied?.newRecords ?? [];
+  // `:level` records are the same fact as the green "Lv N → M" badge below;
+  // announcing them again as "New personal best — number-span level" said it
+  // twice, the second time in raw key language. Stats filters them the same
+  // way.
+  const newRecords = (applied?.newRecords ?? []).filter((k) => !k.endsWith(":level"));
+  // A profile level-up is detectable only here: applied.profile.xp already
+  // contains this session's XP, so subtracting it gives the level walked in
+  // with. Nothing else compares before to after.
+  const leveledUp =
+    applied !== null &&
+    progress !== null &&
+    progress.level > levelForXp(applied.profile.xp - applied.session.xpEarned);
+  const celebrating = newRecords.length > 0 || unlocked.length > 0 || leveledUp;
 
   // Nothing was recorded: every block was skipped as unplayable. Celebrating
   // "0% average accuracy" told the user they scored nothing and that their
@@ -59,7 +71,9 @@ export function SessionSummary({
     <div className="mx-auto flex h-dvh w-full max-w-md flex-col overflow-y-auto px-4 pb-safe pt-safe">
       <div className="flex flex-1 flex-col justify-center gap-5 py-8">
         <div className="rise-in text-center">
-          <div className="celebrate mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-gradient-to-br from-[var(--color-accent)] to-[var(--color-accent-2)] text-4xl shadow-[0_0_50px_-10px_var(--color-accent)]">
+          {/* No pulse here: finishing a session is the routine outcome. The
+              pulse lives on the records/level-up card, where it is rare. */}
+          <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-gradient-to-br from-[var(--color-accent)] to-[var(--color-accent-2)] text-4xl shadow-[0_0_50px_-10px_var(--color-accent)]">
             ✓
           </div>
           <h1 className="mt-4 text-3xl font-bold">{t("Session complete")}</h1>
@@ -103,6 +117,14 @@ export function SessionSummary({
                 next: progress.level + 1,
               })}
             </p>
+            {applied.freezeEarned && (
+              <p className="mt-2 flex items-center gap-1.5 text-xs font-medium text-[var(--color-accent-2)]">
+                <SnowflakeIcon className="h-3.5 w-3.5 shrink-0" />
+                {t("{n} days in a row — you earned a streak freeze. It protects one missed day.", {
+                  n: applied.profile.streak.current,
+                })}
+              </p>
+            )}
           </div>
         )}
 
@@ -137,8 +159,17 @@ export function SessionSummary({
           })}
         </ul>
 
-        {(newRecords.length > 0 || unlocked.length > 0) && (
-          <div className="card rise-in space-y-2.5 p-5">
+        {celebrating && (
+          <div className="card rise-in celebrate space-y-2.5 p-5">
+            {leveledUp && progress && (
+              <p className="flex items-center gap-2 text-sm">
+                <BoltIcon className="h-4.5 w-4.5 shrink-0 text-[var(--color-accent)]" />
+                <span>
+                  {t("Level up —")}{" "}
+                  <span className="font-semibold">{t("Level {n}", { n: progress.level })}</span>
+                </span>
+              </p>
+            )}
             {newRecords.map((key) => (
               <p key={key} className="flex items-center gap-2 text-sm">
                 <TrophyIcon className="h-4.5 w-4.5 shrink-0 text-[var(--color-warn)]" />

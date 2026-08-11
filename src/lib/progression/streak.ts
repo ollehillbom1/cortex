@@ -39,6 +39,8 @@ export interface StreakUpdate {
   streak: StreakState;
   /** Whether a freeze was consumed by this update. */
   freezeUsed: boolean;
+  /** Whether a freeze was earned by this update (7-day milestone). */
+  freezeEarned: boolean;
   /** Whether the streak was reset (previous progress lost). */
   reset: boolean;
 }
@@ -46,12 +48,13 @@ export interface StreakUpdate {
 /** Apply a completed training day. Pure: returns a new state. */
 export function recordActiveDay(state: StreakState, today: string): StreakUpdate {
   if (state.lastActiveDay === today) {
-    return { streak: state, freezeUsed: false, reset: false };
+    return { streak: state, freezeUsed: false, freezeEarned: false, reset: false };
   }
 
   let current: number;
   let freezes = state.freezes;
   let freezeUsed = false;
+  let freezeEarned = false;
   let reset = false;
 
   if (state.lastActiveDay === null) {
@@ -60,7 +63,7 @@ export function recordActiveDay(state: StreakState, today: string): StreakUpdate
     const gap = daysBetween(state.lastActiveDay, today);
     if (gap <= 0) {
       // Clock moved backwards (e.g. timezone travel): keep the streak as-is.
-      return { streak: state, freezeUsed: false, reset: false };
+      return { streak: state, freezeUsed: false, freezeEarned: false, reset: false };
     }
     if (gap === 1) {
       current = state.current + 1;
@@ -74,9 +77,12 @@ export function recordActiveDay(state: StreakState, today: string): StreakUpdate
     }
   }
 
-  // Earn a freeze on every FREEZE_EARN_INTERVAL-day milestone.
+  // Earn a freeze on every FREEZE_EARN_INTERVAL-day milestone. Earning is
+  // reported so the UI can say so at the moment it happens — a safety net
+  // nobody knows about reads as an unfair surprise when it runs out.
   if (current > 0 && current % FREEZE_EARN_INTERVAL === 0 && freezes < MAX_FREEZES) {
     freezes += 1;
+    freezeEarned = true;
   }
 
   return {
@@ -87,6 +93,7 @@ export function recordActiveDay(state: StreakState, today: string): StreakUpdate
       freezes,
     },
     freezeUsed,
+    freezeEarned,
     reset,
   };
 }

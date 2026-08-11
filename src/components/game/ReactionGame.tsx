@@ -37,9 +37,14 @@ export function ReactionGame({
   const [resultMs, setResultMs] = useState<number | null>(null);
   const goAt = useRef<number>(0);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  // The 900 ms result interstitials, tracked separately from the GO timer so
-  // unmounting mid-interstitial (quitting the session) cannot let a dead
-  // round call onRoundComplete into whatever state the session is in by then.
+  // The result interstitials (300 ms for a hit, 900 ms for a false start),
+  // tracked separately from the GO timer so unmounting mid-interstitial
+  // (quitting the session) cannot let a dead round call onRoundComplete into
+  // whatever state the session is in by then. A hit holds only long enough
+  // for the flash and tone to land: the session-level feedback screen repeats
+  // the millisecond figure anyway, and 900 + 1800 ms of the same number was
+  // most of a round's wall clock. A false start keeps the long beat — its
+  // panel is the only place that explains what went wrong.
   const finishTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const done = useRef(false);
   const frame = useRef<number | null>(null);
@@ -136,7 +141,7 @@ export function ReactionGame({
       setResultMs(ms);
       setPhase("result");
       if (soundOn) audio.playSuccess();
-      finishTimer.current = setTimeout(() => finish({ kind: "ok", ms }), 900);
+      finishTimer.current = setTimeout(() => finish({ kind: "ok", ms }), 300);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [phase, soundOn, finish]);

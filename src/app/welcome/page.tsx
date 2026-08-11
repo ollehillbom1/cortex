@@ -34,8 +34,8 @@ const STEPS = [
     title: "Why train working memory?",
     icon: FlameIcon,
     body: [
-      "Working memory is what holds a phone number while you dial, a recipe step while you stir, the thread of a conversation while you listen. Like most skills, the abilities you practise are the ones that grow.",
-      "Short daily sessions beat rare long ones: a focused streak builds span, sharpens attention and speeds up recall — and Cortex shows you that progress, session by session.",
+      "Working memory is what holds a phone number while you dial, a recipe step while you stir, the thread of a conversation while you listen. Cortex trains that kind of holding-and-using in short, focused exercises.",
+      "Honest by design: practice improves the task you practise, so Cortex promises exactly what it measures — your span, accuracy and speed in these exercises — and shows that progress, session by session.",
     ],
   },
   {

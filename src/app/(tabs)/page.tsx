@@ -26,7 +26,13 @@ import { useProfiles } from "@/components/app/ProfileProvider";
 import { Button } from "@/components/ui/Button";
 import { InstallHint } from "@/components/app/InstallHint";
 import { ProgressBar } from "@/components/ui/ProgressBar";
-import { BoltIcon, ChevronRightIcon, ClockIcon, FlameIcon } from "@/components/ui/icons";
+import {
+  BoltIcon,
+  ChevronRightIcon,
+  ClockIcon,
+  FlameIcon,
+  SnowflakeIcon,
+} from "@/components/ui/icons";
 
 export default function HomePage() {
   const router = useRouter();
@@ -164,6 +170,20 @@ export default function HomePage() {
           >
             <FlameIcon className="h-4 w-4" />
             {streak}
+            {profile.streak.freezes > 0 && (
+              <span
+                className="flex items-center gap-0.5 border-l border-white/15 pl-1.5 text-[var(--color-accent-2)]"
+                title={t(
+                  profile.streak.freezes === 1
+                    ? "1 streak freeze — protects one missed day"
+                    : "{n} streak freezes — each protects one missed day",
+                  { n: profile.streak.freezes },
+                )}
+              >
+                <SnowflakeIcon className="h-3.5 w-3.5" />
+                {profile.streak.freezes}
+              </span>
+            )}
           </span>
           <Link
             href="/profile"

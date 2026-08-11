@@ -107,7 +107,9 @@ describe("ReactionGame", () => {
     act(() => vi.advanceTimersByTime(300));
 
     fireEvent.pointerDown(surface()); // react
-    act(() => vi.advanceTimersByTime(900)); // result interstitial
+    // A hit's result panel holds only 300 ms — the session feedback screen
+    // repeats the figure, so the game-side beat is a flash, not a display.
+    act(() => vi.advanceTimersByTime(300));
     expect(onRoundComplete).toHaveBeenCalledTimes(1);
     const result = onRoundComplete.mock.calls[0][0];
     expect(result.accuracy).toBeGreaterThan(0);
@@ -147,7 +149,7 @@ describe("ReactionGame", () => {
 
     fireEvent.pointerDown(surface()); // arm
     act(() => vi.advanceTimersByTime(10_000)); // -> GO
-    fireEvent.pointerDown(surface()); // react -> finish scheduled in 900 ms
+    fireEvent.pointerDown(surface()); // react -> finish scheduled in 300 ms
 
     unmount();
     act(() => vi.advanceTimersByTime(2_000));

@@ -23,6 +23,7 @@ export interface ApplySessionOutput {
   newRecords: string[];
   unlocked: string[];
   freezeUsed: boolean;
+  freezeEarned: boolean;
   streakReset: boolean;
 }
 
@@ -60,6 +61,7 @@ export function applySession(input: ApplySessionInput): ApplySessionOutput {
     newRecords,
     unlocked,
     freezeUsed: streakUpdate.freezeUsed,
+    freezeEarned: streakUpdate.freezeEarned,
     streakReset: streakUpdate.reset,
   };
 }
