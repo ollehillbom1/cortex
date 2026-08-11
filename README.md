@@ -209,9 +209,10 @@ the critical flows on an iPhone viewport, including offline startup. See
 Tracked as GitHub issues. Device sync, dual n-back, auditory training, Swedish
 localisation, automated accessibility audits and optional AI phrasing have all
 landed. Native packaging was evaluated and deliberately declined for now
-([ADR 0009](docs/adr/0009-native-packaging.md) records what would reopen it).
-What remains needs a physical iPhone: the scripted
-[VoiceOver walkthrough](docs/voiceover-protocol.md).
+([ADR 0009](docs/adr/0009-native-packaging.md) records what would reopen it),
+and so was screen-reader (VoiceOver) validation — the app does not target
+screen-reader use (see
+[docs/accessibility.md](docs/accessibility.md), "Deliberately out of scope").
 
 ## Contributing
 
