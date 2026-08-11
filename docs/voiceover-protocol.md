@@ -1,5 +1,11 @@
 # VoiceOver walkthrough protocol (iOS)
 
+> **Status: descoped, not planned.** Screen-reader support is deliberately
+> out of scope for Cortex (decided 2026-08-11, issue #109) — see
+> `docs/accessibility.md`, "Deliberately out of scope". This protocol is kept
+> intact so the walkthrough can be run as written if that decision is ever
+> revisited.
+
 A scripted manual test for one person with one iPhone: about 35 minutes of
 actual testing after a 10-minute one-off setup, and worth running even if you
 stop a third of the way in.

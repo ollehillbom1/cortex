@@ -8,7 +8,8 @@ real devices with real assistive technology.
 ## Implemented
 
 - **Keyboard play** for the core exercises: digits/Backspace/Enter in Number
-  Span and Sound Span, space bar for N-Back and Reaction, A/L for Dual N-Back.
+  Span, space bar for N-Back and Reaction, A/L for Dual N-Back. Sound Span is
+  touch/pointer only — its keypad has no key handler.
 - **Focus management**: dialogs (session quit, profile reset/delete, PIN,
   sync) trap focus, restore it to the trigger on close, and dismiss on
   `Escape`.
@@ -72,15 +73,21 @@ restoration to the trigger. Token contrast is pinned in a unit test
 (`src/lib/a11yContrast.test.ts`), because axe only measures the pages it
 visits while a token change moves every caption in the app at once.
 
+## Deliberately out of scope
+
+- **Screen-reader support (VoiceOver)** is not a target for Cortex (decided
+  2026-08-11, issue #109). The app is a household training app whose users do
+  not use a screen reader; the manual walkthrough that would have validated
+  the screen-reader experience was descoped rather than run. The automated
+  axe audits stay in CI as a markup-quality floor — they also catch problems
+  (labels, contrast, focus order) that affect sighted keyboard and low-vision
+  users — but no claim is made that timed exercises are usable with a screen
+  reader. The scripted protocol is kept at
+  [`docs/voiceover-protocol.md`](voiceover-protocol.md) should the decision
+  ever be revisited.
+
 ## Still open
 
-- **VoiceOver on iOS** (the primary target) has not been walked through on a
-  physical device; axe-core catches markup-level problems but not the lived
-  experience of navigating a timed exercise with a screen reader. A scripted
-  ~35-minute walkthrough is ready to run, ordered so that stopping early still
-  yields useful data — see
-  [`docs/voiceover-protocol.md`](voiceover-protocol.md). Findings from it
-  belong in this file — see issue #6.
 - A **haptic** channel for Reaction (vibration as the GO signal) would give
   that exercise a non-visual pathway; `navigator.vibrate` is unavailable on
   iOS Safari, so this needs a device-specific evaluation before promising it.

@@ -102,9 +102,10 @@ sudo apt-get install libevent-2.1-7t64 libavif16 libmanette-0.2-0
 npx playwright install webkit
 ```
 
-No automated browser replaces the manual VoiceOver pass in
-`docs/voiceover-protocol.md`, which is the only thing that exercises a real
-screen reader.
+No automated browser exercises a real screen reader. The manual VoiceOver
+pass in `docs/voiceover-protocol.md` would, but it was deliberately descoped
+— screen-reader support is not a target (see `docs/accessibility.md`,
+"Deliberately out of scope").
 
 ## CI
 
