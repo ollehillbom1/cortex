@@ -2,6 +2,7 @@
 
 ## v1.8.0 — 2026-08-11
 
+- fix(deps): pin nanoid and js-yaml past their advisories (CVE-2026-67213, CVE-2026-59870) — both transitive/build-time only, not exploitable in the shipped app, patched anyway
 - build(deps): bump the minor-and-patch group with 2 updates (#110)
 - feat(a11y): audit the screens players live on, and pin what axe cannot see (#108)
 - ci(e2e): bound the job, so a hung runner fails fast instead of blocking (#107)
