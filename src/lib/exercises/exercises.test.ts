@@ -123,14 +123,18 @@ describe("visual pattern", () => {
 });
 
 describe("n-back", () => {
-  it("maps levels to 1/2/3-back", () => {
+  it("maps levels to 1/2/3/4/5-back", () => {
     expect(nBackParams(1).n).toBe(1);
     expect(nBackParams(4).n).toBe(2);
     expect(nBackParams(10).n).toBe(3);
+    expect(nBackParams(19).n).toBe(4);
+    expect(nBackParams(27).n).toBe(5);
   });
 
   it("generates streams with the forced match structure", () => {
-    for (const level of [1, 5, 12]) {
+    // Includes lure-band levels: a lure must never break the non-match
+    // guarantee, whatever the rng does.
+    for (const level of [1, 5, 12, 22, 30]) {
       const params = nBackParams(level);
       const stream = generateNBackStream(createRng(99), params);
       expect(stream).toHaveLength(params.trials);
@@ -143,6 +147,47 @@ describe("n-back", () => {
         expect(same).toBe(stream[i].isMatch);
       }
     }
+  });
+
+  it("keeps lures out of the ladder below the 4-back band", () => {
+    // Absence (not 0) is what keeps levels 1-18 byte-identical to what
+    // measurement version 1 fingerprinted — the extension must stay
+    // additive. Same contract for dual n-back below its 4-back band.
+    for (let level = 1; level <= 18; level++) {
+      expect("lureRate" in nBackParams(level), `n-back level ${level}`).toBe(false);
+    }
+    expect(nBackParams(19).lureRate).toBeGreaterThan(0);
+    for (let level = 1; level <= 20; level++) {
+      expect("lureRate" in dualNBackParams(level), `dual level ${level}`).toBe(false);
+    }
+    expect(dualNBackParams(21).lureRate).toBeGreaterThan(0);
+  });
+
+  it("places n±1 lures among non-matches when lureRate is set", () => {
+    // Force every non-match through the lure path: each should copy the
+    // position n-1 or n+1 back whenever that position differs from the one
+    // n back (when it coincides, the generator must fall back to plain
+    // different-at-random rather than mint an accidental match).
+    const params = { ...nBackParams(22), lureRate: 1 };
+    const stream = generateNBackStream(createRng(7), params);
+    const n = params.n;
+    let lures = 0;
+    for (let i = n; i < stream.length; i++) {
+      if (stream[i].isMatch) continue;
+      const near = i - (n - 1) >= 0 && stream[i].position === stream[i - (n - 1)].position;
+      const far = i - (n + 1) >= 0 && stream[i].position === stream[i - (n + 1)].position;
+      if (near || far) lures++;
+    }
+    expect(lures).toBeGreaterThan(0);
+  });
+
+  it("generates identical streams for pre-extension levels (same seed)", () => {
+    // The lure branch consumes rng draws only when lureRate is present, so
+    // a level-12 stream must not depend on the lure code existing at all:
+    // pin the exact stream a fixed seed produced before the extension.
+    // Values verified against the pre-extension generator run standalone.
+    const stream = generateNBackStream(createRng(42), nBackParams(12));
+    expect(stream.slice(0, 5).map((s) => s.position)).toEqual([2, 5, 7, 4, 2]);
   });
 
   it("scores hits, misses, false alarms and correct rejections", () => {
@@ -252,10 +297,11 @@ describe("level ceilings", () => {
   };
 
   it("stops each exercise where its parameters stop changing", () => {
-    // The shared scale runs to 40, but n-back's parameters are identical from
-    // 18 up: every level above was the same round with a bigger number and a
-    // bigger XP bonus. maxLevel is measured here so it cannot drift from the
-    // code that defines the difficulty.
+    // The shared scale runs to 40, but each ladder goes inert somewhere
+    // below it (n-back's parameters are identical from 35 up, and were from
+    // 18 up before the 4/5-back bands): every level above is the same round
+    // with a bigger number and a bigger XP bonus. maxLevel is measured here
+    // so it cannot drift from the code that defines the difficulty.
     for (const [id, params] of Object.entries(PARAMS)) {
       let lastChange = 1;
       let previous = "";
@@ -270,7 +316,7 @@ describe("level ceilings", () => {
 
   it("never reports a level above the exercise's ceiling", () => {
     const skill = { ...initialSkill(), level: 40 };
-    expect(effectiveLevel(skill, EXERCISES["n-back"].maxLevel)).toBe(18);
+    expect(effectiveLevel(skill, EXERCISES["n-back"].maxLevel)).toBe(35);
     expect(effectiveLevel(skill, EXERCISES["visual-pattern"].maxLevel)).toBe(30);
     // ...and the estimate itself stops climbing, so XP cannot inflate either.
     let state = { ...initialSkill(), level: 17.9 };
@@ -290,7 +336,10 @@ describe("level ceilings", () => {
       const cap = EXERCISES[id].maxLevel;
       expect(effectiveLevel(inflated, cap)).toBeLessThanOrEqual(cap);
     }
-    expect(effectiveLevel(inflated, EXERCISES["n-back"].maxLevel)).toBe(18);
+    // Pinned on the exercise whose ceiling still sits below the inflated
+    // estimate (n-back's original example stopped clamping when its ladder
+    // was extended to 35).
+    expect(effectiveLevel(inflated, EXERCISES["tone-pattern"].maxLevel)).toBe(19);
   });
 
   it("changes at least one parameter on every exposed step", () => {

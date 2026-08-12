@@ -16,15 +16,27 @@ export interface NBackParams {
   /** Fraction of scoreable trials that are matches. */
   matchRate: number;
   positions: number;
+  /**
+   * Fraction of non-matches deliberately placed as n±1 lures (a position
+   * seen just beside the target distance). ABSENT — not 0 — below the
+   * 4-back band: absence keeps levels up to the old ceiling byte-identical
+   * to what measurement version 1 fingerprinted, which is what makes the
+   * ladder extension additive instead of a measurement break.
+   */
+  lureRate?: number;
 }
 
 /**
- * Level mapping: 1-back for levels 1-3, 2-back for 4-9, 3-back from 10.
- * Within each N band the stream speeds up and grows slightly.
+ * Level mapping: 1-back for levels 1-3, 2-back for 4-9, 3-back for 10-18,
+ * 4-back for 19-26, 5-back from 27. Within each N band the stream speeds up
+ * and grows slightly; from the 4-back band, n±1 lures ramp as well, so
+ * "felt familiar" stops being evidence of "was exactly n back". The lure
+ * cap (0.44) binds exactly at the ceiling, like the timing floors: every
+ * exposed step changes at least one parameter.
  */
 export function nBackParams(level: number): NBackParams {
-  const n = level < 4 ? 1 : level < 10 ? 2 : 3;
-  const bandStart = n === 1 ? 1 : n === 2 ? 4 : 10;
+  const n = level < 4 ? 1 : level < 10 ? 2 : level < 19 ? 3 : level < 27 ? 4 : 5;
+  const bandStart = n === 1 ? 1 : n === 2 ? 4 : n === 3 ? 10 : n === 4 ? 19 : 27;
   const withinBand = level - bandStart;
   return {
     n,
@@ -33,6 +45,7 @@ export function nBackParams(level: number): NBackParams {
     gapMs: Math.max(1200, 2000 - withinBand * 100),
     matchRate: 0.3,
     positions: 9,
+    ...(n >= 4 ? { lureRate: Math.min(0.44, 0.2 + withinBand * 0.03) } : {}),
   };
 }
 
@@ -70,12 +83,40 @@ export function generateNBackStream(rng: Rng, params: NBackParams): NBackTrialIt
     if (matchAt.has(i)) {
       stream.push({ position: prev, isMatch: true });
     } else {
-      let p = randInt(rng, 0, positions - 1);
-      while (p === prev) p = randInt(rng, 0, positions - 1);
-      stream.push({ position: p, isMatch: false });
+      stream.push({ position: nonMatchPosition(rng, stream, i, params), isMatch: false });
     }
   }
   return stream;
+}
+
+/**
+ * A non-match position. With lureRate set, some non-matches copy the
+ * position from n±1 steps back instead of being merely different-at-random:
+ * rejecting them requires knowing WHERE in the stream a position occurred,
+ * not just that it occurred recently. A lure that would coincide with the
+ * position n back falls through to plain different-at-random — it must
+ * never become an accidental match. When lureRate is absent this consumes
+ * no extra randomness, so streams at pre-extension levels stay byte-equal
+ * for a given seed.
+ */
+function nonMatchPosition(
+  rng: Rng,
+  stream: NBackTrialItem[],
+  i: number,
+  params: NBackParams,
+): number {
+  const { n, positions } = params;
+  const prev = stream[i - n].position;
+  const lureRate = params.lureRate ?? 0;
+  if (lureRate > 0 && rng() < lureRate) {
+    const useFar = rng() < 0.5 && i - (n + 1) >= 0;
+    const offset = useFar ? n + 1 : n - 1;
+    const candidate = offset >= 1 ? stream[i - offset].position : undefined;
+    if (candidate !== undefined && candidate !== prev) return candidate;
+  }
+  let p = randInt(rng, 0, positions - 1);
+  while (p === prev) p = randInt(rng, 0, positions - 1);
+  return p;
 }
 
 export interface NBackScore {

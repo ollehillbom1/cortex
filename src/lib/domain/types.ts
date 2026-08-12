@@ -225,7 +225,7 @@ export const EXERCISES: Record<ExerciseId, ExerciseDefinition> = {
     defaultRounds: 1,
     requiresVision: true,
     requiresAudio: false,
-    maxLevel: 18,
+    maxLevel: 35,
   },
   "dual-n-back": {
     id: "dual-n-back",
@@ -236,7 +236,7 @@ export const EXERCISES: Record<ExerciseId, ExerciseDefinition> = {
     defaultRounds: 1,
     requiresVision: true,
     requiresAudio: true,
-    maxLevel: 20,
+    maxLevel: 29,
   },
   "auditory-digits": {
     id: "auditory-digits",
