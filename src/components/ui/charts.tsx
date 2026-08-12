@@ -117,7 +117,7 @@ export function DayBars({
                 ? isLast
                   ? "bg-[var(--color-accent-2)]"
                   : "bg-[var(--color-accent)]/70"
-                : "bg-white/10"
+                : "bg-[var(--fill-strong)]"
             }`}
             style={{ height: h }}
           />
@@ -135,7 +135,7 @@ export function BalanceBars({ entries }: { entries: { label: string; fraction: n
         <li key={e.label} className="flex items-center gap-3">
           <span className="w-32 shrink-0 text-sm text-[var(--color-ink-dim)]">{e.label}</span>
           <div
-            className="h-2.5 flex-1 overflow-hidden rounded-full bg-white/8"
+            className="h-2.5 flex-1 overflow-hidden rounded-full bg-[var(--fill-soft)]"
             role="img"
             aria-label={t("{label}: {pct} percent of recent training", {
               label: e.label,

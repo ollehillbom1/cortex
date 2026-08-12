@@ -197,7 +197,7 @@ export function DualNBackGame({ level, seed, audio, onRoundComplete }: GameProps
               className={`aspect-square rounded-2xl border transition-all duration-100 ${
                 active
                   ? "border-[var(--color-accent-2)] bg-gradient-to-br from-[var(--color-accent)] to-[var(--color-accent-2)] shadow-[0_0_24px_-4px_var(--color-accent)]"
-                  : "border-white/10 bg-white/6"
+                  : "border-[var(--surface-border)] bg-[var(--fill-subtle)]"
               }`}
             />
           );

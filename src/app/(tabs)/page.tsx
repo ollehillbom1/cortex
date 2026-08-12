@@ -196,7 +196,7 @@ export default function HomePage() {
             className={`flex items-center gap-1.5 rounded-full px-3 py-1.5 text-sm font-semibold ${
               atRisk
                 ? "bg-[var(--color-warn)]/15 text-[var(--color-warn)]"
-                : "bg-white/8 text-[var(--color-ink-dim)]"
+                : "bg-[var(--fill-soft)] text-[var(--color-ink-dim)]"
             }`}
             title={atRisk ? t("Train today to keep your streak") : t("Daily streak")}
           >
@@ -204,7 +204,7 @@ export default function HomePage() {
             {streak}
             {profile.streak.freezes > 0 && (
               <span
-                className="flex items-center gap-0.5 border-l border-white/15 pl-1.5 text-[var(--color-accent-2)]"
+                className="flex items-center gap-0.5 border-l border-[var(--surface-border-strong)] pl-1.5 text-[var(--color-accent-2)]"
                 title={t(
                   profile.streak.freezes === 1
                     ? "1 streak freeze — protects one missed day"
@@ -220,7 +220,7 @@ export default function HomePage() {
           <Link
             href="/profile"
             aria-label={t("Profile: {name}", { name: profile.name })}
-            className="flex h-10 w-10 items-center justify-center rounded-full border border-white/10 text-xl"
+            className="flex h-10 w-10 items-center justify-center rounded-full border border-[var(--surface-border)] text-xl"
             style={{ background: `hsl(${profile.avatarHue} 60% 25% / 0.6)` }}
           >
             <span aria-hidden>{profile.avatar}</span>
@@ -368,7 +368,7 @@ export default function HomePage() {
               {plan.modalities.map((m) => (
                 <span
                   key={m}
-                  className="rounded-full border border-white/10 bg-white/5 px-2.5 py-1 text-xs text-[var(--color-ink-dim)]"
+                  className="rounded-full border border-[var(--surface-border)] bg-[var(--fill-subtle)] px-2.5 py-1 text-xs text-[var(--color-ink-dim)]"
                 >
                   {t(MODALITY_LABELS[m])}
                 </span>
@@ -390,7 +390,7 @@ export default function HomePage() {
             </Link>
           </>
         ) : (
-          <div className="mt-4 h-24 animate-pulse rounded-xl bg-white/5" />
+          <div className="mt-4 h-24 animate-pulse rounded-xl bg-[var(--fill-subtle)]" />
         )}
         {goal > 0 && (
           <div className="mt-4">
@@ -462,7 +462,7 @@ export default function HomePage() {
             {t("No sessions yet. Your first session takes about {goal} minutes.", { goal })}
           </p>
         ) : (
-          <ul className="card divide-y divide-white/6 px-4">
+          <ul className="card divide-y divide-[var(--divider)] px-4">
             {recent.map((s) => (
               <li key={s.id} className="flex items-center justify-between py-3">
                 <div>

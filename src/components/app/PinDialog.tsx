@@ -52,7 +52,7 @@ export function PinDialog({
         }}
         onKeyDown={(e) => e.key === "Enter" && pin.length === 4 && void submit()}
         aria-label={t("PIN code")}
-        className="mt-3 w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-center text-2xl tracking-[0.5em] outline-none focus:border-[var(--color-accent-2)]"
+        className="mt-3 w-full rounded-2xl border border-[var(--surface-border)] bg-[var(--fill-subtle)] px-4 py-3 text-center text-2xl tracking-[0.5em] outline-none focus:border-[var(--color-accent-2)]"
       />
       <p role="alert" className="mt-1.5 min-h-5 text-sm text-[var(--color-bad)]">
         {error ? t("Wrong PIN — try again.") : ""}

@@ -320,7 +320,7 @@ export function SyncSection() {
               {devices.map((d) => (
                 <li
                   key={d.id}
-                  className="flex items-center justify-between rounded-xl bg-white/5 px-3 py-2 text-sm"
+                  className="flex items-center justify-between rounded-xl bg-[var(--fill-subtle)] px-3 py-2 text-sm"
                 >
                   {d.self && labelDraft !== null ? (
                     <input
@@ -331,7 +331,7 @@ export function SyncSection() {
                       onBlur={() => void saveLabel()}
                       onKeyDown={(e) => e.key === "Enter" && void saveLabel()}
                       aria-label={t("Device name")}
-                      className="w-40 rounded-lg border border-white/10 bg-white/5 px-2 py-1 outline-none focus:border-[var(--color-accent-2)]"
+                      className="w-40 rounded-lg border border-[var(--surface-border)] bg-[var(--fill-subtle)] px-2 py-1 outline-none focus:border-[var(--color-accent-2)]"
                     />
                   ) : (
                     <span>
@@ -432,7 +432,7 @@ export function SyncSection() {
             onKeyDown={(e) => e.key === "Enter" && void doJoin()}
             aria-label={t("Sync code or passphrase")}
             placeholder={t("Sync code or passphrase")}
-            className="mt-3 w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 outline-none focus:border-[var(--color-accent-2)]"
+            className="mt-3 w-full rounded-2xl border border-[var(--surface-border)] bg-[var(--fill-subtle)] px-4 py-3 outline-none focus:border-[var(--color-accent-2)]"
           />
           <p role="alert" className="mt-1.5 min-h-5 text-sm text-[var(--color-bad)]">
             {joinError ?? ""}
@@ -521,7 +521,7 @@ export function SyncSection() {
           <p className="text-lg font-bold">{t("Your sync code")}</p>
           <p
             data-testid="sync-code"
-            className="mt-3 select-all break-all rounded-2xl border border-white/10 bg-white/5 p-4 text-center font-mono text-base tracking-wide"
+            className="mt-3 select-all break-all rounded-2xl border border-[var(--surface-border)] bg-[var(--fill-subtle)] p-4 text-center font-mono text-base tracking-wide"
           >
             {shownCode.code}
           </p>

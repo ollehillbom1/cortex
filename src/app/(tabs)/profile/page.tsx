@@ -191,7 +191,7 @@ export default function ProfilePage() {
       <header className="flex items-center gap-4">
         <span
           aria-hidden
-          className="flex h-16 w-16 items-center justify-center rounded-2xl border border-white/10 text-3xl"
+          className="flex h-16 w-16 items-center justify-center rounded-2xl border border-[var(--surface-border)] text-3xl"
           style={{ background: `hsl(${profile.avatarHue} 60% 25% / 0.6)` }}
         >
           {profile.avatar}
@@ -235,7 +235,7 @@ export default function ProfilePage() {
                 className={`flex w-full items-center gap-3 rounded-xl border p-3 text-left transition-colors ${
                   p.id === profile.id
                     ? "border-[var(--color-accent)]/50 bg-[var(--color-accent)]/10"
-                    : "border-white/8 bg-white/4 hover:bg-white/8"
+                    : "border-[var(--surface-border)] bg-[var(--fill-faint)] hover:bg-[var(--fill-soft)]"
                 }`}
               >
                 <span aria-hidden className="text-xl">
@@ -259,14 +259,14 @@ export default function ProfilePage() {
           ))}
         </ul>
         {showNewProfile ? (
-          <div className="mt-3 space-y-3 rounded-xl border border-white/10 p-3">
+          <div className="mt-3 space-y-3 rounded-xl border border-[var(--surface-border)] p-3">
             <label className="block text-sm">
               <span className="mb-1 block text-[var(--color-ink-dim)]">{t("Name")}</span>
               <input
                 value={newName}
                 onChange={(e) => setNewName(e.target.value)}
                 maxLength={40}
-                className="w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2.5 outline-none focus:border-[var(--color-accent-2)]"
+                className="w-full rounded-xl border border-[var(--surface-border)] bg-[var(--fill-subtle)] px-3 py-2.5 outline-none focus:border-[var(--color-accent-2)]"
                 placeholder="e.g. Alex"
               />
             </label>
@@ -281,7 +281,7 @@ export default function ProfilePage() {
                   className={`touch-target rounded-xl border p-2 text-xl ${
                     newAvatar === a
                       ? "border-[var(--color-accent-2)] bg-[var(--color-accent)]/15"
-                      : "border-white/10"
+                      : "border-[var(--surface-border)]"
                   }`}
                 >
                   {a}
@@ -307,7 +307,7 @@ export default function ProfilePage() {
           </Button>
         )}
         {profiles.length > 1 && (
-          <div className="mt-4 border-t border-white/8 pt-4">
+          <div className="mt-4 border-t border-[var(--divider)] pt-4">
             <Toggle
               label={t("Ask who's training at start")}
               description={t("Show the profile picker when the app opens")}
@@ -453,7 +453,7 @@ export default function ProfilePage() {
                   className={`touch-target rounded-xl border px-3 py-2 font-medium transition-colors ${
                     profile.preferences.locale === opt.value
                       ? "border-[var(--color-accent-2)] bg-[var(--color-accent)]/15"
-                      : "border-white/10 bg-white/4"
+                      : "border-[var(--surface-border)] bg-[var(--fill-faint)]"
                   }`}
                 >
                   {opt.label}
@@ -472,7 +472,7 @@ export default function ProfilePage() {
         {/* State-aware: the flat claim was false whenever sync or the coach
             was on, which is exactly when a user needs it to be accurate. */}
         {syncEnabled === null ? (
-          <p className="mt-2 h-10 animate-pulse rounded bg-white/5" aria-hidden />
+          <p className="mt-2 h-10 animate-pulse rounded bg-[var(--fill-subtle)]" aria-hidden />
         ) : (
           <p className="mt-2 text-sm text-[var(--color-ink-dim)]">
             {syncEnabled
@@ -689,7 +689,7 @@ function SetPinDialog({
           onChange={(e) => field.set(e.target.value.replace(/\D/g, "").slice(0, 4))}
           aria-label={field.label}
           placeholder={field.label}
-          className="mt-3 w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-center text-xl tracking-[0.4em] outline-none placeholder:text-sm placeholder:tracking-normal focus:border-[var(--color-accent-2)]"
+          className="mt-3 w-full rounded-2xl border border-[var(--surface-border)] bg-[var(--fill-subtle)] px-4 py-3 text-center text-xl tracking-[0.4em] outline-none placeholder:text-sm placeholder:tracking-normal focus:border-[var(--color-accent-2)]"
         />
       ))}
       <p role="alert" className="mt-1.5 min-h-5 text-sm text-[var(--color-bad)]">
@@ -738,7 +738,7 @@ function Toggle({
           onChange={(e) => onChange(e.target.checked)}
           className="peer sr-only"
         />
-        <span className="absolute inset-0 rounded-full bg-white/12 transition-colors peer-checked:bg-[var(--color-accent)] peer-focus-visible:outline peer-focus-visible:outline-2 peer-focus-visible:outline-[var(--color-accent-2)]" />
+        <span className="absolute inset-0 rounded-full bg-[var(--fill-strong)] transition-colors peer-checked:bg-[var(--color-accent)] peer-focus-visible:outline peer-focus-visible:outline-2 peer-focus-visible:outline-[var(--color-accent-2)]" />
         <span className="absolute left-1 top-1 h-5 w-5 rounded-full bg-white transition-transform peer-checked:translate-x-5" />
       </span>
     </label>

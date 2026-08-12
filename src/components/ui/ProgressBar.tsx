@@ -17,7 +17,7 @@ export function ProgressBar({
       aria-valuemin={0}
       aria-valuemax={100}
       aria-label={label}
-      className={`h-2 w-full overflow-hidden rounded-full bg-white/10 ${className}`}
+      className={`h-2 w-full overflow-hidden rounded-full bg-[var(--fill-strong)] ${className}`}
     >
       <div
         className="h-full rounded-full bg-gradient-to-r from-[var(--color-accent)] to-[var(--color-accent-2)] transition-[width] duration-500"

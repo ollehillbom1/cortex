@@ -80,7 +80,7 @@ export function ProfileGate() {
             >
               <span
                 aria-hidden
-                className="flex h-16 w-16 items-center justify-center rounded-2xl border border-white/10 text-3xl"
+                className="flex h-16 w-16 items-center justify-center rounded-2xl border border-[var(--surface-border)] text-3xl"
                 style={{ background: `hsl(${p.avatarHue} 60% 25% / 0.6)` }}
               >
                 {p.avatar}

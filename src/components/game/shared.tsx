@@ -84,7 +84,7 @@ export function DigitKeypad({
           type="button"
           disabled={disabled}
           onClick={() => onDigit(k)}
-          className="touch-target rounded-2xl border border-white/10 bg-white/5 py-3.5 text-xl font-semibold tabular-nums transition-colors active:bg-white/15 disabled:opacity-40"
+          className="touch-target rounded-2xl border border-[var(--surface-border)] bg-[var(--fill-subtle)] py-3.5 text-xl font-semibold tabular-nums transition-colors active:bg-[var(--fill-active)] disabled:opacity-40"
         >
           {k}
         </button>
@@ -94,7 +94,7 @@ export function DigitKeypad({
         disabled={disabled}
         onClick={onBackspace}
         aria-label={t("Delete last digit")}
-        className="touch-target rounded-2xl border border-white/10 bg-white/5 py-3.5 text-lg transition-colors active:bg-white/15 disabled:opacity-40"
+        className="touch-target rounded-2xl border border-[var(--surface-border)] bg-[var(--fill-subtle)] py-3.5 text-lg transition-colors active:bg-[var(--fill-active)] disabled:opacity-40"
       >
         ⌫
       </button>
@@ -102,7 +102,7 @@ export function DigitKeypad({
         type="button"
         disabled={disabled}
         onClick={() => onDigit(0)}
-        className="touch-target rounded-2xl border border-white/10 bg-white/5 py-3.5 text-xl font-semibold tabular-nums transition-colors active:bg-white/15 disabled:opacity-40"
+        className="touch-target rounded-2xl border border-[var(--surface-border)] bg-[var(--fill-subtle)] py-3.5 text-xl font-semibold tabular-nums transition-colors active:bg-[var(--fill-active)] disabled:opacity-40"
       >
         0
       </button>
@@ -141,7 +141,7 @@ export function DigitSlots({
           className={`flex h-10 w-8 items-center justify-center rounded-lg border text-lg font-semibold tabular-nums ${
             i < entered.length
               ? "border-[var(--color-accent)]/60 bg-[var(--color-accent)]/15 text-[var(--color-ink)]"
-              : "border-white/10 bg-white/4 text-transparent"
+              : "border-[var(--surface-border)] bg-[var(--fill-faint)] text-transparent"
           }`}
         >
           {i < entered.length ? entered[i] : "0"}
