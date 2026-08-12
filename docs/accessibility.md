@@ -78,6 +78,15 @@ visits while a token change moves every caption in the app at once.
 
 ## Deliberately out of scope
 
+- **Pinch/double-tap zoom is disabled app-wide** (decided 2026-08-12). A
+  zoomable standalone app pans around its own interface and reads as
+  broken, and an accidental pinch or double-tap during a timed exercise
+  corrupts the round it lands in. The supported low-vision accommodation
+  is the **Larger text** preference (plus the OS text-size setting, which
+  the app's relative units follow). Consequences owned openly: axe's
+  `meta-viewport` rule fires on this by design and is excluded from the
+  audit with a comment pointing here (`e2e/a11y.spec.ts`); users who rely
+  on zoom rather than text scaling lose that path.
 - **Screen-reader support (VoiceOver)** is not a target for Cortex (decided
   2026-08-11, issue #109). The app is a household training app whose users do
   not use a screen reader; the manual walkthrough that would have validated

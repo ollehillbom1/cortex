@@ -16,7 +16,12 @@ async function expectNoSeriousViolations(page: Page, context: string) {
   await page.waitForFunction(() =>
     document.getAnimations().every((a) => a.playState === "finished"),
   );
-  const results = await new AxeBuilder({ page }).analyze();
+  // meta-viewport is excluded by decision, not oversight: zoom is disabled
+  // app-wide (accidental pinch/double-tap during a timed round corrupts the
+  // measurement, and a zoomable standalone app pans around its own chrome).
+  // The Larger text preference is the supported low-vision accommodation.
+  // Documented in docs/accessibility.md, "Deliberately out of scope".
+  const results = await new AxeBuilder({ page }).disableRules(["meta-viewport"]).analyze();
   const serious = results.violations.filter(
     (v) => v.impact === "serious" || v.impact === "critical",
   );
