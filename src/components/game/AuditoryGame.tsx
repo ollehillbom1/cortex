@@ -213,7 +213,7 @@ export function AuditoryGame({ level, roundIndex, seed, audio, onRoundComplete }
                     ? "scale-150 bg-[var(--color-accent-2)]"
                     : i < presentIndex
                       ? "bg-[var(--color-accent)]/60"
-                      : "bg-white/15"
+                      : "bg-[var(--fill-active)]"
                 }`}
               />
             ))}
@@ -251,7 +251,7 @@ export function AuditoryGame({ level, roundIndex, seed, audio, onRoundComplete }
                 type="button"
                 aria-label={t("Sound pad {n}", { n: pad + 1 })}
                 onClick={() => tapPad(pad)}
-                className={`touch-target aspect-square rounded-2xl border border-white/10 text-2xl font-bold transition-transform active:scale-95 ${
+                className={`touch-target aspect-square rounded-2xl border border-[var(--surface-border)] text-2xl font-bold transition-transform active:scale-95 ${
                   ["bg-violet-500/30", "bg-cyan-500/30", "bg-emerald-500/30", "bg-amber-500/30"][
                     pad
                   ]

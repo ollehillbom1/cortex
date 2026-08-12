@@ -111,7 +111,7 @@ export function PatternGame({ level, seed, onRoundComplete }: GameProps) {
                   ? "border-[var(--color-accent-2)] bg-gradient-to-br from-[var(--color-accent)] to-[var(--color-accent-2)]"
                   : picked
                     ? "border-[var(--color-accent-2)] bg-[var(--color-accent)]/40"
-                    : "border-white/10 bg-white/6 active:bg-white/15"
+                    : "border-[var(--surface-border)] bg-[var(--fill-subtle)] active:bg-[var(--fill-active)]"
               }`}
             />
           );

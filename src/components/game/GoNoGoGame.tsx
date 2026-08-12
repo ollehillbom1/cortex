@@ -150,7 +150,7 @@ export function GoNoGoGame({ level, seed, audio, soundOn, onRoundComplete }: Gam
         aria-label={
           showing ? (showing.go ? t("Go — tap now") : t("Stop — do nothing")) : t("Waiting…")
         }
-        className="play-surface touch-target mx-auto flex aspect-square w-full max-w-xs select-none items-center justify-center rounded-[2rem] border border-white/10 bg-white/5"
+        className="play-surface touch-target mx-auto flex aspect-square w-full max-w-xs select-none items-center justify-center rounded-[2rem] border border-[var(--surface-border)] bg-[var(--fill-subtle)]"
       >
         {showing ? (
           showing.go ? (

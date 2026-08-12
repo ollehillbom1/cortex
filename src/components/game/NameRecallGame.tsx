@@ -126,7 +126,7 @@ export function NameRecallGame({ level, seed, audio, soundOn, onRoundComplete }:
         </PhaseHint>
         {/* Keyed remount so each pair pops in as a new card. */}
         <div key={studyIndex} className="pop-in flex flex-col items-center gap-3">
-          <div className="rounded-3xl border border-white/10 bg-white/5 p-4">
+          <div className="rounded-3xl border border-[var(--surface-border)] bg-[var(--fill-subtle)] p-4">
             <FaceSvg face={pair.face} />
           </div>
           <p className="text-2xl font-bold">{pair.name}</p>
@@ -141,7 +141,10 @@ export function NameRecallGame({ level, seed, audio, soundOn, onRoundComplete }:
       <PhaseHint>
         {t("Who is this? — {i}/{n}", { i: quizIndex + 1, n: round.quiz.length })}
       </PhaseHint>
-      <div key={quizIndex} className="pop-in rounded-3xl border border-white/10 bg-white/5 p-4">
+      <div
+        key={quizIndex}
+        className="pop-in rounded-3xl border border-[var(--surface-border)] bg-[var(--fill-subtle)] p-4"
+      >
         <FaceSvg face={round.pairs[item.pairIndex].face} />
       </div>
       <p aria-live="polite" className="min-h-5 text-sm font-medium">
@@ -161,7 +164,7 @@ export function NameRecallGame({ level, seed, audio, soundOn, onRoundComplete }:
             type="button"
             onClick={() => answer(name)}
             disabled={feedback !== null}
-            className="touch-target rounded-2xl border border-white/10 bg-white/6 py-3 text-lg font-semibold transition-colors active:bg-white/15 disabled:opacity-60"
+            className="touch-target rounded-2xl border border-[var(--surface-border)] bg-[var(--fill-subtle)] py-3 text-lg font-semibold transition-colors active:bg-[var(--fill-active)] disabled:opacity-60"
           >
             {name}
           </button>

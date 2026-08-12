@@ -62,7 +62,7 @@ export function ServiceWorkerManager() {
   return (
     <div
       role="status"
-      className="fixed inset-x-0 bottom-20 z-50 mx-auto w-fit max-w-[90vw] rounded-full border border-white/10 bg-[#161f31] px-4 py-2 text-sm shadow-xl"
+      className="fixed inset-x-0 bottom-20 z-50 mx-auto w-fit max-w-[90vw] rounded-full border border-[var(--surface-border)] bg-[#161f31] px-4 py-2 text-sm shadow-xl"
     >
       <span className="mr-3">{t("A new version of Cortex is ready.")}</span>
       <button

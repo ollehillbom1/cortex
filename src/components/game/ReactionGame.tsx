@@ -158,14 +158,14 @@ export function ReactionGame({
   }, [press]);
 
   const surface: Record<Phase, { text: string; cls: string }> = {
-    ready: { text: t("Tap to arm"), cls: "bg-white/6 border-white/10" },
+    ready: { text: t("Tap to arm"), cls: "bg-[var(--fill-subtle)] border-[var(--surface-border)]" },
     waiting: { text: t("Wait for it…"), cls: "bg-[#2a1530] border-[var(--color-accent)]/40" },
     go: {
       text: "GO!",
       cls: "bg-gradient-to-br from-emerald-500 to-cyan-400 border-transparent text-[#04211a]",
     },
     "false-start": { text: t("Too early!"), cls: "bg-[#3a1a1a] border-[var(--color-bad)]/60" },
-    result: { text: `${resultMs} ms`, cls: "bg-white/8 border-[var(--color-good)]/50" },
+    result: { text: `${resultMs} ms`, cls: "bg-[var(--fill-soft)] border-[var(--color-good)]/50" },
     timeout: {
       text: t("No answer — tap to try again"),
       cls: "bg-[#3a1a1a] border-[var(--color-warn)]/60",

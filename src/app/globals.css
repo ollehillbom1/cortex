@@ -30,6 +30,36 @@
 
 :root {
   color-scheme: dark;
+
+  /*
+   * Surface tokens. Every translucent white fill, border and divider in the
+   * app goes through these, so a future light theme is a redefinition of
+   * this block — not a sweep across twenty files. Consolidated from the
+   * previously hard-coded values (±0.01–0.02 where near-duplicates merged):
+   *
+   *   --fill-faintest         ← .card gradient tail (0.02)
+   *   --fill-faint            ← bg-white/4 (unselected chips/options)
+   *   --fill-subtle           ← bg-white/5, bg-white/6, .card gradient head (0.055)
+   *   --fill-soft             ← bg-white/8
+   *   --fill-strong           ← bg-white/10, bg-white/12
+   *   --fill-active           ← bg-white/15 (pressed states, idle pattern dots)
+   *   --surface-border        ← border-white/8 (chips), /10, /12, .card border (0.08)
+   *   --surface-border-strong ← border-white/15
+   *   --divider               ← divide-white/6, and border-white/8 used as `border-t` dividers
+   *   --edge-highlight-subtle ← .card inset top edge (0.04)
+   *   --edge-highlight-strong ← .btn-primary inset top edge (0.25)
+   */
+  --fill-faintest: rgb(255 255 255 / 0.02);
+  --fill-faint: rgb(255 255 255 / 0.04);
+  --fill-subtle: rgb(255 255 255 / 0.06);
+  --fill-soft: rgb(255 255 255 / 0.08);
+  --fill-strong: rgb(255 255 255 / 0.12);
+  --fill-active: rgb(255 255 255 / 0.15);
+  --surface-border: rgb(255 255 255 / 0.1);
+  --surface-border-strong: rgb(255 255 255 / 0.15);
+  --divider: rgb(255 255 255 / 0.06);
+  --edge-highlight-subtle: rgb(255 255 255 / 0.04);
+  --edge-highlight-strong: rgb(255 255 255 / 0.25);
 }
 
 html {
@@ -95,11 +125,11 @@ html[data-large-text="true"] {
 
 /* Glassy raised card */
 .card {
-  background: linear-gradient(160deg, rgba(255, 255, 255, 0.055), rgba(255, 255, 255, 0.02));
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: linear-gradient(160deg, var(--fill-subtle), var(--fill-faintest));
+  border: 1px solid var(--surface-border);
   border-radius: var(--radius-card);
   box-shadow:
-    0 1px 0 rgba(255, 255, 255, 0.04) inset,
+    0 1px 0 var(--edge-highlight-subtle) inset,
     0 12px 30px -18px rgba(0, 0, 0, 0.8);
 }
 
@@ -114,7 +144,7 @@ html[data-large-text="true"] {
   background: linear-gradient(94deg, #7c4dff 0%, #06b6d4 120%);
   color: #fff;
   box-shadow:
-    0 1px 0 rgba(255, 255, 255, 0.25) inset,
+    0 1px 0 var(--edge-highlight-strong) inset,
     0 10px 24px -12px rgba(124, 77, 255, 0.55);
 }
 .btn-primary:active {

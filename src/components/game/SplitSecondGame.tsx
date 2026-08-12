@@ -157,7 +157,7 @@ export function SplitSecondGame({ level, seed, audio, soundOn, onRoundComplete }
         {stage === "answer-target" && t("Where was the diamond?")}
       </PhaseHint>
 
-      <div className="relative mx-auto aspect-square w-full max-w-xs rounded-[2rem] border border-white/10 bg-white/5">
+      <div className="relative mx-auto aspect-square w-full max-w-xs rounded-[2rem] border border-[var(--surface-border)] bg-[var(--fill-subtle)]">
         <svg viewBox="0 0 100 100" className="h-full w-full">
           {/* Fixation cross stays up except during the answer ring. */}
           {(stage === "fixation" || stage === "exposure" || stage === "mask") && (
@@ -235,7 +235,7 @@ export function SplitSecondGame({ level, seed, audio, soundOn, onRoundComplete }
                 data-pos={p}
                 onClick={onRingTap}
                 aria-label={t("Position {n}", { n: p + 1 })}
-                className="touch-target absolute flex h-11 w-11 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border border-white/15 bg-white/8 text-sm font-semibold text-[var(--color-ink-dim)] active:bg-white/15"
+                className="touch-target absolute flex h-11 w-11 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border border-[var(--surface-border-strong)] bg-[var(--fill-soft)] text-sm font-semibold text-[var(--color-ink-dim)] active:bg-[var(--fill-active)]"
                 style={{ left: `${x}%`, top: `${y}%` }}
               >
                 {p + 1}
@@ -259,7 +259,7 @@ export function SplitSecondGame({ level, seed, audio, soundOn, onRoundComplete }
           <button
             type="button"
             onClick={() => answerCentre(0)}
-            className="touch-target flex items-center justify-center gap-2 rounded-2xl border border-white/10 bg-white/6 py-3 text-lg font-semibold active:bg-white/15"
+            className="touch-target flex items-center justify-center gap-2 rounded-2xl border border-[var(--surface-border)] bg-[var(--fill-subtle)] py-3 text-lg font-semibold active:bg-[var(--fill-active)]"
           >
             <span
               aria-hidden
@@ -270,7 +270,7 @@ export function SplitSecondGame({ level, seed, audio, soundOn, onRoundComplete }
           <button
             type="button"
             onClick={() => answerCentre(1)}
-            className="touch-target flex items-center justify-center gap-2 rounded-2xl border border-white/10 bg-white/6 py-3 text-lg font-semibold active:bg-white/15"
+            className="touch-target flex items-center justify-center gap-2 rounded-2xl border border-[var(--surface-border)] bg-[var(--fill-subtle)] py-3 text-lg font-semibold active:bg-[var(--fill-active)]"
           >
             <span aria-hidden className="inline-block h-4 w-4 bg-[var(--color-accent-2)]" />
             {t("Square")}

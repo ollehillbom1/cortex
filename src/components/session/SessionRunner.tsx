@@ -583,7 +583,7 @@ export function SessionRunner() {
                     className={`h-full flex-1 rounded-full ${
                       passed
                         ? "bg-gradient-to-r from-[var(--color-accent)] to-[var(--color-accent-2)]"
-                        : "bg-white/12"
+                        : "bg-[var(--fill-strong)]"
                     }`}
                   />
                 );
@@ -614,7 +614,7 @@ export function SessionRunner() {
                 })}
               </p>
             </div>
-            <ol className="card divide-y divide-white/6 px-5">
+            <ol className="card divide-y divide-[var(--divider)] px-5">
               {overview.map((item) => {
                 const def = EXERCISES[item.exerciseId];
                 const level = effectiveLevel(
@@ -630,7 +630,7 @@ export function SessionRunner() {
                         {t("{n} rounds", { n: item.rounds })}
                       </p>
                     </div>
-                    <span className="rounded-full bg-white/8 px-2.5 py-1 text-xs font-semibold text-[var(--color-ink-dim)]">
+                    <span className="rounded-full bg-[var(--fill-soft)] px-2.5 py-1 text-xs font-semibold text-[var(--color-ink-dim)]">
                       Lv {level}
                     </span>
                   </li>
@@ -656,7 +656,7 @@ export function SessionRunner() {
                   {t("Practice — does not affect XP, streak or level")}
                 </p>
               )}
-              <p className="mt-2 inline-block rounded-full bg-white/8 px-3 py-1 text-xs font-semibold">
+              <p className="mt-2 inline-block rounded-full bg-[var(--fill-soft)] px-3 py-1 text-xs font-semibold">
                 {/* An exercise with no difficulty scale shows rounds only —
                     "Level 1" there is a number that never moves and never
                     meant anything. */}
@@ -698,7 +698,7 @@ export function SessionRunner() {
                     </li>
                   ))}
                 </ul>
-                <p className="mt-3 border-t border-white/8 pt-3 text-sm text-[var(--color-ink-dim)]">
+                <p className="mt-3 border-t border-[var(--divider)] pt-3 text-sm text-[var(--color-ink-dim)]">
                   <span className="font-semibold text-[var(--color-ink)]">{t("Scoring:")} </span>
                   {t(INSTRUCTIONS[currentDef.id].scoring)}
                 </p>

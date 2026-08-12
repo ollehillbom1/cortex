@@ -66,7 +66,7 @@ export default function ExercisesPage() {
                   <div className="flex items-center gap-2">
                     <h2 className="font-bold">{t(def.name)}</h2>
                     {def.maxLevel > MIN_LEVEL && (
-                      <span className="rounded-full bg-white/8 px-2 py-0.5 text-[11px] font-semibold text-[var(--color-ink-dim)]">
+                      <span className="rounded-full bg-[var(--fill-soft)] px-2 py-0.5 text-[11px] font-semibold text-[var(--color-ink-dim)]">
                         Lv {level}
                       </span>
                     )}
@@ -94,7 +94,7 @@ export default function ExercisesPage() {
                 type="button"
                 onClick={() => openPractice(id)}
                 aria-label={t("Practice {name} at a level you choose", { name: t(def.name) })}
-                className="touch-target shrink-0 rounded-2xl border border-white/10 bg-white/5 px-3 py-2 text-xs font-semibold text-[var(--color-ink-dim)] transition-colors active:bg-white/15"
+                className="touch-target shrink-0 rounded-2xl border border-[var(--surface-border)] bg-[var(--fill-subtle)] px-3 py-2 text-xs font-semibold text-[var(--color-ink-dim)] transition-colors active:bg-[var(--fill-active)]"
               >
                 {t("Practice")}
               </button>
@@ -133,7 +133,7 @@ export default function ExercisesPage() {
                   onClick={() => setPracticeLevel((l) => Math.max(MIN_LEVEL, l - 1))}
                   disabled={practiceLevel <= MIN_LEVEL}
                   aria-label={t("Lower level")}
-                  className="touch-target rounded-2xl border border-white/10 bg-white/5 px-5 py-2.5 text-xl font-bold transition-colors active:bg-white/15 disabled:opacity-40"
+                  className="touch-target rounded-2xl border border-[var(--surface-border)] bg-[var(--fill-subtle)] px-5 py-2.5 text-xl font-bold transition-colors active:bg-[var(--fill-active)] disabled:opacity-40"
                 >
                   −
                 </button>
@@ -155,7 +155,7 @@ export default function ExercisesPage() {
                   }
                   disabled={practiceLevel >= EXERCISES[practiceFor].maxLevel}
                   aria-label={t("Raise level")}
-                  className="touch-target rounded-2xl border border-white/10 bg-white/5 px-5 py-2.5 text-xl font-bold transition-colors active:bg-white/15 disabled:opacity-40"
+                  className="touch-target rounded-2xl border border-[var(--surface-border)] bg-[var(--fill-subtle)] px-5 py-2.5 text-xl font-bold transition-colors active:bg-[var(--fill-active)] disabled:opacity-40"
                 >
                   +
                 </button>
@@ -176,7 +176,7 @@ export default function ExercisesPage() {
               className={`touch-target rounded-2xl border px-2 py-2.5 text-sm font-semibold transition-colors ${
                 practiceRounds === null
                   ? "border-[var(--color-accent-2)] bg-[var(--color-accent)]/25"
-                  : "border-white/10 bg-white/5 active:bg-white/15"
+                  : "border-[var(--surface-border)] bg-[var(--fill-subtle)] active:bg-[var(--fill-active)]"
               }`}
             >
               {t("Default")}
@@ -190,7 +190,7 @@ export default function ExercisesPage() {
                 className={`touch-target rounded-2xl border px-2 py-2.5 text-sm font-semibold tabular-nums transition-colors ${
                   practiceRounds === n
                     ? "border-[var(--color-accent-2)] bg-[var(--color-accent)]/25"
-                    : "border-white/10 bg-white/5 active:bg-white/15"
+                    : "border-[var(--surface-border)] bg-[var(--fill-subtle)] active:bg-[var(--fill-active)]"
                 }`}
               >
                 {n}

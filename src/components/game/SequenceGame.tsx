@@ -145,7 +145,7 @@ export function SequenceGame({ level, seed, audio, soundOn, onRoundComplete }: G
                   ? "border-[var(--color-bad)] bg-[var(--color-bad)]/20"
                   : lit
                     ? "scale-[1.04] border-[var(--color-accent-2)] bg-gradient-to-br from-[var(--color-accent)] to-[var(--color-accent-2)] shadow-[0_0_24px_-4px_var(--color-accent)]"
-                    : "border-white/10 bg-white/6 active:bg-white/15"
+                    : "border-[var(--surface-border)] bg-[var(--fill-subtle)] active:bg-[var(--fill-active)]"
               }`}
             >
               {error && <XIcon className="mx-auto h-8 w-8 text-[var(--color-bad)]" />}

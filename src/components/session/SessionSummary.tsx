@@ -166,7 +166,7 @@ export function SessionSummary({
           </div>
         )}
 
-        <ul className="card rise-in divide-y divide-white/6 px-5">
+        <ul className="card rise-in divide-y divide-[var(--divider)] px-5">
           {completed.map((e) => {
             const def = EXERCISES[e.exerciseId];
             const levelChanged = e.levelAfter !== e.levelBefore;
@@ -187,7 +187,7 @@ export function SessionSummary({
                       ? e.levelAfter > e.levelBefore
                         ? "bg-[var(--color-good)]/15 text-[var(--color-good)]"
                         : "bg-[var(--color-warn)]/15 text-[var(--color-warn)]"
-                      : "bg-white/8 text-[var(--color-ink-dim)]"
+                      : "bg-[var(--fill-soft)] text-[var(--color-ink-dim)]"
                   }`}
                 >
                   {levelChanged ? `Lv ${e.levelBefore} → ${e.levelAfter}` : `Lv ${e.levelAfter}`}

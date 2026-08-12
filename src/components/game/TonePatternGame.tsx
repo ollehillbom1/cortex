@@ -164,7 +164,7 @@ export function TonePatternGame({ level, seed, audio, onRoundComplete }: GamePro
                     ? "scale-150 bg-[var(--color-accent-2)]"
                     : i < presentIndex
                       ? "bg-[var(--color-accent)]/60"
-                      : "bg-white/15"
+                      : "bg-[var(--fill-active)]"
                 }`}
               />
             ))}
@@ -190,7 +190,7 @@ export function TonePatternGame({ level, seed, audio, onRoundComplete }: GamePro
                 className={`touch-target aspect-square rounded-2xl border text-2xl font-bold transition-all duration-100 ${
                   litPad === pad
                     ? "scale-[1.05] border-[var(--color-accent-2)] shadow-[0_0_20px_-4px_var(--color-accent)]"
-                    : "border-white/10"
+                    : "border-[var(--surface-border)]"
                 } ${PAD_COLORS[pad]} ${phase === "input" ? "active:scale-95" : ""}`}
               >
                 {pad + 1}

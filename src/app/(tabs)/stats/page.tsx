@@ -134,7 +134,7 @@ export default function StatsPage() {
               className={`rounded-full px-3 py-1.5 text-xs font-semibold transition-colors ${
                 selected === id
                   ? "bg-[var(--color-accent)]/25 text-[var(--color-ink)]"
-                  : "bg-white/6 text-[var(--color-ink-faint)]"
+                  : "bg-[var(--fill-subtle)] text-[var(--color-ink-faint)]"
               }`}
             >
               {t(EXERCISES[id].name)}
@@ -269,7 +269,7 @@ export default function StatsPage() {
               const olderEra =
                 (rec.measurementVersion ?? 0) !== (MEASUREMENT_VERSION[exercise] ?? 0);
               return (
-                <li key={key} className="rounded-xl bg-white/5 p-3">
+                <li key={key} className="rounded-xl bg-[var(--fill-subtle)] p-3">
                   <p className="text-lg font-bold tabular-nums">
                     {rec.value}{" "}
                     <span className="text-xs font-normal">{t(RECORD_LABELS[key].unit)}</span>

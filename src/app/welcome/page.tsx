@@ -148,7 +148,7 @@ export default function WelcomePage() {
             <span
               key={i}
               className={`h-1.5 rounded-full transition-all ${
-                i === step ? "w-6 bg-[var(--color-accent-2)]" : "w-1.5 bg-white/15"
+                i === step ? "w-6 bg-[var(--color-accent-2)]" : "w-1.5 bg-[var(--fill-active)]"
               }`}
             />
           ))}
@@ -188,7 +188,7 @@ export default function WelcomePage() {
                 onKeyDown={(e) => e.key === "Enter" && void finish()}
                 maxLength={40}
                 placeholder="e.g. Olle"
-                className="w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3.5 text-lg outline-none focus:border-[var(--color-accent-2)]"
+                className="w-full rounded-2xl border border-[var(--surface-border)] bg-[var(--fill-subtle)] px-4 py-3.5 text-lg outline-none focus:border-[var(--color-accent-2)]"
               />
             </label>
             <div>
@@ -206,7 +206,7 @@ export default function WelcomePage() {
                     className={`touch-target rounded-2xl border p-2.5 text-2xl transition-colors ${
                       avatar === a
                         ? "border-[var(--color-accent-2)] bg-[var(--color-accent)]/20"
-                        : "border-white/10 bg-white/4"
+                        : "border-[var(--surface-border)] bg-[var(--fill-faint)]"
                     }`}
                   >
                     {a}
@@ -282,7 +282,7 @@ export default function WelcomePage() {
             onKeyDown={(e) => e.key === "Enter" && void restore()}
             aria-label={t("Sync code or passphrase")}
             placeholder={t("Sync code or passphrase")}
-            className="mt-3 w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 outline-none focus:border-[var(--color-accent-2)]"
+            className="mt-3 w-full rounded-2xl border border-[var(--surface-border)] bg-[var(--fill-subtle)] px-4 py-3 outline-none focus:border-[var(--color-accent-2)]"
           />
           <p role="alert" className="mt-1.5 min-h-5 text-sm text-[var(--color-bad)]">
             {restoreError ?? ""}

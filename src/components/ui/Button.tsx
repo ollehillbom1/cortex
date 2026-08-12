@@ -6,9 +6,10 @@ type Variant = "primary" | "ghost" | "danger" | "subtle";
 
 const styles: Record<Variant, string> = {
   primary: "btn-primary font-semibold",
-  ghost: "border border-white/12 bg-white/5 text-[var(--color-ink)] hover:bg-white/10",
+  ghost:
+    "border border-[var(--surface-border)] bg-[var(--fill-subtle)] text-[var(--color-ink)] hover:bg-[var(--fill-strong)]",
   danger:
-    "border border-[color-mix(in_srgb,var(--color-bad)_50%,transparent)] text-[var(--color-bad)] bg-white/5",
+    "border border-[color-mix(in_srgb,var(--color-bad)_50%,transparent)] text-[var(--color-bad)] bg-[var(--fill-subtle)]",
   subtle: "text-[var(--color-ink-dim)] hover:text-[var(--color-ink)]",
 };
 

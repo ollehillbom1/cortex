@@ -164,7 +164,9 @@ export function RhythmGame({ level, seed, audio, onRoundComplete }: GameProps) {
               <span
                 key={i}
                 className={`h-3 w-3 rounded-full transition-colors ${
-                  phase === "tap" && i < tapCount ? "bg-[var(--color-accent)]" : "bg-white/15"
+                  phase === "tap" && i < tapCount
+                    ? "bg-[var(--color-accent)]"
+                    : "bg-[var(--fill-active)]"
                 }`}
               />
             ))}
@@ -181,8 +183,8 @@ export function RhythmGame({ level, seed, audio, onRoundComplete }: GameProps) {
               pulse
                 ? "scale-[1.06] border-[var(--color-accent-2)] bg-gradient-to-br from-[var(--color-accent)] to-[var(--color-accent-2)] shadow-[0_0_40px_-8px_var(--color-accent)]"
                 : phase === "tap"
-                  ? "border-[var(--color-accent)]/50 bg-white/6 active:scale-95 active:bg-white/12"
-                  : "border-white/10 bg-white/5"
+                  ? "border-[var(--color-accent)]/50 bg-[var(--fill-subtle)] active:scale-95 active:bg-[var(--fill-strong)]"
+                  : "border-[var(--surface-border)] bg-[var(--fill-subtle)]"
             }`}
           >
             {phase === "tap" ? t("Tap here") : ""}
