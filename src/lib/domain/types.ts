@@ -15,7 +15,8 @@ export type ExerciseId =
   | "tone-pattern"
   | "rhythm-recall"
   | "reaction-time"
-  | "go-no-go";
+  | "go-no-go"
+  | "name-recall";
 
 export type Modality =
   "working-memory" | "visual-memory" | "auditory-memory" | "attention" | "speed";
@@ -294,6 +295,17 @@ export const EXERCISES: Record<ExerciseId, ExerciseDefinition> = {
     requiresVision: true,
     requiresAudio: false,
     maxLevel: 25,
+  },
+  "name-recall": {
+    id: "name-recall",
+    name: "Name Recall",
+    tagline: "Put names to faces and keep them",
+    modalities: ["visual-memory", "working-memory"],
+    secondsPerRound: 30,
+    defaultRounds: 2,
+    requiresVision: true,
+    requiresAudio: false,
+    maxLevel: 26,
   },
 };
 

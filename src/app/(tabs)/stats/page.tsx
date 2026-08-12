@@ -33,6 +33,7 @@ const RECORD_LABELS: Record<string, { label: string; unit: string; lower?: boole
   "number-span:maxSpan": { label: "Number span", unit: "digits" },
   "auditory-digits:maxSpan": { label: "Sound span", unit: "digits" },
   "sequence-memory:maxSequence": { label: "Longest sequence", unit: "steps" },
+  "name-recall:maxSpan": { label: "Most names", unit: "faces" },
 };
 
 export default function StatsPage() {

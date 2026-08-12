@@ -118,4 +118,14 @@ export const INSTRUCTIONS: Record<ExerciseId, ExerciseInstructions> = {
     accessibility:
       "This exercise needs sight. GO and STOP differ by shape and text, not colour alone. Keyboard: the space bar works instead of tapping.",
   },
+  "name-recall": {
+    how: [
+      "Faces appear one at a time, each with a name. Use the study time to link them — hang the name on something you see: 'Rosa with the round glasses'.",
+      "Then the faces come back in a new order, and you pick the right name for each.",
+      "More faces, briefer study time and closer choices as you improve.",
+    ],
+    scoring: "Every face matched to its right name counts. All of them is a perfect round.",
+    accessibility:
+      "This exercise needs sight — the cue is a face. Names are shown as text. Keyboard: number keys pick a name.",
+  },
 };

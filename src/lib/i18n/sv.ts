@@ -269,6 +269,9 @@ export const SV: Record<string, string> = {
   ms: "ms",
   digits: "siffror",
   steps: "steg",
+  faces: "ansikten",
+  "Most names": "Flest namn",
+  "Most names remembered": "Flest ihågkomna namn",
 
   // Charts
   "No data yet.": "Ingen data ännu.",
@@ -520,6 +523,25 @@ export const SV: Record<string, string> = {
   "That was a stop — hold back": "Det där var en STOP — håll emot",
   "{hits} of {go} go · {held} of {stop} stop held":
     "{hits} av {go} GO · {held} av {stop} STOP hejdade",
+
+  // Name Recall
+  "Name Recall": "Namnminne",
+  "Put names to faces and keep them": "Sätt namn på ansikten och behåll dem",
+  "Faces appear one at a time, each with a name. Use the study time to link them — hang the name on something you see: 'Rosa with the round glasses'.":
+    "Ansikten visas ett i taget, vart och ett med ett namn. Använd studietiden till att koppla ihop dem — häng upp namnet på något du ser: 'Rosa med de runda glasögonen'.",
+  "Then the faces come back in a new order, and you pick the right name for each.":
+    "Sedan kommer ansiktena tillbaka i ny ordning, och du väljer rätt namn till vart och ett.",
+  "More faces, briefer study time and closer choices as you improve.":
+    "Fler ansikten, kortare studietid och lurigare alternativ när du blir bättre.",
+  "Every face matched to its right name counts. All of them is a perfect round.":
+    "Varje ansikte som paras med sitt rätta namn räknas. Alla rätt är en perfekt runda.",
+  "This exercise needs sight — the cue is a face. Names are shown as text. Keyboard: number keys pick a name.":
+    "Den här övningen kräver syn — ledtråden är ett ansikte. Namnen visas som text. Tangentbord: sifferknapparna väljer namn.",
+  "Memorise — {i}/{n}. Hang the name on something you see.":
+    "Memorera — {i}/{n}. Häng upp namnet på något du ser.",
+  "Who is this? — {i}/{n}": "Vem är det här? — {i}/{n}",
+  "It was {name}": "Det var {name}",
+  "{n} of {total} names": "{n} av {total} namn",
 
   // Achievements
   "First Steps": "Första stegen",

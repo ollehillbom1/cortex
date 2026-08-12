@@ -26,6 +26,7 @@ const RECORD_LABELS: Record<string, string> = {
   "number-span:maxSpan": "Longest number span",
   "auditory-digits:maxSpan": "Longest sound span",
   "sequence-memory:maxSequence": "Longest sequence",
+  "name-recall:maxSpan": "Most names remembered",
 };
 
 export function SessionSummary({
