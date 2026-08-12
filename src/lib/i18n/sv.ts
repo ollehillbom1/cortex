@@ -52,6 +52,17 @@ export const SV: Record<string, string> = {
     "Inga pass ännu. Ditt första pass tar cirka {goal} minuter.",
   Session: "Pass",
   "Training insight": "Träningsinsikt",
+  "Last week": "Förra veckan",
+  "Last week's recap": "Förra veckans återblick",
+  "{n} active day": "{n} aktiv dag",
+  "{n} active days": "{n} aktiva dagar",
+  "{n} personal best": "{n} personligt rekord",
+  "{n} personal bests": "{n} personliga rekord",
+  "Dismiss last week's recap": "Stäng förra veckans återblick",
+  "Tomorrow:": "Imorgon:",
+  "about {min} min": "ca {min} min",
+  "Same task as earlier in this session — start when ready.":
+    "Samma uppgift som tidigare i passet — starta när du är redo.",
   "Your training is stored in this browser and, because sync is on, also end-to-end encrypted on your sync server. The server stores ciphertext only — it cannot read your data.":
     "Din träning lagras i den här webbläsaren och, eftersom synk är på, även änd-till-änd-krypterad på din synkserver. Servern lagrar bara chiffertext — den kan inte läsa dina data.",
   "AI phrasing is on, so a short set of numbers from your insights is sent to the language model your server is configured with. No names, and no session history.":

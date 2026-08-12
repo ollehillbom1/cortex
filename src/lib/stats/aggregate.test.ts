@@ -8,6 +8,8 @@ import {
   shiftDay,
   strengthsAndFocus,
   timeOfDayPerformance,
+  weeklyRecap,
+  weekStartOf,
 } from "./aggregate";
 import { spansMeasurementBreak } from "@/lib/measurement/version";
 import { createProfile } from "@/lib/storage/profileFactory";
@@ -107,6 +109,52 @@ describe("stats aggregation", () => {
     expect(morning?.accuracy).toBeCloseTo(0.8, 5);
     expect(evening?.sessions).toBe(2);
     expect(parts.find((p) => p.part === "night")).toBeUndefined();
+  });
+});
+
+describe("weekly recap", () => {
+  it("computes Monday-based week starts", () => {
+    expect(weekStartOf("2026-08-12")).toBe("2026-08-10"); // Wednesday
+    expect(weekStartOf("2026-08-10")).toBe("2026-08-10"); // Monday is its own start
+    expect(weekStartOf("2026-08-16")).toBe("2026-08-10"); // Sunday closes the week
+  });
+
+  it("summarises last calendar week and nothing else", () => {
+    // Today Wednesday 2026-08-12 -> recapped week is Mon 08-03 .. Sun 08-09.
+    const sessions = [
+      session("in1", new Date(2026, 7, 3, 9, 0).toISOString(), { xpEarned: 40 }),
+      session("in2", new Date(2026, 7, 3, 18, 0).toISOString(), { xpEarned: 10 }),
+      session("in3", new Date(2026, 7, 9, 9, 0).toISOString()),
+      session("thisWeek", new Date(2026, 7, 11, 9, 0).toISOString()),
+      session("older", new Date(2026, 6, 20, 9, 0).toISOString()),
+    ];
+    const records = {
+      // Set during the week: counts.
+      "number-span:maxSpan": { value: 7, achievedAt: new Date(2026, 7, 4, 10, 0).toISOString() },
+      // `:level` keys are excluded, matching what the summary celebrates.
+      "n-back:level": { value: 9, achievedAt: new Date(2026, 7, 4, 10, 0).toISOString() },
+      // Set this week: outside the recap.
+      "reaction-time:bestMs": {
+        value: 210,
+        achievedAt: new Date(2026, 7, 11, 10, 0).toISOString(),
+      },
+    };
+    const recap = weeklyRecap(sessions, records, "2026-08-12");
+    expect(recap).toMatchObject({
+      weekStart: "2026-08-03",
+      weekEnd: "2026-08-09",
+      sessions: 3,
+      activeDays: 2,
+      xp: 80,
+      records: 1,
+    });
+    expect(recap?.minutes).toBe(18); // three 6-minute sessions
+  });
+
+  it("returns null when last week held no training", () => {
+    expect(weeklyRecap([], {}, "2026-08-12")).toBeNull();
+    const onlyThisWeek = [session("a", new Date(2026, 7, 11, 9, 0).toISOString())];
+    expect(weeklyRecap(onlyThisWeek, {}, "2026-08-12")).toBeNull();
   });
 });
 

@@ -34,6 +34,14 @@ function isWithinDays(iso: string | null, days: number, now: Date): boolean {
   return ageMs >= 0 && ageMs < days * 86_400_000;
 }
 
-/** Meta keys used by the reminder + export bookkeeping. */
+/**
+ * Meta keys used by the reminder + export bookkeeping.
+ *
+ * Deliberately NOT profile-scoped, unlike the insight/recap dismissals: the
+ * export is exportAll() — one household file — so one export protects every
+ * profile's data, and the snooze snoozes that same household-level concern.
+ * Scoping the snooze per profile would nag each family member separately
+ * about a backup any one of them can take for everyone.
+ */
 export const META_LAST_EXPORT_AT = "lastExportAt";
 export const META_BACKUP_REMINDER_DISMISSED_AT = "backupReminderDismissedAt";

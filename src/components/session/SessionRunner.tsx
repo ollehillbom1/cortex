@@ -22,6 +22,7 @@ import {
 import { xpForRound } from "@/lib/progression/xp";
 import {
   dailyPlanSeed,
+  isRepeatBlock,
   planSession,
   PLAN_HISTORY_WINDOW,
   sessionTargetMinutes,
@@ -548,12 +549,7 @@ export function SessionRunner() {
             </Button>
           </div>
         )}
-        <SessionSummary
-          applied={summaryData}
-          completed={completed}
-          skills={skills}
-          practice={!!practice}
-        />
+        <SessionSummary applied={summaryData} completed={completed} practice={!!practice} />
       </>
     );
   }
@@ -678,28 +674,37 @@ export function SessionRunner() {
                 })}
               </p>
             </div>
-            <div className="card p-5">
-              <h2 className="mb-2 text-sm font-semibold uppercase tracking-wide text-[var(--color-ink-dim)]">
-                {t("How it works")}
-              </h2>
-              <ul className="space-y-2 text-[15px] leading-snug">
-                {INSTRUCTIONS[currentDef.id].how.map((line, i) => (
-                  <li key={i} className="flex gap-2.5">
-                    <CheckIcon className="mt-0.5 h-4 w-4 shrink-0 text-[var(--color-accent-2)]" />
-                    <span>{t(line)}</span>
-                  </li>
-                ))}
-              </ul>
-              <p className="mt-3 border-t border-white/8 pt-3 text-sm text-[var(--color-ink-dim)]">
-                <span className="font-semibold text-[var(--color-ink)]">{t("Scoring:")} </span>
-                {t(INSTRUCTIONS[currentDef.id].scoring)}
+            {/* A repeat block skips the wall of text the user read minutes
+                ago — the plan interleaves repeats on purpose, and up to
+                eight full instruction screens per session was dead time. */}
+            {isRepeatBlock(items, itemIndex) ? (
+              <p className="text-center text-sm text-[var(--color-ink-dim)]">
+                {t("Same task as earlier in this session — start when ready.")}
               </p>
-              {INSTRUCTIONS[currentDef.id].accessibility && (
-                <p className="mt-2 text-sm text-[var(--color-ink-dim)]">
-                  {t(INSTRUCTIONS[currentDef.id].accessibility!)}
+            ) : (
+              <div className="card p-5">
+                <h2 className="mb-2 text-sm font-semibold uppercase tracking-wide text-[var(--color-ink-dim)]">
+                  {t("How it works")}
+                </h2>
+                <ul className="space-y-2 text-[15px] leading-snug">
+                  {INSTRUCTIONS[currentDef.id].how.map((line, i) => (
+                    <li key={i} className="flex gap-2.5">
+                      <CheckIcon className="mt-0.5 h-4 w-4 shrink-0 text-[var(--color-accent-2)]" />
+                      <span>{t(line)}</span>
+                    </li>
+                  ))}
+                </ul>
+                <p className="mt-3 border-t border-white/8 pt-3 text-sm text-[var(--color-ink-dim)]">
+                  <span className="font-semibold text-[var(--color-ink)]">{t("Scoring:")} </span>
+                  {t(INSTRUCTIONS[currentDef.id].scoring)}
                 </p>
-              )}
-            </div>
+                {INSTRUCTIONS[currentDef.id].accessibility && (
+                  <p className="mt-2 text-sm text-[var(--color-ink-dim)]">
+                    {t(INSTRUCTIONS[currentDef.id].accessibility!)}
+                  </p>
+                )}
+              </div>
+            )}
             <Button onClick={() => void beginExercise()} className="w-full">
               {t("Start {name}", { name: t(currentDef.name) })}
             </Button>

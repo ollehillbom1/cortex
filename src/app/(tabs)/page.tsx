@@ -12,14 +12,19 @@ import {
   sessionTargetMinutes,
 } from "@/lib/session/planner";
 import { levelProgress } from "@/lib/progression/xp";
-import { dayKey, displayedStreak, streakAtRisk } from "@/lib/progression/streak";
-import { strengthsAndFocus } from "@/lib/stats/aggregate";
+import { dayKey, daysBetween, displayedStreak, streakAtRisk } from "@/lib/progression/streak";
+import {
+  strengthsAndFocus,
+  weeklyRecap,
+  weeklyRecapDismissedKey,
+  weekStartOf,
+} from "@/lib/stats/aggregate";
 import {
   META_BACKUP_REMINDER_DISMISSED_AT,
   META_LAST_EXPORT_AT,
   shouldRemindBackup,
 } from "@/lib/storage/backupReminder";
-import { deriveInsights, META_INSIGHTS_DISMISSED_DAY, type Insight } from "@/lib/insights/engine";
+import { deriveInsights, insightsDismissedKey, type Insight } from "@/lib/insights/engine";
 import { coachLocaleOf, rephraseInsight } from "@/lib/coach/client";
 import { useT } from "@/lib/i18n/useT";
 import { useProfiles } from "@/components/app/ProfileProvider";
@@ -41,6 +46,7 @@ export default function HomePage() {
   const [sessions, setSessions] = useState<SessionRecord[] | null>(null);
   const [backupHint, setBackupHint] = useState(false);
   const [insight, setInsight] = useState<Insight | null>(null);
+  const [recapDismissedWeek, setRecapDismissedWeek] = useState<string | null>(null);
 
   useEffect(() => {
     if (ready && !profile) router.replace("/welcome");
@@ -51,39 +57,46 @@ export default function HomePage() {
     let cancelled = false;
     (async () => {
       const storage = getStorage();
-      const list = await storage.listSessions(profile.id, 30);
-      if (cancelled) return;
-      setSessions(list);
-      const [lastExportAt, dismissedAt, insightsDismissedDay] = await Promise.all([
+      // One round-trip for everything the first paint depends on. Sessions
+      // and the recap dismissal in particular must land in the SAME commit:
+      // set separately across an await, the intermediate render had
+      // sessions without the dismissal and flashed a recap the user had
+      // already dismissed.
+      // 60 sessions, not 30: the window must cover all of LAST week for the
+      // recap even in a heavy week (3 sessions/day = 21), plus the current.
+      const [list, lastExportAt, dismissedAt, insightsDismissedDay, recapWeek] = await Promise.all([
+        storage.listSessions(profile.id, 60),
         storage.getMeta(META_LAST_EXPORT_AT),
         storage.getMeta(META_BACKUP_REMINDER_DISMISSED_AT),
-        storage.getMeta(META_INSIGHTS_DISMISSED_DAY),
+        storage.getMeta(insightsDismissedKey(profile.id)),
+        storage.getMeta(weeklyRecapDismissedKey(profile.id)),
       ]);
-      if (!cancelled) {
-        setBackupHint(
-          shouldRemindBackup({
-            lastExportAt: lastExportAt ?? null,
-            dismissedAt: dismissedAt ?? null,
-            sessionCount: list.length,
-            now: new Date(),
-          }),
-        );
-        const todayKey = dayKey(new Date());
-        if (insightsDismissedDay !== todayKey) {
-          const insights = deriveInsights({ profile, sessions: list, today: todayKey }, t);
-          setInsight(insights[0] ?? null);
-          // Opt-in phrasing pass: structured facts only, cached for the day,
-          // and the original wording stays whenever the coach is off,
-          // unreachable or its output failed validation.
-          if (insights[0] && profile.preferences.aiCoach) {
-            const reworded = await rephraseInsight(
-              storage,
-              insights[0],
-              coachLocaleOf(locale),
-              todayKey,
-            );
-            if (!cancelled) setInsight(reworded);
-          }
+      if (cancelled) return;
+      setSessions(list);
+      setRecapDismissedWeek(recapWeek ?? null);
+      setBackupHint(
+        shouldRemindBackup({
+          lastExportAt: lastExportAt ?? null,
+          dismissedAt: dismissedAt ?? null,
+          sessionCount: list.length,
+          now: new Date(),
+        }),
+      );
+      const todayKey = dayKey(new Date());
+      if (insightsDismissedDay !== todayKey) {
+        const insights = deriveInsights({ profile, sessions: list, today: todayKey }, t);
+        setInsight(insights[0] ?? null);
+        // Opt-in phrasing pass: structured facts only, cached for the day,
+        // and the original wording stays whenever the coach is off,
+        // unreachable or its output failed validation.
+        if (insights[0] && profile.preferences.aiCoach) {
+          const reworded = await rephraseInsight(
+            storage,
+            insights[0],
+            coachLocaleOf(locale),
+            todayKey,
+          );
+          if (!cancelled) setInsight(reworded);
         }
       }
     })();
@@ -98,11 +111,30 @@ export default function HomePage() {
   };
 
   const dismissInsight = async () => {
+    if (!profile) return;
     setInsight(null);
-    await getStorage().setMeta(META_INSIGHTS_DISMISSED_DAY, dayKey(new Date()));
+    await getStorage().setMeta(insightsDismissedKey(profile.id), dayKey(new Date()));
   };
 
   const today = dayKey(new Date());
+  // useMemo, not a bare call: weekStartOf constructs a Date, which the React
+  // Compiler treats as impure in render scope and refuses to memoize around.
+  const weekStart = useMemo(() => weekStartOf(today), [today]);
+
+  const dismissRecap = async () => {
+    if (!profile) return;
+    setRecapDismissedWeek(weekStart);
+    await getStorage().setMeta(weeklyRecapDismissedKey(profile.id), weekStart);
+  };
+
+  // Last week's numbers, shown Monday-Wednesday until dismissed: a recap is
+  // a look back over the shoulder, not a permanent fixture.
+  const recap = useMemo(
+    () => (profile && sessions ? weeklyRecap(sessions, profile.records, today) : null),
+    [profile, sessions, today],
+  );
+  const showRecap =
+    recap !== null && daysBetween(weekStart, today) <= 2 && recapDismissedWeek !== weekStart;
 
   const plan = useMemo(() => {
     if (!profile || sessions === null) return null;
@@ -225,6 +257,42 @@ export default function HomePage() {
               </button>
             </div>
           </div>
+        </section>
+      )}
+
+      {/* Last week in numbers (own data only, dismissible per week) */}
+      {showRecap && recap && (
+        <section className="card flex items-start gap-3 p-4" aria-label={t("Last week's recap")}>
+          <span aria-hidden className="text-lg">
+            📅
+          </span>
+          <div className="flex-1 text-sm">
+            <p className="font-semibold">{t("Last week")}</p>
+            <p className="mt-0.5 text-[var(--color-ink-dim)]">
+              {t(recap.activeDays !== 1 ? "{n} active days" : "{n} active day", {
+                n: recap.activeDays,
+              })}
+              {" · "}
+              {recap.minutes} min ·{" "}
+              <span className="font-semibold text-gradient">+{recap.xp} XP</span>
+              {recap.records > 0 && (
+                <>
+                  {" · "}
+                  {t(recap.records !== 1 ? "{n} personal bests" : "{n} personal best", {
+                    n: recap.records,
+                  })}
+                </>
+              )}
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={() => void dismissRecap()}
+            aria-label={t("Dismiss last week's recap")}
+            className="touch-target -m-2 flex items-center justify-center p-2 text-[var(--color-ink-faint)] hover:text-[var(--color-ink)]"
+          >
+            ✕
+          </button>
         </section>
       )}
 
