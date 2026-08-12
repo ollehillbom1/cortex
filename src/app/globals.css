@@ -105,12 +105,12 @@ body {
   overscroll-behavior: none;
 }
 
-/* No double-tap-zoom wait on anything interactive. */
-button,
-a,
-[role="button"],
-input,
-label {
+/* No double-tap-zoom wait anywhere — belt and braces with the viewport
+   meta (iOS honours the two inconsistently across Safari vs standalone):
+   zoom is deliberately disabled app-wide, see docs/accessibility.md
+   ("Deliberately out of scope"). Ancestor touch-action constrains the
+   whole chain, so body covers every descendant. */
+body {
   touch-action: manipulation;
 }
 

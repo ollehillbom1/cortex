@@ -39,6 +39,15 @@ export const viewport: Viewport = {
   themeColor: "#070b15",
   width: "device-width",
   initialScale: 1,
+  // Zoom is deliberately disabled app-wide (Olle's call, 2026-08-12): a
+  // zoomable standalone app pans around its own UI and feels broken, and an
+  // accidental pinch or double-tap during a timed exercise corrupts the
+  // round. The Larger text preference in Profile is the supported
+  // low-vision path. This trips axe's meta-viewport rule, which is
+  // disabled with a pointer to this decision — see e2e/a11y.spec.ts and
+  // docs/accessibility.md ("Deliberately out of scope").
+  maximumScale: 1,
+  userScalable: false,
   viewportFit: "cover",
 };
 
