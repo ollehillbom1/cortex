@@ -627,6 +627,15 @@ export const SV: Record<string, string> = {
   Language: "Språk",
   Automatic: "Automatiskt",
   "Your data": "Din data",
+  Diagnostics: "Diagnostik",
+  "{n} error was recorded on this device. It stays here — nothing is sent anywhere. Share it if you report a problem.":
+    "{n} fel registrerades på den här enheten. Det stannar här — inget skickas någonstans. Dela det om du rapporterar ett problem.",
+  "{n} errors were recorded on this device. They stay here — nothing is sent anywhere. Share them if you report a problem.":
+    "{n} fel registrerades på den här enheten. De stannar här — inget skickas någonstans. Dela dem om du rapporterar ett problem.",
+  "Copy details": "Kopiera detaljer",
+  "Diagnostics copied.": "Diagnostik kopierad.",
+  "Could not copy — no clipboard access.": "Kunde inte kopiera — ingen åtkomst till urklipp.",
+  "Diagnostics cleared.": "Diagnostik rensad.",
   "Everything is stored locally in this browser — nothing is sent anywhere. Export a backup before clearing browser data or moving devices.":
     "Allt lagras lokalt i den här webbläsaren — inget skickas någonstans. Exportera en säkerhetskopia innan du rensar webbläsardata eller byter enhet.",
   "Last export:": "Senaste export:",
