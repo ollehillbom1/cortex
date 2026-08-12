@@ -50,6 +50,7 @@ import { AuditoryGame } from "@/components/game/AuditoryGame";
 import { TonePatternGame } from "@/components/game/TonePatternGame";
 import { RhythmGame } from "@/components/game/RhythmGame";
 import { ReactionGame } from "@/components/game/ReactionGame";
+import { GoNoGoGame } from "@/components/game/GoNoGoGame";
 import { SessionSummary } from "./SessionSummary";
 
 const GAMES: Record<ExerciseId, React.ComponentType<GameProps>> = {
@@ -62,7 +63,17 @@ const GAMES: Record<ExerciseId, React.ComponentType<GameProps>> = {
   "tone-pattern": TonePatternGame,
   "rhythm-recall": RhythmGame,
   "reaction-time": ReactionGame,
+  "go-no-go": GoNoGoGame,
 };
+
+/**
+ * Exercises whose accuracy is already speed-derived: reaction IS a response
+ * time, and go/no-go misses on the deadline. Feeding their latency into the
+ * engine's input-time modulation would count speed twice, and their reported
+ * responseMs (~a fraction of a second against a ~50 s round) says nothing
+ * about the effort fatigue is meant to track.
+ */
+const SPEED_DERIVED: ReadonlySet<ExerciseId> = new Set(["reaction-time", "go-no-go"]);
 
 /** Mounts the right game as a real component so its hooks stay isolated. */
 function CurrentGame({ exerciseId, ...props }: GameProps & { exerciseId: ExerciseId }) {
@@ -341,10 +352,10 @@ export function SessionRunner() {
       // Active play time, not wall clock: the old measure counted instruction
       // screens, interruptions and time spent away as fatigue, so a session
       // read as exhausting because the user paused to read.
-      // Reaction rounds are excluded for the same reason their latency is:
-      // the response IS the measurement, ~250 ms against ~8 s of round, so
-      // counting it would understate the session's real effort.
-      if (id !== "reaction-time") activePlayMs.current += result.responseMs ?? 0;
+      // Speed-derived rounds are excluded for the same reason their latency
+      // is: the response IS the measurement, a fraction of a second against
+      // seconds of round, so counting it would understate the real effort.
+      if (!SPEED_DERIVED.has(id)) activePlayMs.current += result.responseMs ?? 0;
       // Calibrated to answering time, not wall clock. The 15-minute constant
       // belonged to the old wall-clock measure; a whole session is at most
       // ~7 minutes of it, so keeping 15 left fatigue near zero and silently
@@ -355,9 +366,9 @@ export function SessionRunner() {
         {
           accuracy: result.accuracy,
           fatigue,
-          // Reaction accuracy is already speed-derived; don't double-count.
-          inputMs: id === "reaction-time" ? undefined : result.responseMs,
-          responseUnits: id === "reaction-time" ? undefined : result.responseUnits,
+          // Speed-derived accuracy must not count speed twice.
+          inputMs: SPEED_DERIVED.has(id) ? undefined : result.responseMs,
+          responseUnits: SPEED_DERIVED.has(id) ? undefined : result.responseUnits,
         },
         new Date(),
         { gentle: profile?.preferences.kidMode ?? false, maxLevel },

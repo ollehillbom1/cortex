@@ -6,6 +6,7 @@ import { sequenceParams } from "@/lib/exercises/sequenceMemory";
 import { patternParams } from "@/lib/exercises/visualPattern";
 import { nBackParams } from "@/lib/exercises/nback";
 import { dualNBackParams } from "@/lib/exercises/dualNBack";
+import { goNoGoParams } from "@/lib/exercises/goNoGo";
 import { tonePatternParams } from "@/lib/exercises/tonePattern";
 import { rhythmParams } from "@/lib/exercises/rhythm";
 import { reactionParams } from "@/lib/exercises/reaction";
@@ -53,6 +54,8 @@ function difficultyLadder(id: ExerciseId): unknown[] {
       return levels.map(rhythmParams);
     case "reaction-time":
       return levels.map(() => reactionParams());
+    case "go-no-go":
+      return levels.map(goNoGoParams);
   }
 }
 

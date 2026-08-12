@@ -28,7 +28,7 @@ real devices with real assistive technology.
 
 ## Sensory requirements are labelled, not pretended away
 
-Three of the nine exercises are inherently visuospatial: the stimulus _is_ a
+Three of the ten exercises are inherently visuospatial: the stimulus _is_ a
 flashed grid, a square's position, or a colour change. There is no honest way
 to render that through a screen reader, and inventing a "sonified grid" would
 be a different exercise wearing the same name. So each exercise declares what
@@ -45,6 +45,7 @@ it needs:
 | Tone Pattern    | no    | yes   | —                               |
 | Rhythm Recall   | no    | yes   | —                               |
 | Reaction        | yes   | no    | —                               |
+| Go/No-Go        | yes   | no    | —                               |
 
 The requirement is shown on each library card and repeated in the exercise's
 instructions screen, next to the pointer at its closest non-visual equivalent.

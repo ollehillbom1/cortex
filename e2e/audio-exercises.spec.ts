@@ -38,10 +38,10 @@ test.describe("audio exercises", () => {
     });
   });
 
-  test("the library lists all nine exercises", async ({ page }) => {
+  test("the library lists all ten exercises", async ({ page }) => {
     await createProfile(page, "Biblio");
     await page.goto("/exercises");
-    for (const name of ["Tone Pattern", "Rhythm Recall", "Dual N-Back"]) {
+    for (const name of ["Tone Pattern", "Rhythm Recall", "Dual N-Back", "Go/No-Go"]) {
       await expect(page.getByRole("heading", { name, exact: true })).toBeVisible();
     }
   });
