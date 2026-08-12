@@ -60,6 +60,24 @@
   --divider: rgb(255 255 255 / 0.06);
   --edge-highlight-subtle: rgb(255 255 255 / 0.04);
   --edge-highlight-strong: rgb(255 255 255 / 0.25);
+
+  /*
+   * Modality identity colours — one hue per cognitive modality, inherited
+   * by every exercise from its primary modality (MODALITY_COLORS in
+   * domain/types.ts). Used as fills, strokes and dots ONLY, never as text,
+   * and never as the sole identity carrier: every use sits beside a text
+   * label, which is what licenses five categorical hues (all-pairs CVD
+   * separation cannot hold for five; the adjacent pairlist — the balance
+   * bars' stacking order below — passes the full six-check validation
+   * against --color-night: worst adjacent deutan dE 10.4, normal 26.5,
+   * all >= 3:1). Deliberately distinct from the reserved status colours
+   * (--color-good/-warn/-bad). Contrast is pinned in a11yContrast.test.ts.
+   */
+  --mod-working-memory: #9085e9;
+  --mod-visual-memory: #d95926;
+  --mod-auditory-memory: #0891b2;
+  --mod-attention: #d55181;
+  --mod-speed: #3987e5;
 }
 
 html {

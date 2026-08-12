@@ -330,3 +330,22 @@ export const MODALITY_LABELS: Record<Modality, string> = {
   attention: "Attention",
   speed: "Speed",
 };
+
+/**
+ * Identity colour per modality (CSS variables defined and documented in
+ * globals.css). Fills, strokes and dots only — never text, and always
+ * beside a text label, so colour is a recognition aid rather than the
+ * only carrier.
+ */
+export const MODALITY_COLORS: Record<Modality, string> = {
+  "working-memory": "var(--mod-working-memory)",
+  "visual-memory": "var(--mod-visual-memory)",
+  "auditory-memory": "var(--mod-auditory-memory)",
+  attention: "var(--mod-attention)",
+  speed: "var(--mod-speed)",
+};
+
+/** An exercise's identity colour: its primary (first-listed) modality's. */
+export function exerciseColor(id: ExerciseId): string {
+  return MODALITY_COLORS[EXERCISES[id].modalities[0]];
+}

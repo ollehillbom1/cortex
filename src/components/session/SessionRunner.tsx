@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import {
   ALL_EXERCISE_IDS,
   EXERCISES,
+  exerciseColor,
   MODALITY_LABELS,
   type ExerciseId,
   type ExerciseResult,
@@ -624,7 +625,14 @@ export function SessionRunner() {
                 return (
                   <li key={item.exerciseId} className="flex items-center justify-between py-3.5">
                     <div>
-                      <p className="font-semibold">{t(def.name)}</p>
+                      <p className="flex items-center gap-2 font-semibold">
+                        <span
+                          aria-hidden
+                          className="h-2 w-2 shrink-0 rounded-full"
+                          style={{ background: exerciseColor(item.exerciseId) }}
+                        />
+                        {t(def.name)}
+                      </p>
                       <p className="text-xs text-[var(--color-ink-dim)]">
                         {def.modalities.map((m) => t(MODALITY_LABELS[m])).join(" · ")} ·{" "}
                         {t("{n} rounds", { n: item.rounds })}

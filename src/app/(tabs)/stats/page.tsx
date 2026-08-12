@@ -4,6 +4,8 @@ import { useEffect, useMemo, useState } from "react";
 import {
   ALL_EXERCISE_IDS,
   EXERCISES,
+  exerciseColor,
+  MODALITY_COLORS,
   MODALITY_LABELS,
   type ExerciseId,
   type Modality,
@@ -131,12 +133,22 @@ export default function StatsPage() {
               type="button"
               aria-pressed={selected === id}
               onClick={() => setSelected(id)}
-              className={`rounded-full px-3 py-1.5 text-xs font-semibold transition-colors ${
+              className={`flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold transition-colors ${
                 selected === id
-                  ? "bg-[var(--color-accent)]/25 text-[var(--color-ink)]"
+                  ? "text-[var(--color-ink)]"
                   : "bg-[var(--fill-subtle)] text-[var(--color-ink-faint)]"
               }`}
+              style={
+                selected === id
+                  ? { background: `color-mix(in srgb, ${exerciseColor(id)} 24%, transparent)` }
+                  : undefined
+              }
             >
+              <span
+                aria-hidden
+                className="h-2 w-2 shrink-0 rounded-full"
+                style={{ background: exerciseColor(id) }}
+              />
               {t(EXERCISES[id].name)}
             </button>
           ))}
@@ -147,6 +159,7 @@ export default function StatsPage() {
               values={levels20.map((p) => p.value)}
               label={t("{name} level", { name: t(EXERCISES[selected].name) })}
               formatValue={(v) => `Lv ${v.toFixed(0)}`}
+              stroke={exerciseColor(selected)}
             />
             <p className="mb-3 mt-2 text-xs text-[var(--color-ink-faint)]">
               {t(
@@ -169,6 +182,7 @@ export default function StatsPage() {
           values={trend.map((p) => p.value * 100)}
           label={t("{name} accuracy", { name: t(EXERCISES[selected].name) })}
           formatValue={(v) => `${v.toFixed(0)}%`}
+          stroke={exerciseColor(selected)}
         />
         <p className="mt-2 text-xs text-[var(--color-ink-faint)]">
           {trend.length > 0 && trend.length < 5
@@ -253,6 +267,7 @@ export default function StatsPage() {
           entries={(Object.keys(balance) as Modality[]).map((m) => ({
             label: t(MODALITY_LABELS[m]),
             fraction: balance[m],
+            color: MODALITY_COLORS[m],
           }))}
         />
       </section>

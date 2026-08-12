@@ -3,7 +3,12 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { EXERCISES, MODALITY_LABELS, type SessionRecord } from "@/lib/domain/types";
+import {
+  EXERCISES,
+  MODALITY_COLORS,
+  MODALITY_LABELS,
+  type SessionRecord,
+} from "@/lib/domain/types";
 import { getStorage } from "@/lib/storage/db";
 import {
   dailyPlanSeed,
@@ -368,8 +373,13 @@ export default function HomePage() {
               {plan.modalities.map((m) => (
                 <span
                   key={m}
-                  className="rounded-full border border-[var(--surface-border)] bg-[var(--fill-subtle)] px-2.5 py-1 text-xs text-[var(--color-ink-dim)]"
+                  className="flex items-center gap-1.5 rounded-full border border-[var(--surface-border)] bg-[var(--fill-subtle)] px-2.5 py-1 text-xs text-[var(--color-ink-dim)]"
                 >
+                  <span
+                    aria-hidden
+                    className="h-1.5 w-1.5 shrink-0 rounded-full"
+                    style={{ background: MODALITY_COLORS[m] }}
+                  />
                   {t(MODALITY_LABELS[m])}
                 </span>
               ))}
