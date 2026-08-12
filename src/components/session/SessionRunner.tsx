@@ -8,6 +8,7 @@ import {
   MODALITY_LABELS,
   type ExerciseId,
   type ExerciseResult,
+  type Profile,
   type SessionRecord,
   type SkillState,
 } from "@/lib/domain/types";
@@ -30,6 +31,7 @@ import { MEASUREMENT_VERSION } from "@/lib/measurement/version";
 import { dayKey } from "@/lib/progression/streak";
 import { parsePracticeParams } from "@/lib/session/practice";
 import { applySession } from "@/lib/session/apply";
+import { trackPersonalBest } from "@/lib/session/roundRecords";
 import { timeSeed } from "@/lib/engine/rng";
 import { getStorage } from "@/lib/storage/db";
 import { newId } from "@/lib/storage/profileFactory";
@@ -110,6 +112,10 @@ export function SessionRunner() {
   const [retrying, setRetrying] = useState(false);
 
   const blockRounds = useRef<{ result: RoundResult; level: number; xp: number }[]>([]);
+  // Records as they stand DURING the session: the profile's records at start,
+  // updated as rounds beat them, so the per-round personal-best XP bonus sees
+  // a best set two rounds ago instead of paying twice for the same value.
+  const sessionRecords = useRef<Profile["records"] | null>(null);
   // State, not a ref: the per-round seed below is derived during render, and
   // refs may not be read there. Lazy init keeps it stable for the session.
   const [seedBase] = useState(timeSeed);
@@ -364,16 +370,27 @@ export function SessionRunner() {
       );
       // Practice stays outside progression: the skill estimate is not fed and
       // no XP accrues — a chosen difficulty must not farm or wreck either.
+      let personalBest = false;
+      if (!practice && profile) {
+        const tracked = trackPersonalBest(
+          sessionRecords.current ?? profile.records,
+          id,
+          result,
+          new Date(),
+        );
+        personalBest = tracked.personalBest;
+        sessionRecords.current = tracked.records;
+      }
       const xp = practice
         ? 0
-        : xpForRound({ accuracy: result.accuracy, level, perfect: result.perfect });
+        : xpForRound({ accuracy: result.accuracy, level, perfect: result.perfect, personalBest });
       blockRounds.current.push({ result, level, xp });
       if (!practice) setSkills((s) => ({ ...s, [id]: nextSkill }));
       setLastRound(result);
       advancing.current = false;
       setPhase("feedback");
     },
-    [currentItem, skills, practice, profile?.preferences.kidMode, skipBlock],
+    [currentItem, skills, practice, profile, skipBlock],
   );
 
   const advance = useCallback(async () => {

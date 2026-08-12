@@ -275,10 +275,10 @@ export const SV: Record<string, string> = {
   "It measures your in-app performance — accuracy, span, reaction time — and shows how it develops. The numbers describe practice inside this app, and nothing beyond it.":
     "Den mäter din prestation i appen — träffsäkerhet, spann, reaktionstid — och visar hur den utvecklas. Siffrorna beskriver träning i den här appen, inget därutöver.",
   "Why train working memory?": "Varför träna arbetsminnet?",
-  "Working memory is what holds a phone number while you dial, a recipe step while you stir, the thread of a conversation while you listen. Like most skills, the abilities you practise are the ones that grow.":
-    "Arbetsminnet är det som håller ett telefonnummer medan du slår det, ett receptsteg medan du rör i grytan, tråden i ett samtal medan du lyssnar. Som med de flesta färdigheter är det förmågorna du övar som växer.",
-  "Short daily sessions beat rare long ones: a focused streak builds span, sharpens attention and speeds up recall — and Cortex shows you that progress, session by session.":
-    "Korta dagliga pass slår sällsynta långa: en fokuserad svit bygger spann, skärper uppmärksamheten och snabbar upp minnet — och Cortex visar dig framstegen, pass för pass.",
+  "Working memory is what holds a phone number while you dial, a recipe step while you stir, the thread of a conversation while you listen. Cortex trains that kind of holding-and-using in short, focused exercises.":
+    "Arbetsminnet är det som håller ett telefonnummer medan du slår det, ett receptsteg medan du rör i grytan, tråden i ett samtal medan du lyssnar. Cortex tränar just det slaget av hållande-och-användande i korta, fokuserade övningar.",
+  "Honest by design: practice improves the task you practise, so Cortex promises exactly what it measures — your span, accuracy and speed in these exercises — and shows that progress, session by session.":
+    "Ärlig i grunden: träning förbättrar uppgiften du övar på, så Cortex lovar exakt det appen mäter — ditt spann, din träffsäkerhet och din snabbhet i övningarna — och visar de framstegen, pass för pass.",
   "Always the right challenge": "Alltid rätt utmaning",
   "Every exercise adapts to you. Do well and the difficulty rises gently; struggle and it eases off.":
     "Varje övning anpassar sig efter dig. Går det bra höjs svårigheten varsamt; går det trögt backar den.",
@@ -335,6 +335,12 @@ export const SV: Record<string, string> = {
   "avg {ms} ms": "snitt {ms} ms",
   "{n}-day streak": "{n} dagars svit",
   "(freeze used)": "(frysning använd)",
+  "{n} days in a row — you earned a streak freeze. It protects one missed day.":
+    "{n} dagar i rad — du fick en frysdag. Den skyddar en missad dag.",
+  "1 streak freeze — protects one missed day": "1 frysdag — skyddar en missad dag",
+  "{n} streak freezes — each protects one missed day":
+    "{n} frysdagar — var och en skyddar en missad dag",
+  "Level up —": "Ny nivå —",
   "Level {n} progress": "Framsteg nivå {n}",
   "{xp} XP to level {next}": "{xp} XP till nivå {next}",
   "New personal best — {what}": "Nytt personligt rekord — {what}",
