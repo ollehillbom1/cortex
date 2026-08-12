@@ -1,5 +1,10 @@
 # Changelog
 
+## v1.10.0 — 2026-08-12
+
+- feat(theme): give every modality a colour, and every exercise its own (#122)
+- refactor(theme): route every white-alpha surface through design tokens (#121)
+
 ## v1.9.0 — 2026-08-12
 
 - feat(exercises): Split Second — brief exposures at the edge of view (#119)
