@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { EXERCISES, type ExerciseResult, type SkillState } from "@/lib/domain/types";
+import { EXERCISES, type ExerciseResult } from "@/lib/domain/types";
 import type { applySession } from "@/lib/session/apply";
 import { levelForXp, levelProgress } from "@/lib/progression/xp";
 import { achievementById } from "@/lib/progression/achievements";
@@ -35,7 +35,6 @@ export function SessionSummary({
 }: {
   applied: ReturnType<typeof applySession> | null;
   completed: ExerciseResult[];
-  skills: Record<string, SkillState>;
   practice?: boolean;
 }) {
   const { t } = useT();

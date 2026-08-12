@@ -549,12 +549,7 @@ export function SessionRunner() {
             </Button>
           </div>
         )}
-        <SessionSummary
-          applied={summaryData}
-          completed={completed}
-          skills={skills}
-          practice={!!practice}
-        />
+        <SessionSummary applied={summaryData} completed={completed} practice={!!practice} />
       </>
     );
   }

@@ -14,9 +14,9 @@ import {
 import { levelProgress } from "@/lib/progression/xp";
 import { dayKey, daysBetween, displayedStreak, streakAtRisk } from "@/lib/progression/streak";
 import {
-  META_WEEKLY_RECAP_DISMISSED_WEEK,
   strengthsAndFocus,
   weeklyRecap,
+  weeklyRecapDismissedKey,
   weekStartOf,
 } from "@/lib/stats/aggregate";
 import {
@@ -57,43 +57,46 @@ export default function HomePage() {
     let cancelled = false;
     (async () => {
       const storage = getStorage();
-      // 60, not 30: the window must cover all of LAST week for the recap
-      // even in a heavy week (3 sessions/day = 21), plus the current one.
-      const list = await storage.listSessions(profile.id, 60);
-      if (cancelled) return;
-      setSessions(list);
-      const [lastExportAt, dismissedAt, insightsDismissedDay, recapWeek] = await Promise.all([
+      // One round-trip for everything the first paint depends on. Sessions
+      // and the recap dismissal in particular must land in the SAME commit:
+      // set separately across an await, the intermediate render had
+      // sessions without the dismissal and flashed a recap the user had
+      // already dismissed.
+      // 60 sessions, not 30: the window must cover all of LAST week for the
+      // recap even in a heavy week (3 sessions/day = 21), plus the current.
+      const [list, lastExportAt, dismissedAt, insightsDismissedDay, recapWeek] = await Promise.all([
+        storage.listSessions(profile.id, 60),
         storage.getMeta(META_LAST_EXPORT_AT),
         storage.getMeta(META_BACKUP_REMINDER_DISMISSED_AT),
         storage.getMeta(META_INSIGHTS_DISMISSED_DAY),
-        storage.getMeta(META_WEEKLY_RECAP_DISMISSED_WEEK),
+        storage.getMeta(weeklyRecapDismissedKey(profile.id)),
       ]);
-      if (!cancelled) setRecapDismissedWeek(recapWeek ?? null);
-      if (!cancelled) {
-        setBackupHint(
-          shouldRemindBackup({
-            lastExportAt: lastExportAt ?? null,
-            dismissedAt: dismissedAt ?? null,
-            sessionCount: list.length,
-            now: new Date(),
-          }),
-        );
-        const todayKey = dayKey(new Date());
-        if (insightsDismissedDay !== todayKey) {
-          const insights = deriveInsights({ profile, sessions: list, today: todayKey }, t);
-          setInsight(insights[0] ?? null);
-          // Opt-in phrasing pass: structured facts only, cached for the day,
-          // and the original wording stays whenever the coach is off,
-          // unreachable or its output failed validation.
-          if (insights[0] && profile.preferences.aiCoach) {
-            const reworded = await rephraseInsight(
-              storage,
-              insights[0],
-              coachLocaleOf(locale),
-              todayKey,
-            );
-            if (!cancelled) setInsight(reworded);
-          }
+      if (cancelled) return;
+      setSessions(list);
+      setRecapDismissedWeek(recapWeek ?? null);
+      setBackupHint(
+        shouldRemindBackup({
+          lastExportAt: lastExportAt ?? null,
+          dismissedAt: dismissedAt ?? null,
+          sessionCount: list.length,
+          now: new Date(),
+        }),
+      );
+      const todayKey = dayKey(new Date());
+      if (insightsDismissedDay !== todayKey) {
+        const insights = deriveInsights({ profile, sessions: list, today: todayKey }, t);
+        setInsight(insights[0] ?? null);
+        // Opt-in phrasing pass: structured facts only, cached for the day,
+        // and the original wording stays whenever the coach is off,
+        // unreachable or its output failed validation.
+        if (insights[0] && profile.preferences.aiCoach) {
+          const reworded = await rephraseInsight(
+            storage,
+            insights[0],
+            coachLocaleOf(locale),
+            todayKey,
+          );
+          if (!cancelled) setInsight(reworded);
         }
       }
     })();
@@ -113,11 +116,14 @@ export default function HomePage() {
   };
 
   const today = dayKey(new Date());
+  // useMemo, not a bare call: weekStartOf constructs a Date, which the React
+  // Compiler treats as impure in render scope and refuses to memoize around.
+  const weekStart = useMemo(() => weekStartOf(today), [today]);
 
   const dismissRecap = async () => {
-    const week = weekStartOf(today);
-    setRecapDismissedWeek(week);
-    await getStorage().setMeta(META_WEEKLY_RECAP_DISMISSED_WEEK, week);
+    if (!profile) return;
+    setRecapDismissedWeek(weekStart);
+    await getStorage().setMeta(weeklyRecapDismissedKey(profile.id), weekStart);
   };
 
   // Last week's numbers, shown Monday-Wednesday until dismissed: a recap is
@@ -127,9 +133,7 @@ export default function HomePage() {
     [profile, sessions, today],
   );
   const showRecap =
-    recap !== null &&
-    daysBetween(weekStartOf(today), today) <= 2 &&
-    recapDismissedWeek !== weekStartOf(today);
+    recap !== null && daysBetween(weekStart, today) <= 2 && recapDismissedWeek !== weekStart;
 
   const plan = useMemo(() => {
     if (!profile || sessions === null) return null;

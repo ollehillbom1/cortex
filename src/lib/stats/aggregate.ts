@@ -265,8 +265,14 @@ export interface WeeklyRecap {
   records: number;
 }
 
-/** Meta key: the weekStart whose recap the user has dismissed. */
-export const META_WEEKLY_RECAP_DISMISSED_WEEK = "weeklyRecapDismissedWeek";
+/**
+ * Meta key for the weekStart whose recap this profile dismissed. Scoped per
+ * profile: the recap's content is per-profile, so one household member
+ * dismissing theirs must not hide another member's.
+ */
+export function weeklyRecapDismissedKey(profileId: string): string {
+  return `weeklyRecapDismissedWeek:${profileId}`;
+}
 
 /**
  * Recap of the calendar week BEFORE the one containing `today`, or null when
