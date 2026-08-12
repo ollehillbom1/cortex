@@ -131,5 +131,13 @@ function suggestExerciseFor(modality: Modality): ExerciseId | null {
   return match ? match.id : null;
 }
 
-/** Meta key: day on which the user dismissed insights. */
-export const META_INSIGHTS_DISMISSED_DAY = "insightsDismissedDay";
+/**
+ * Meta key for the day this profile dismissed its insight. Scoped per
+ * profile: insights are derived from one profile's own data, so a household
+ * member dismissing theirs must not hide another member's. (Unscoped values
+ * written under the old bare key are simply orphaned — a dismissal only
+ * lasted the day it named, so nothing meaningful is lost.)
+ */
+export function insightsDismissedKey(profileId: string): string {
+  return `insightsDismissedDay:${profileId}`;
+}

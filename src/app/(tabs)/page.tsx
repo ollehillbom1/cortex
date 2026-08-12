@@ -24,7 +24,7 @@ import {
   META_LAST_EXPORT_AT,
   shouldRemindBackup,
 } from "@/lib/storage/backupReminder";
-import { deriveInsights, META_INSIGHTS_DISMISSED_DAY, type Insight } from "@/lib/insights/engine";
+import { deriveInsights, insightsDismissedKey, type Insight } from "@/lib/insights/engine";
 import { coachLocaleOf, rephraseInsight } from "@/lib/coach/client";
 import { useT } from "@/lib/i18n/useT";
 import { useProfiles } from "@/components/app/ProfileProvider";
@@ -68,7 +68,7 @@ export default function HomePage() {
         storage.listSessions(profile.id, 60),
         storage.getMeta(META_LAST_EXPORT_AT),
         storage.getMeta(META_BACKUP_REMINDER_DISMISSED_AT),
-        storage.getMeta(META_INSIGHTS_DISMISSED_DAY),
+        storage.getMeta(insightsDismissedKey(profile.id)),
         storage.getMeta(weeklyRecapDismissedKey(profile.id)),
       ]);
       if (cancelled) return;
@@ -111,8 +111,9 @@ export default function HomePage() {
   };
 
   const dismissInsight = async () => {
+    if (!profile) return;
     setInsight(null);
-    await getStorage().setMeta(META_INSIGHTS_DISMISSED_DAY, dayKey(new Date()));
+    await getStorage().setMeta(insightsDismissedKey(profile.id), dayKey(new Date()));
   };
 
   const today = dayKey(new Date());
