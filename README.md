@@ -2,7 +2,7 @@
 
 **Cortex is a premium, self-hosted cognitive training PWA.** Short daily sessions —
 5 to 20 minutes — train working memory, visual and auditory memory, attention,
-speed and response inhibition through ten adaptive exercises. Everything runs in your browser, installs to
+speed and response inhibition through eleven adaptive exercises. Everything runs in your browser, installs to
 your home screen, works offline, and stores data only on your device.
 
 Cortex measures **in-app performance** (accuracy, span, reaction time) and shows how
@@ -37,6 +37,7 @@ the code that restored a moment earlier then finds nothing.
 | **Rhythm Recall**   | Auditory memory + attention           | Tap back a rhythm; scoring compares inter-onset intervals with tempo normalisation, scheduled on the Web Audio clock.                                     |
 | **Reaction**        | Speed + attention                     | Random delay → GO. False-start detection, millisecond timing via `performance.now()`, averages and personal bests.                                        |
 | **Go/No-Go**        | Response inhibition + attention       | Mostly green GO circles to tap fast; some red STOP signs to leave alone. Balanced scoring, so tapping everything pays no better than tapping nothing.     |
+| **Name Recall**     | Associative memory                    | Study parametric SVG faces with names, then match them back from a line-up. Teaches the imagery strategy; more faces and closer choices as levels rise.   |
 
 A central **adaptive difficulty engine** keeps every exercise near a 70–85 % success
 band with smooth, capped steps — see [docs/adaptive-difficulty.md](docs/adaptive-difficulty.md).

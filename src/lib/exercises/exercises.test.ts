@@ -19,6 +19,7 @@ import { dualNBackParams } from "./dualNBack";
 import { tonePatternParams } from "./tonePattern";
 import { rhythmParams } from "./rhythm";
 import { generateGoNoGoTrials, goNoGoParams, scoreGoNoGo } from "./goNoGo";
+import { nameRecallParams } from "./nameRecall";
 
 describe("number span", () => {
   it("generates the requested span deterministically without immediate repeats", () => {
@@ -361,6 +362,7 @@ describe("level ceilings", () => {
     // would show up here.
     "reaction-time": (l) => (reactionParams as (level?: number) => ReactionParams)(l),
     "go-no-go": (l) => goNoGoParams(l),
+    "name-recall": (l) => nameRecallParams(l),
   };
 
   it("stops each exercise where its parameters stop changing", () => {

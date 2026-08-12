@@ -53,6 +53,7 @@ export const UNKNOWN_MEASUREMENT_VERSION = 0;
  *     not move.
  *   1 (2026-08-12) go-no-go added — a new exercise starts its own history
  *     at version 1.
+ *   1 (2026-08-12) name-recall added, version 1.
  */
 export const MEASUREMENT_VERSION: Record<ExerciseId, number> = {
   "number-span": 1,
@@ -65,6 +66,7 @@ export const MEASUREMENT_VERSION: Record<ExerciseId, number> = {
   "rhythm-recall": 2,
   "reaction-time": 2,
   "go-no-go": 1,
+  "name-recall": 1,
 };
 
 /**
@@ -95,6 +97,7 @@ export const DIFFICULTY_FINGERPRINT: Record<ExerciseId, string> = {
   "rhythm-recall": "0d44aed94f3da908",
   "reaction-time": "59db8f21be3a3187",
   "go-no-go": "c33612bad5ca5d0e",
+  "name-recall": "13a22402bba5f406",
 };
 
 /** True when these results cannot honestly be plotted on one line. */
