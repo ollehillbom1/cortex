@@ -6,6 +6,7 @@ import type { Profile } from "@/lib/domain/types";
 import { levelProgress } from "@/lib/progression/xp";
 import { initialStreak } from "@/lib/progression/streak";
 import { getStorage } from "@/lib/storage/db";
+import { clearCrashes, readCrashes, type CrashEntry } from "@/lib/storage/crashLog";
 import { AVATAR_CHOICES, createProfile, newId } from "@/lib/storage/profileFactory";
 import { exportAll, importBundle, ImportError, readExportFile } from "@/lib/storage/exportImport";
 import { META_LAST_EXPORT_AT } from "@/lib/storage/backupReminder";
@@ -55,6 +56,7 @@ export default function ProfilePage() {
   // "nothing is sent anywhere" while sync was on, for as long as the status
   // took to load — measured at 3 s behind a slow coach endpoint.
   const [syncEnabled, setSyncEnabled] = useState<boolean | null>(null);
+  const [crashes, setCrashes] = useState<CrashEntry[]>([]);
   const fileInput = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -70,6 +72,8 @@ export default function ProfilePage() {
         setPersistence(status);
         setAskAtStart(skipPicker !== "true");
       }
+      const recorded = await readCrashes(getStorage());
+      if (!cancelled) setCrashes(recorded);
       // The AI-phrasing option only exists when the operator configured an
       // endpoint; otherwise the setting would be a dead switch.
       // Read the sync status FIRST and independently: it used to queue behind
@@ -554,6 +558,62 @@ export default function ProfilePage() {
           </Button>
         </div>
       </section>
+
+      {/* Diagnostics — only when there is something to show. On-device
+          crash log; nothing is ever sent anywhere. */}
+      {crashes.length > 0 && (
+        <section className="card p-5" aria-label={t("Diagnostics")}>
+          <h2 className="text-sm font-semibold uppercase tracking-wide text-[var(--color-ink-dim)]">
+            {t("Diagnostics")}
+          </h2>
+          <p className="mt-2 text-sm text-[var(--color-ink-dim)]">
+            {t(
+              crashes.length === 1
+                ? "{n} error was recorded on this device. It stays here — nothing is sent anywhere. Share it if you report a problem."
+                : "{n} errors were recorded on this device. They stay here — nothing is sent anywhere. Share them if you report a problem.",
+              { n: crashes.length },
+            )}
+          </p>
+          <ul className="mt-3 space-y-2">
+            {crashes.slice(0, 5).map((c, i) => (
+              <li
+                key={i}
+                className="rounded-xl border border-[var(--surface-border)] bg-[var(--fill-subtle)] p-2.5"
+              >
+                <p className="text-xs font-semibold">{c.message}</p>
+                <p className="mt-0.5 text-[11px] text-[var(--color-ink-faint)]">
+                  {new Date(c.at).toLocaleString()} · {c.kind}
+                  {c.where ? ` · ${c.where}` : ""}
+                </p>
+              </li>
+            ))}
+          </ul>
+          <div className="mt-3 grid grid-cols-2 gap-2.5">
+            <Button
+              variant="ghost"
+              onClick={() =>
+                void navigator.clipboard
+                  ?.writeText(JSON.stringify(crashes, null, 2))
+                  .then(() => setMessage(t("Diagnostics copied.")))
+                  .catch(() => setMessage(t("Could not copy — no clipboard access.")))
+              }
+            >
+              {t("Copy details")}
+            </Button>
+            <Button
+              variant="ghost"
+              onClick={() =>
+                void clearCrashes(getStorage()).then(() => {
+                  setCrashes([]);
+                  setMessage(t("Diagnostics cleared."));
+                })
+              }
+            >
+              {t("Clear")}
+            </Button>
+          </div>
+        </section>
+      )}
 
       {/* Sync */}
       <SyncSection />

@@ -3,6 +3,7 @@ import "./globals.css";
 import { ProfileProvider } from "@/components/app/ProfileProvider";
 import { ProfileGate } from "@/components/app/ProfileGate";
 import { ServiceWorkerManager } from "@/components/app/ServiceWorkerManager";
+import { CrashCatcher } from "@/components/app/CrashCatcher";
 
 export const metadata: Metadata = {
   title: {
@@ -54,6 +55,7 @@ export default function RootLayout({
           {children}
           <ProfileGate />
           <ServiceWorkerManager />
+          <CrashCatcher />
         </ProfileProvider>
       </body>
     </html>

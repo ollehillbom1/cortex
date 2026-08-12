@@ -73,6 +73,10 @@ if a spec exists that is not described here:
   and-state-outlive-the-screen bug class; asserts an intact profile and,
   via the console net below, no errors provoked along the way. The seed is
   fixed and the visited-step list is attached to a failure as the repro.
+- `crash-log.spec.ts` — an uncaught error and an unhandled rejection are
+  captured by the on-device crash log, shown under Profile → Diagnostics
+  (hidden until something breaks), and clear on demand. No telemetry, so
+  this is the only path a household bug reaches anyone.
 
 ## Nets under every e2e spec
 
