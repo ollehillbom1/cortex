@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "./fixtures";
 import { createProfile } from "./helpers";
 
 test.describe("onboarding and profiles", () => {
@@ -21,6 +21,28 @@ test.describe("onboarding and profiles", () => {
 
     await hint.getByRole("button", { name: /don't show this again/i }).click();
     await expect(hint).toBeHidden();
+    // Dismissal hides the hint synchronously but persists to IndexedDB in
+    // the background. A real user's app stays open long enough for that
+    // write to land; only a test reloads within milliseconds, so wait for
+    // the write before reloading — otherwise this races the persistence and
+    // is flaky ~50% of the time (found by the console-error net, 2026-08-12).
+    await expect
+      .poll(() =>
+        page.evaluate(
+          () =>
+            new Promise<string | undefined>((resolve) => {
+              const req = indexedDB.open("cortex");
+              req.onsuccess = () => {
+                const db = req.result;
+                const get = db.transaction("meta").objectStore("meta").get("installHintDismissed");
+                get.onsuccess = () => resolve(get.result?.value);
+                get.onerror = () => resolve(undefined);
+              };
+              req.onerror = () => resolve(undefined);
+            }),
+        ),
+      )
+      .toBeTruthy();
     await page.reload();
     await expect(
       page.getByRole("region", { name: /install cortex on your home screen/i }),

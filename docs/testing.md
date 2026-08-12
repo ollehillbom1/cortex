@@ -68,6 +68,29 @@ if a spec exists that is not described here:
   is called out as a code typo rather than blamed on the data. Sync records
   go to `.sync-test-data/` (gitignored) via the web server's
   `SYNC_DATA_DIR`.
+- `monkey.spec.ts` — a seeded random walk of the app (taps, tab switches,
+  keypresses, backgrounding mid-round) for ~90 steps, aimed at the timer-
+  and-state-outlive-the-screen bug class; asserts an intact profile and,
+  via the console net below, no errors provoked along the way. The seed is
+  fixed and the visited-step list is attached to a failure as the repro.
+
+## Nets under every e2e spec
+
+Two cross-cutting nets, not tests of their own:
+
+- **Console-error net** (`fixtures.ts`): every spec imports `test` from
+  there instead of `@playwright/test`, so any `console.error` or uncaught
+  exception during any flow fails that spec. Genuine resource-load noise
+  (the offline suite aborts requests on purpose) is filtered; everything
+  the app itself logs stays fatal. It paid for itself immediately — it
+  surfaced a ~50%-flaky persistence race in the install-hint dismissal
+  (the reload beat the IndexedDB write), now fixed in `onboarding.spec.ts`.
+- The unit side has a matching sweep, `src/lib/exercises/propertySweep.test.ts`:
+  every exercise generator and scorer, across every exposed level and a
+  spread of seeds, checked for structural validity, determinism, bounded
+  accuracy on garbage input, and one-sided-strategy resistance — plus the
+  adaptive engine, fuzzed for 60 rounds, never leaving its level range or
+  producing NaN.
 
 In sandboxed environments without Playwright's downloaded browsers, point the
 suite at a system Chromium:

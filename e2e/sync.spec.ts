@@ -1,4 +1,4 @@
-import { devices, expect, test, type Page } from "@playwright/test";
+import { devices, expect, test, type Page } from "./fixtures";
 import { advanceToProfileForm, createProfile } from "./helpers";
 
 /**
