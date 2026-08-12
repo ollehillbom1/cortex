@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   dailyPlanSeed,
+  isRepeatBlock,
   planSession,
   MAX_SESSION_MINUTES,
   PLAN_HISTORY_WINDOW,
@@ -243,6 +244,17 @@ describe("session planner", () => {
       else freshCount++;
     }
     expect(freshCount).toBeGreaterThan(stale);
+  });
+
+  it("flags repeat blocks so the runner can skip the re-read", () => {
+    const items = [
+      { exerciseId: "n-back" as const, rounds: 1 },
+      { exerciseId: "reaction-time" as const, rounds: 5 },
+      { exerciseId: "n-back" as const, rounds: 1 },
+    ];
+    expect(isRepeatBlock(items, 0)).toBe(false);
+    expect(isRepeatBlock(items, 1)).toBe(false);
+    expect(isRepeatBlock(items, 2)).toBe(true);
   });
 });
 

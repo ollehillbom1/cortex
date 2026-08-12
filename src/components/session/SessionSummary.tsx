@@ -1,13 +1,24 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { EXERCISES, type ExerciseResult, type SkillState } from "@/lib/domain/types";
 import type { applySession } from "@/lib/session/apply";
 import { levelForXp, levelProgress } from "@/lib/progression/xp";
 import { achievementById } from "@/lib/progression/achievements";
+import {
+  dailyPlanSeed,
+  planSession,
+  PLAN_HISTORY_WINDOW,
+  sessionTargetMinutes,
+  type PlannedSession,
+} from "@/lib/session/planner";
+import { shiftDay } from "@/lib/stats/aggregate";
+import { dayKey } from "@/lib/progression/streak";
+import { getStorage } from "@/lib/storage/db";
 import { ProgressBar } from "@/components/ui/ProgressBar";
 import { Button } from "@/components/ui/Button";
-import { BoltIcon, FlameIcon, SnowflakeIcon, TrophyIcon } from "@/components/ui/icons";
+import { BoltIcon, ClockIcon, FlameIcon, SnowflakeIcon, TrophyIcon } from "@/components/ui/icons";
 import { useT } from "@/lib/i18n/useT";
 
 const RECORD_LABELS: Record<string, string> = {
@@ -28,6 +39,33 @@ export function SessionSummary({
   practice?: boolean;
 }) {
   const { t } = useT();
+  // Tomorrow's plan is knowable tonight: the daily seed is a pure function
+  // of the day key, so this preview IS the session the home screen will
+  // offer tomorrow (given today's history). A concrete reason to come back
+  // beats a bare "Done" — and it is a fact, not a nudge.
+  const [tomorrow, setTomorrow] = useState<PlannedSession | null>(null);
+  useEffect(() => {
+    if (!applied || practice) return;
+    let cancelled = false;
+    (async () => {
+      const profile = applied.profile;
+      const recent = await getStorage().listSessions(profile.id, PLAN_HISTORY_WINDOW);
+      if (cancelled) return;
+      const tomorrowKey = shiftDay(dayKey(new Date()), 1);
+      setTomorrow(
+        planSession({
+          profile,
+          recentSessions: recent,
+          seed: dailyPlanSeed(tomorrowKey),
+          targetMinutes: sessionTargetMinutes(profile.preferences.dailyGoalMinutes, 0),
+        }),
+      );
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [applied, practice]);
+
   const xpEarned = completed.reduce((a, e) => a + e.xp, 0);
   const meanAccuracy =
     completed.length > 0 ? completed.reduce((a, e) => a + e.accuracy, 0) / completed.length : 0;
@@ -205,6 +243,19 @@ export function SessionSummary({
                 : "Tough one today — levels adjust so the next session lands closer to your range.",
           )}
         </p>
+
+        {tomorrow && tomorrow.items.length > 0 && (
+          <p className="rise-in flex items-center justify-center gap-1.5 text-center text-xs text-[var(--color-ink-faint)]">
+            <ClockIcon className="h-3.5 w-3.5 shrink-0" />
+            <span>
+              {t("Tomorrow:")}{" "}
+              {[...new Set(tomorrow.items.map((i) => i.exerciseId))]
+                .map((id) => t(EXERCISES[id].name))
+                .join(" · ")}{" "}
+              — {t("about {min} min", { min: tomorrow.estimatedMinutes })}
+            </span>
+          </p>
+        )}
 
         <div className="rise-in flex flex-col gap-2.5">
           <Link href="/" className="contents">

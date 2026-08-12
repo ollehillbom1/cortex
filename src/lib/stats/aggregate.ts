@@ -244,3 +244,57 @@ export function shiftDay(day: string, n: number): string {
   const dd = String(date.getUTCDate()).padStart(2, "0");
   return `${yy}-${mm}-${dd}`;
 }
+
+/** Monday of the week containing `day` (weeks start on Monday here). */
+export function weekStartOf(day: string): string {
+  const [y, m, d] = day.split("-").map(Number);
+  const dow = new Date(y, m - 1, d).getDay(); // 0 = Sunday
+  return shiftDay(day, -((dow + 6) % 7));
+}
+
+export interface WeeklyRecap {
+  /** Monday of the recapped week (local day key). */
+  weekStart: string;
+  /** Sunday of the recapped week. */
+  weekEnd: string;
+  sessions: number;
+  activeDays: number;
+  minutes: number;
+  xp: number;
+  /** Personal bests set during the week (`:level` keys excluded, as in the UI). */
+  records: number;
+}
+
+/** Meta key: the weekStart whose recap the user has dismissed. */
+export const META_WEEKLY_RECAP_DISMISSED_WEEK = "weeklyRecapDismissedWeek";
+
+/**
+ * Recap of the calendar week BEFORE the one containing `today`, or null when
+ * that week held no training. Facts from the user's own history, nothing
+ * else — the same contract as the insights (docs/measurement.md).
+ */
+export function weeklyRecap(
+  sessions: SessionRecord[],
+  records: Profile["records"],
+  today: string,
+): WeeklyRecap | null {
+  const weekStart = shiftDay(weekStartOf(today), -7);
+  const weekEnd = shiftDay(weekStartOf(today), -1);
+  // Day keys are ISO-shaped, so lexicographic order IS chronological order.
+  const inWeek = (day: string) => day >= weekStart && day <= weekEnd;
+
+  const week = sessions.filter((s) => inWeek(dayKey(new Date(s.startedAt))));
+  if (week.length === 0) return null;
+  const activeDays = new Set(week.map((s) => dayKey(new Date(s.startedAt)))).size;
+  return {
+    weekStart,
+    weekEnd,
+    sessions: week.length,
+    activeDays,
+    minutes: Math.round(week.reduce((a, s) => a + s.durationMs / 60_000, 0)),
+    xp: week.reduce((a, s) => a + s.xpEarned, 0),
+    records: Object.entries(records).filter(
+      ([key, rec]) => !key.endsWith(":level") && inWeek(dayKey(new Date(rec.achievedAt))),
+    ).length,
+  };
+}

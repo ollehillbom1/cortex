@@ -267,3 +267,15 @@ export function estimateSingle(exerciseId: ExerciseId): number {
   const def = EXERCISES[exerciseId];
   return Math.max(1, Math.round((def.secondsPerRound * def.defaultRounds) / 60));
 }
+
+/**
+ * True when this block's exercise already ran earlier in the plan. The plan
+ * deliberately interleaves repeat blocks to fill the time budget; the runner
+ * shows those a compact ready-check instead of the full "How it works" wall
+ * the user read minutes ago.
+ */
+export function isRepeatBlock(items: PlannedItem[], index: number): boolean {
+  return (
+    index > 0 && items.slice(0, index).some((it) => it.exerciseId === items[index]?.exerciseId)
+  );
+}
