@@ -18,6 +18,7 @@ import type { ReactionParams } from "./reaction";
 import { dualNBackParams } from "./dualNBack";
 import { tonePatternParams } from "./tonePattern";
 import { rhythmParams } from "./rhythm";
+import { generateGoNoGoTrials, goNoGoParams, scoreGoNoGo } from "./goNoGo";
 
 describe("number span", () => {
   it("generates the requested span deterministically without immediate repeats", () => {
@@ -274,6 +275,71 @@ describe("n-back", () => {
   });
 });
 
+describe("go/no-go", () => {
+  it("forces the no-go count exactly, never on the first trial", () => {
+    for (const level of [1, 10, 25]) {
+      const params = goNoGoParams(level);
+      const trials = generateGoNoGoTrials(createRng(31), params);
+      expect(trials).toHaveLength(params.trials);
+      expect(trials[0].go).toBe(true);
+      const noGos = trials.filter((t) => !t.go).length;
+      expect(noGos).toBe(Math.max(1, Math.round(params.trials * params.noGoRate)));
+      // Jittered ISI stays inside its declared window.
+      for (const t of trials) {
+        expect(t.isiMs).toBeGreaterThanOrEqual(params.isiMs);
+        expect(t.isiMs).toBeLessThanOrEqual(params.isiMs + params.isiJitterMs);
+      }
+    }
+  });
+
+  it("scores every one-sided strategy at chance, never inside the target band", () => {
+    // With ~75% go trials, plain accuracy would pay an always-presser ~75%
+    // — inside the adaptive band [0.70, 0.85] — for zero inhibition. Same
+    // anti-gaming contract as n-back's balanced accuracy.
+    for (const level of [1, 8, 20]) {
+      const trials = generateGoNoGoTrials(createRng(5), goNoGoParams(level));
+      const alwaysPress = scoreGoNoGo(
+        trials,
+        trials.map(() => 300),
+      );
+      const neverPress = scoreGoNoGo(
+        trials,
+        trials.map(() => null),
+      );
+      expect(alwaysPress.accuracy).toBeCloseTo(0.5);
+      expect(neverPress.accuracy).toBeCloseTo(0.5);
+      expect(alwaysPress.accuracy).toBeLessThan(TARGET_LOW);
+      expect(neverPress.accuracy).toBeLessThan(TARGET_LOW);
+    }
+  });
+
+  it("scores the confusion matrix and mean go time", () => {
+    const trials = [
+      { go: true, isiMs: 1000 },
+      { go: false, isiMs: 1000 },
+      { go: true, isiMs: 1000 },
+      { go: false, isiMs: 1000 },
+    ];
+    // Hit (400ms), false alarm, miss, correct rejection.
+    const score = scoreGoNoGo(trials, [400, 350, null, null]);
+    expect(score).toMatchObject({ hits: 1, falseAlarms: 1, misses: 1, correctRejections: 1 });
+    expect(score.goRate).toBeCloseTo(0.5);
+    expect(score.withholdRate).toBeCloseTo(0.5);
+    expect(score.accuracy).toBeCloseTo(0.5);
+    expect(score.meanGoMs).toBe(400);
+    expect(score.perfect).toBe(false);
+  });
+
+  it("marks a clean round perfect and derives its mean time from hits only", () => {
+    const trials = generateGoNoGoTrials(createRng(9), goNoGoParams(3));
+    const responses = trials.map((t) => (t.go ? 500 : null));
+    const score = scoreGoNoGo(trials, responses);
+    expect(score.perfect).toBe(true);
+    expect(score.accuracy).toBe(1);
+    expect(score.meanGoMs).toBe(500);
+  });
+});
+
 describe("level ceilings", () => {
   // All nine, called as their game components call them. Four of nine were
   // covered before, so five ceilings were hand-pinned and checked by nothing:
@@ -294,6 +360,7 @@ describe("level ceilings", () => {
     // measurement below is only meaningful if a reintroduced dependence
     // would show up here.
     "reaction-time": (l) => (reactionParams as (level?: number) => ReactionParams)(l),
+    "go-no-go": (l) => goNoGoParams(l),
   };
 
   it("stops each exercise where its parameters stop changing", () => {

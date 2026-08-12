@@ -14,7 +14,8 @@ export type ExerciseId =
   | "auditory-digits"
   | "tone-pattern"
   | "rhythm-recall"
-  | "reaction-time";
+  | "reaction-time"
+  | "go-no-go";
 
 export type Modality =
   "working-memory" | "visual-memory" | "auditory-memory" | "attention" | "speed";
@@ -282,6 +283,17 @@ export const EXERCISES: Record<ExerciseId, ExerciseDefinition> = {
     requiresAudio: false,
     // 1 means "no difficulty scale", not "capped low": see reactionParams.
     maxLevel: 1,
+  },
+  "go-no-go": {
+    id: "go-no-go",
+    name: "Go/No-Go",
+    tagline: "React on go — hold back on stop",
+    modalities: ["attention", "speed"],
+    secondsPerRound: 50,
+    defaultRounds: 1,
+    requiresVision: true,
+    requiresAudio: false,
+    maxLevel: 25,
   },
 };
 

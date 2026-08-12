@@ -51,6 +51,8 @@ export const UNKNOWN_MEASUREMENT_VERSION = 0;
  *     numbers are therefore systematically slow and cannot be compared with
  *     era 2. Nothing about the difficulty changed, so the fingerprints do
  *     not move.
+ *   1 (2026-08-12) go-no-go added — a new exercise starts its own history
+ *     at version 1.
  */
 export const MEASUREMENT_VERSION: Record<ExerciseId, number> = {
   "number-span": 1,
@@ -62,6 +64,7 @@ export const MEASUREMENT_VERSION: Record<ExerciseId, number> = {
   "tone-pattern": 1,
   "rhythm-recall": 2,
   "reaction-time": 2,
+  "go-no-go": 1,
 };
 
 /**
@@ -91,6 +94,7 @@ export const DIFFICULTY_FINGERPRINT: Record<ExerciseId, string> = {
   "tone-pattern": "c37c37067ef0803f",
   "rhythm-recall": "0d44aed94f3da908",
   "reaction-time": "59db8f21be3a3187",
+  "go-no-go": "c33612bad5ca5d0e",
 };
 
 /** True when these results cannot honestly be plotted on one line. */

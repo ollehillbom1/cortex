@@ -107,4 +107,15 @@ export const INSTRUCTIONS: Record<ExerciseId, ExerciseInstructions> = {
     accessibility:
       "This exercise needs sight: the GO signal is a visual change. Keyboard: the space bar works instead of tapping.",
   },
+  "go-no-go": {
+    how: [
+      "Symbols appear one at a time: mostly a green GO circle, sometimes a red STOP sign.",
+      "Tap (or press the space bar) as fast as you can on GO — before it disappears.",
+      "On STOP, do nothing. Holding back is the whole exercise.",
+    ],
+    scoring:
+      "Catching the GOs and holding back on the STOPs count equally, so tapping everything scores no better than tapping nothing. A GO you miss before it disappears counts as missed.",
+    accessibility:
+      "This exercise needs sight. GO and STOP differ by shape and text, not colour alone. Keyboard: the space bar works instead of tapping.",
+  },
 };

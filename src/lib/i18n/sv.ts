@@ -487,6 +487,29 @@ export const SV: Record<string, string> = {
   "Your reaction time in milliseconds, measured from the moment the panel actually changes. Lower is better. A tap too fast to be a reaction does not count, and a round left unanswered for three seconds is dropped rather than scored.":
     "Din reaktionstid i millisekunder, mätt från när panelen faktiskt ändras. Lägre är bättre. En tryckning som är för snabb för att vara en reaktion räknas inte, och en runda som lämnas obesvarad i tre sekunder kastas i stället för att poängsättas.",
 
+  // Go/No-Go
+  "React on go — hold back on stop": "Reagera på GO — håll emot på STOP",
+  "Symbols appear one at a time: mostly a green GO circle, sometimes a red STOP sign.":
+    "Symboler visas en i taget: oftast en grön GO-cirkel, ibland en röd STOP-skylt.",
+  "Tap (or press the space bar) as fast as you can on GO — before it disappears.":
+    "Tryck (eller använd mellanslag) så snabbt du kan på GO — innan den hinner försvinna.",
+  "On STOP, do nothing. Holding back is the whole exercise.":
+    "Vid STOP: gör ingenting. Att hålla emot är hela övningen.",
+  "Catching the GOs and holding back on the STOPs count equally, so tapping everything scores no better than tapping nothing. A GO you miss before it disappears counts as missed.":
+    "Att fånga GO och hålla emot på STOP väger lika tungt, så att trycka på allt ger inte mer poäng än att aldrig trycka. En GO du inte hinner med räknas som missad.",
+  "This exercise needs sight. GO and STOP differ by shape and text, not colour alone. Keyboard: the space bar works instead of tapping.":
+    "Den här övningen kräver syn. GO och STOP skiljer sig i form och text, inte bara i färg. Tangentbord: mellanslag fungerar i stället för att trycka.",
+  "tap for the green GO circle, do nothing for the red STOP sign":
+    "tryck vid den gröna GO-cirkeln, gör ingenting vid den röda STOP-skylten",
+  "Go — tap now": "GO — tryck nu",
+  "Stop — do nothing": "STOP — gör ingenting",
+  "Waiting…": "Väntar …",
+  "Get ready…": "Gör dig redo …",
+  "Caught it": "Fångad",
+  "That was a stop — hold back": "Det där var en STOP — håll emot",
+  "{hits} of {go} go · {held} of {stop} stop held":
+    "{hits} av {go} GO · {held} av {stop} STOP hejdade",
+
   // Achievements
   "First Steps": "Första stegen",
   "Complete your first training session.": "Slutför ditt första träningspass.",
