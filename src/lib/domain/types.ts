@@ -16,7 +16,8 @@ export type ExerciseId =
   | "rhythm-recall"
   | "reaction-time"
   | "go-no-go"
-  | "name-recall";
+  | "name-recall"
+  | "split-second";
 
 export type Modality =
   "working-memory" | "visual-memory" | "auditory-memory" | "attention" | "speed";
@@ -306,6 +307,17 @@ export const EXERCISES: Record<ExerciseId, ExerciseDefinition> = {
     requiresVision: true,
     requiresAudio: false,
     maxLevel: 26,
+  },
+  "split-second": {
+    id: "split-second",
+    name: "Split Second",
+    tagline: "Catch the centre and the edge in one blink",
+    modalities: ["speed", "attention"],
+    secondsPerRound: 30,
+    defaultRounds: 2,
+    requiresVision: true,
+    requiresAudio: false,
+    maxLevel: 21,
   },
 };
 

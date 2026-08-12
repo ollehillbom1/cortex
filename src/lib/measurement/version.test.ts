@@ -8,6 +8,7 @@ import { nBackParams } from "@/lib/exercises/nback";
 import { dualNBackParams } from "@/lib/exercises/dualNBack";
 import { goNoGoParams } from "@/lib/exercises/goNoGo";
 import { nameRecallParams } from "@/lib/exercises/nameRecall";
+import { splitSecondParams } from "@/lib/exercises/splitSecond";
 import { tonePatternParams } from "@/lib/exercises/tonePattern";
 import { rhythmParams } from "@/lib/exercises/rhythm";
 import { reactionParams } from "@/lib/exercises/reaction";
@@ -59,6 +60,8 @@ function difficultyLadder(id: ExerciseId): unknown[] {
       return levels.map(goNoGoParams);
     case "name-recall":
       return levels.map(nameRecallParams);
+    case "split-second":
+      return levels.map(splitSecondParams);
   }
 }
 

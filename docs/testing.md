@@ -48,7 +48,7 @@ if a spec exists that is not described here:
 - `family.spec.ts` — launch picker with several profiles; PIN-gated
   switching.
 - `audio-exercises.spec.ts` — sound-dependent exercises play and score; the
-  library lists all eleven exercises.
+  library lists all twelve exercises.
 - `i18n.spec.ts` — switching to Swedish translates the app and persists.
 - `coach.spec.ts` — the optional AI coach is off, unconfigured and
   non-posting by default; errors carry no upstream detail.
