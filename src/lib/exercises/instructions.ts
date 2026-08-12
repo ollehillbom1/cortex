@@ -128,4 +128,15 @@ export const INSTRUCTIONS: Record<ExerciseId, ExerciseInstructions> = {
     accessibility:
       "This exercise needs sight — the cue is a face. Names are shown as text. Keyboard: number keys pick a name.",
   },
+  "split-second": {
+    how: [
+      "Keep your eyes on the cross — everything happens in one blink.",
+      "For a split second a symbol shows in the middle while a diamond flashes somewhere on the ring. Then everything is masked.",
+      "Answer both: which symbol was in the middle, and where the diamond was. Briefer flashes and more look-alikes as you improve.",
+    ],
+    scoring:
+      "Each blink is two answers — the centre symbol and the diamond's position — worth half each. Guessing pays poorly: two symbols, but eight positions.",
+    accessibility:
+      "This exercise needs sight more than any other: the stimulus is a brief flash at the edge of your view. Keyboard: number keys answer both steps.",
+  },
 };

@@ -20,6 +20,7 @@ import { tonePatternParams } from "./tonePattern";
 import { rhythmParams } from "./rhythm";
 import { generateGoNoGoTrials, goNoGoParams, scoreGoNoGo } from "./goNoGo";
 import { nameRecallParams } from "./nameRecall";
+import { splitSecondParams } from "./splitSecond";
 
 describe("number span", () => {
   it("generates the requested span deterministically without immediate repeats", () => {
@@ -363,6 +364,7 @@ describe("level ceilings", () => {
     "reaction-time": (l) => (reactionParams as (level?: number) => ReactionParams)(l),
     "go-no-go": (l) => goNoGoParams(l),
     "name-recall": (l) => nameRecallParams(l),
+    "split-second": (l) => splitSecondParams(l),
   };
 
   it("stops each exercise where its parameters stop changing", () => {

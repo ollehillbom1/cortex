@@ -543,6 +543,29 @@ export const SV: Record<string, string> = {
   "It was {name}": "Det var {name}",
   "{n} of {total} names": "{n} av {total} namn",
 
+  // Split Second
+  "Split Second": "Blixtblick",
+  "Catch the centre and the edge in one blink": "Fånga mitten och kanten i en enda blinkning",
+  "Keep your eyes on the cross — everything happens in one blink.":
+    "Håll blicken på korset — allt händer i en enda blinkning.",
+  "For a split second a symbol shows in the middle while a diamond flashes somewhere on the ring. Then everything is masked.":
+    "Under en bråkdels sekund visas en symbol i mitten medan en romb blixtrar till någonstans på ringen. Sedan maskeras allt.",
+  "Answer both: which symbol was in the middle, and where the diamond was. Briefer flashes and more look-alikes as you improve.":
+    "Svara på båda: vilken symbol som var i mitten och var romben fanns. Kortare blixtar och fler förväxlare när du blir bättre.",
+  "Each blink is two answers — the centre symbol and the diamond's position — worth half each. Guessing pays poorly: two symbols, but eight positions.":
+    "Varje blixt är två svar — mittsymbolen och rombens position — värda hälften var. Att gissa lönar sig dåligt: två symboler, men åtta positioner.",
+  "This exercise needs sight more than any other: the stimulus is a brief flash at the edge of your view. Keyboard: number keys answer both steps.":
+    "Den här övningen kräver syn mer än någon annan: stimulit är en kort blixt i utkanten av synfältet. Tangentbord: sifferknapparna svarar i båda stegen.",
+  "Eyes on the cross — {i}/{n}": "Blicken på korset — {i}/{n}",
+  "What was in the middle?": "Vad var i mitten?",
+  "Where was the diamond?": "Var var romben?",
+  Circle: "Cirkel",
+  Square: "Kvadrat",
+  "Both right": "Båda rätt",
+  "Half right": "Hälften rätt",
+  "Both missed": "Båda missade",
+  "{n} of {total} caught whole": "{n} av {total} helt fångade",
+
   // Achievements
   "First Steps": "Första stegen",
   "Complete your first training session.": "Slutför ditt första träningspass.",

@@ -55,6 +55,7 @@ import { RhythmGame } from "@/components/game/RhythmGame";
 import { ReactionGame } from "@/components/game/ReactionGame";
 import { GoNoGoGame } from "@/components/game/GoNoGoGame";
 import { NameRecallGame } from "@/components/game/NameRecallGame";
+import { SplitSecondGame } from "@/components/game/SplitSecondGame";
 import { SessionSummary } from "./SessionSummary";
 
 const GAMES: Record<ExerciseId, React.ComponentType<GameProps>> = {
@@ -69,6 +70,7 @@ const GAMES: Record<ExerciseId, React.ComponentType<GameProps>> = {
   "reaction-time": ReactionGame,
   "go-no-go": GoNoGoGame,
   "name-recall": NameRecallGame,
+  "split-second": SplitSecondGame,
 };
 
 /**
