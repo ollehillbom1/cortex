@@ -462,8 +462,8 @@ export const SV: Record<string, string> = {
     "En kvadrat visas i en av nio positioner, steg för steg.",
   "Tap Match whenever the position is the same as it was N steps earlier. Do nothing when it is not.":
     "Tryck Träff när positionen är samma som för N steg sedan. Gör inget när den inte är det.",
-  "You start at 1-back (same as the previous step). Higher levels move to 2-back and 3-back.":
-    "Du börjar med 1-back (samma som föregående steg). Högre nivåer går till 2-back och 3-back.",
+  "You start at 1-back (same as the previous step). Higher levels move to 2-back, 3-back and beyond — and begin slipping in near-misses from just beside the target distance.":
+    "Du börjar med 1-back (samma som föregående steg). Högre nivåer går till 2-back, 3-back och vidare — och börjar smyga in nästan-träffar från strax intill måldistansen.",
   "Catching the matches and leaving the non-matches alone count equally. Missing matches and false alarms cost the same, so never tapping scores no better than tapping every time.":
     "Att fånga träffarna och att låta icke-träffarna passera väger lika tungt. Missade träffar och falsklarm kostar lika mycket, så att aldrig trycka ger inte bättre resultat än att trycka varje gång.",
   "You can press the space bar instead of tapping Match.":

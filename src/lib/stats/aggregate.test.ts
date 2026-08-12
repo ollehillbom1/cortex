@@ -182,8 +182,13 @@ describe("strengths and focus", () => {
 
   it("expresses progress as a fraction of the exercise's own range", () => {
     const profile = createProfile({ id: "p", name: "P" });
-    profile.skills["n-back"] = { ...initialSkill(), level: 18, attempts: 10 };
+    profile.skills["n-back"] = { ...initialSkill(), level: 35, attempts: 10 };
     const [summary] = exerciseLevels(profile).filter((e) => e.exerciseId === "n-back");
     expect(exerciseProgress(summary)).toBeCloseTo(1, 5);
+    // Halfway through the ladder reads as 50%, not as a fraction of the
+    // shared 40-level scale (18 was 100% before the ladder grew to 35).
+    profile.skills["n-back"] = { ...initialSkill(), level: 18, attempts: 10 };
+    const [half] = exerciseLevels(profile).filter((e) => e.exerciseId === "n-back");
+    expect(exerciseProgress(half)).toBeCloseTo(0.5, 5);
   });
 });

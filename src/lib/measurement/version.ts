@@ -69,13 +69,24 @@ export const MEASUREMENT_VERSION: Record<ExerciseId, number> = {
  * level it exposes), as verified by version.test.ts. A changed ramp changes
  * the fingerprint; the test then fails and names the exercise whose
  * MEASUREMENT_VERSION needs bumping.
+ *
+ * A fingerprint may change WITHOUT a version bump in exactly one case: the
+ * ladder was extended above its old ceiling and every pre-existing level is
+ * byte-identical — provable because the old fingerprint hashed exactly
+ * levels 1..oldMax, so hash(new params over 1..oldMax) must equal it.
+ * Extensions so far:
+ *   (2026-08-11) n-back 18 → 35 (4-back from 19, 5-back from 27, n±1 lures
+ *     — lureRate is ABSENT below level 19, not 0, precisely so the prefix
+ *     stays byte-identical) and dual-n-back 20 → 29 (4-back from 21, same
+ *     lure construction). Prefix hashes verified equal to the version-1
+ *     fingerprints (91c48b451f47f013 / 6979e700e3db13b8) before updating.
  */
 export const DIFFICULTY_FINGERPRINT: Record<ExerciseId, string> = {
   "number-span": "72b2ce9bcc21bbd7",
   "sequence-memory": "471ee77db7352fb6",
   "visual-pattern": "df4e3e5936f0e90e",
-  "n-back": "91c48b451f47f013",
-  "dual-n-back": "6979e700e3db13b8",
+  "n-back": "0b36c1905df14c44",
+  "dual-n-back": "6383da668c28aa07",
   "auditory-digits": "c4860a43535993f5",
   "tone-pattern": "c37c37067ef0803f",
   "rhythm-recall": "0d44aed94f3da908",

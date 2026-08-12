@@ -22,14 +22,26 @@ export interface DualNBackParams {
   positions: number;
   /** Number of distinct sounds (spoken letters or tones). */
   sounds: number;
+  /**
+   * Fraction of non-matches placed as n±1 lures, per channel. ABSENT below
+   * the 4-back band, for the same reason as in nback.ts: absence keeps the
+   * pre-extension levels byte-identical to what version 1 fingerprinted.
+   */
+  lureRate?: number;
 }
 
 /** Classic dual n-back letter set — phonetically distinct when spoken. */
 export const DUAL_NBACK_LETTERS = ["C", "H", "K", "L", "Q", "R", "S", "T"];
 
+/**
+ * Level mapping: 1-back for 1-4, 2-back for 5-11, 3-back for 12-20, 4-back
+ * from 21 — dual 4-back is brutal, so no 5-back band here. The lure cap
+ * (0.39, gentler than single n-back's) binds exactly at the ceiling,
+ * together with the gap floor.
+ */
 export function dualNBackParams(level: number): DualNBackParams {
-  const n = level < 5 ? 1 : level < 12 ? 2 : 3;
-  const bandStart = n === 1 ? 1 : n === 2 ? 5 : 12;
+  const n = level < 5 ? 1 : level < 12 ? 2 : level < 21 ? 3 : 4;
+  const bandStart = n === 1 ? 1 : n === 2 ? 5 : n === 3 ? 12 : 21;
   const withinBand = level - bandStart;
   return {
     n,
@@ -39,6 +51,7 @@ export function dualNBackParams(level: number): DualNBackParams {
     matchRate: 0.25,
     positions: 9,
     sounds: DUAL_NBACK_LETTERS.length,
+    ...(n >= 4 ? { lureRate: Math.min(0.39, 0.15 + withinBand * 0.03) } : {}),
   };
 }
 
@@ -55,6 +68,7 @@ export function generateDualNBackStream(rng: Rng, params: DualNBackParams): Dual
     stimulusMs: params.stimulusMs,
     gapMs: params.gapMs,
     matchRate: params.matchRate,
+    ...(params.lureRate !== undefined ? { lureRate: params.lureRate } : {}),
   };
   return {
     position: generateNBackStream(rng, { ...base, positions: params.positions }),

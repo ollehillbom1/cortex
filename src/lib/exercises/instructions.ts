@@ -47,7 +47,7 @@ export const INSTRUCTIONS: Record<ExerciseId, ExerciseInstructions> = {
     how: [
       "A square appears in one of nine positions, step by step.",
       "Tap Match whenever the position is the same as it was N steps earlier. Do nothing when it is not.",
-      "You start at 1-back (same as the previous step). Higher levels move to 2-back and 3-back.",
+      "You start at 1-back (same as the previous step). Higher levels move to 2-back, 3-back and beyond — and begin slipping in near-misses from just beside the target distance.",
     ],
     scoring:
       "Catching the matches and leaving the non-matches alone count equally. Missing matches and false alarms cost the same, so never tapping scores no better than tapping every time.",
