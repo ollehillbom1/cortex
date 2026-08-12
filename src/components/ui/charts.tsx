@@ -18,6 +18,7 @@ export function Sparkline({
   height = 56,
   formatValue = (v) => v.toFixed(0),
   invert = false,
+  stroke,
 }: {
   values: number[];
   label: string;
@@ -25,6 +26,9 @@ export function Sparkline({
   formatValue?: (v: number) => string;
   /** For lower-is-better metrics, colour improvement accordingly. */
   invert?: boolean;
+  /** Identity colour for the line (e.g. the exercise's modality colour);
+   *  defaults to the brand gradient. */
+  stroke?: string;
 }) {
   const { t } = useT();
   if (values.length === 0) {
@@ -62,7 +66,13 @@ export function Sparkline({
           first: formatValue(first),
         })}
       >
-        <path d={path} fill="none" stroke="url(#spark)" strokeWidth={2.5} strokeLinecap="round" />
+        <path
+          d={path}
+          fill="none"
+          stroke={stroke ?? "url(#spark)"}
+          strokeWidth={2.5}
+          strokeLinecap="round"
+        />
         <defs>
           <linearGradient id="spark" x1="0" x2="1" y1="0" y2="0">
             <stop offset="0%" stopColor="var(--color-accent)" />
@@ -127,7 +137,11 @@ export function DayBars({
   );
 }
 
-export function BalanceBars({ entries }: { entries: { label: string; fraction: number }[] }) {
+export function BalanceBars({
+  entries,
+}: {
+  entries: { label: string; fraction: number; color?: string }[];
+}) {
   const { t } = useT();
   return (
     <ul className="space-y-2.5">
@@ -143,8 +157,15 @@ export function BalanceBars({ entries }: { entries: { label: string; fraction: n
             })}
           >
             <div
-              className="h-full rounded-full bg-gradient-to-r from-[var(--color-accent)] to-[var(--color-accent-2)]"
-              style={{ width: `${Math.round(e.fraction * 100)}%` }}
+              className={`h-full rounded-full ${
+                e.color
+                  ? ""
+                  : "bg-gradient-to-r from-[var(--color-accent)] to-[var(--color-accent-2)]"
+              }`}
+              style={{
+                width: `${Math.round(e.fraction * 100)}%`,
+                ...(e.color ? { background: e.color } : {}),
+              }}
             />
           </div>
           <span className="w-10 text-right text-sm tabular-nums text-[var(--color-ink-dim)]">

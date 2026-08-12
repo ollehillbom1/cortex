@@ -51,3 +51,31 @@ describe("text contrast against the night background", () => {
     ).toBeGreaterThanOrEqual(minimum);
   });
 });
+
+describe("modality identity colours against the night background", () => {
+  const background = token("night");
+
+  function modToken(name: string): string {
+    const match = css.match(new RegExp(`--mod-${name}:\\s*(#[0-9a-fA-F]{6})`));
+    if (!match) throw new Error(`token --mod-${name} not found in globals.css`);
+    return match[1];
+  }
+
+  it.each([
+    // These are UI marks (bars, dots, strokes), never text: WCAG's non-text
+    // threshold is 3:1. The identity is never colour-alone — every use sits
+    // beside a text label — but an invisible mark is no identity at all.
+    "working-memory",
+    "visual-memory",
+    "auditory-memory",
+    "attention",
+    "speed",
+  ] as const)("--mod-%s stays visible as a mark (>= 3:1)", (name) => {
+    const ratio = contrast(modToken(name), background);
+    expect(
+      ratio,
+      `--mod-${name} is ${ratio.toFixed(2)}:1 against --color-night; ` +
+        `below 3:1 a bar or dot in this colour fades into the background`,
+    ).toBeGreaterThanOrEqual(3);
+  });
+});

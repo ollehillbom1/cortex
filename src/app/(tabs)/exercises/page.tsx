@@ -3,7 +3,13 @@
 import Link from "next/link";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { ALL_EXERCISE_IDS, EXERCISES, MODALITY_LABELS, type ExerciseId } from "@/lib/domain/types";
+import {
+  ALL_EXERCISE_IDS,
+  EXERCISES,
+  exerciseColor,
+  MODALITY_LABELS,
+  type ExerciseId,
+} from "@/lib/domain/types";
 import { effectiveLevel, MIN_LEVEL, recentAccuracy } from "@/lib/adaptive/engine";
 import { availableExerciseIds } from "@/lib/exercises/availability";
 import { PRACTICE_ROUND_CHOICES } from "@/lib/session/practice";
@@ -64,6 +70,13 @@ export default function ExercisesPage() {
               >
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2">
+                    {/* Identity dot: the primary modality's colour, so the
+                        library, session list and stats read as one system. */}
+                    <span
+                      aria-hidden
+                      className="h-2.5 w-2.5 shrink-0 rounded-full"
+                      style={{ background: exerciseColor(id) }}
+                    />
                     <h2 className="font-bold">{t(def.name)}</h2>
                     {def.maxLevel > MIN_LEVEL && (
                       <span className="rounded-full bg-[var(--fill-soft)] px-2 py-0.5 text-[11px] font-semibold text-[var(--color-ink-dim)]">
