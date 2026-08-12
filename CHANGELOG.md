@@ -1,5 +1,15 @@
 # Changelog
 
+## v1.9.0 — 2026-08-12
+
+- feat(exercises): Split Second — brief exposures at the edge of view (#119)
+- feat(exercises): Name Recall — faces, names and the imagery strategy (#118)
+- feat(flow): point at tomorrow, recap last week, skip the re-read (#117)
+- feat(exercises): Go/No-Go — response inhibition, the first hold-back task (#116)
+- feat(nback): open the n ladder (4/5-back) with n-adjacent lures, additively (#115)
+- feat(ux): pay the record bonus, surface streak freezes, and cut dead time (#114)
+- docs(a11y): descope screen-reader support, and stop overclaiming keyboard play (#113)
+
 ## v1.8.0 — 2026-08-11
 
 - fix(deps): pin nanoid and js-yaml past their advisories (CVE-2026-67213, CVE-2026-59870) — both transitive/build-time only, not exploitable in the shipped app, patched anyway
