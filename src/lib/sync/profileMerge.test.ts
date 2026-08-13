@@ -213,6 +213,54 @@ describe("profile merge keeps both devices' progression", () => {
     expect(mergeProfiles(behind, ahead).skills["n-back"]?.attempts).toBe(400);
   });
 
+  it("keeps the higher attempts even when the winner is chosen but trained less", () => {
+    // The gap the old guard missed: the profile winner (later updatedAt) has
+    // the newer skill but FEWER attempts, and the loser trained more on an
+    // older-stamped skill (e.g. a device restored from a backup then edited).
+    // max(chosen, winner) was a no-op; the loser's 400 attempts vanished and
+    // the x1.8 calibration ramp re-triggered.
+    const winner = profileAt("2026-07-02T00:00:00Z", {
+      skills: {
+        "n-back": { ...initialSkill(), level: 3, attempts: 12, updatedAt: "2026-07-02T00:00:00Z" },
+      },
+    });
+    const loser = profileAt("2026-07-01T00:00:00Z", {
+      skills: {
+        "n-back": { ...initialSkill(), level: 5, attempts: 400, updatedAt: "2026-07-01T00:00:00Z" },
+      },
+    });
+    expect(mergeProfiles(winner, loser).skills["n-back"]?.attempts).toBe(400);
+    expect(mergeProfiles(loser, winner).skills["n-back"]?.attempts).toBe(400);
+  });
+
+  it("does not resurrect skills or the streak that a reset cleared", () => {
+    // A reset zeroes skills/streak; the pre-reset copy still on the server
+    // carries them. Skills and streak lacked the cleared-guard records and
+    // achievements had, so the very next sync pulled level 9 and the 30-day
+    // streak back — the user was told progression was reset.
+    const reset = profileAt("2026-07-05T00:00:00Z", {
+      xp: 0,
+      skills: {},
+      streak: { current: 0, best: 0, lastActiveDay: null, freezes: 0 },
+    });
+    const stale = profileAt("2026-07-04T00:00:00Z", {
+      xp: 100,
+      skills: {
+        "n-back": { ...initialSkill(), level: 9, attempts: 400, updatedAt: "2026-07-04T00:00:00Z" },
+      },
+      streak: { current: 30, best: 30, lastActiveDay: "2026-07-04", freezes: 2 },
+    });
+    const merged = mergeStates(
+      state({
+        profiles: [reset],
+        tombstones: { deletedProfiles: {}, clearedSessions: { p: "2026-07-04T12:00:00.000Z" } },
+      }),
+      state({ profiles: [stale] }),
+    );
+    expect(merged.profiles[0].skills).toEqual({});
+    expect(merged.profiles[0].streak).toMatchObject({ current: 0, best: 0, lastActiveDay: null });
+  });
+
   it("is symmetric: both devices converge on the same profile", () => {
     const phone = profileAt("2026-07-01T10:00:00Z", { xp: 120 });
     const laptop = profileAt("2026-07-01T11:00:00Z", { xp: 130 });
