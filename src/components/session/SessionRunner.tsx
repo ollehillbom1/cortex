@@ -475,11 +475,17 @@ export function SessionRunner() {
   }, [phase]);
 
   // Auto-advance the feedback interstitial (a Continue button remains).
+  // Paused while the quit dialog is open: otherwise the timer fires behind
+  // the modal, mounting the next round unseen (its stimulus playing under
+  // the dialog) — or, on the last round, finalizing and PERSISTING the
+  // session while the dialog still says the exercise will be discarded. The
+  // same unseen-stimulus defect the backgrounding guard exists to prevent.
+  // Closing the dialog re-arms a fresh 1.8 s to read the feedback.
   useEffect(() => {
-    if (phase !== "feedback" || interrupted) return;
+    if (phase !== "feedback" || interrupted || quitPrompt) return;
     const t = setTimeout(() => void advance(), 1800);
     return () => clearTimeout(t);
-  }, [phase, advance, interrupted]);
+  }, [phase, advance, interrupted, quitPrompt]);
 
   const quit = async (save: boolean) => {
     if (save && !practice && completed.length > 0) {

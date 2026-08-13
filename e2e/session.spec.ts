@@ -26,6 +26,33 @@ test.describe("training sessions", () => {
     await expect(page.getByText(/round paused/i)).toBeHidden();
   });
 
+  test("opening the quit dialog during feedback pauses the auto-advance", async ({ page }) => {
+    // The feedback interstitial auto-advances after 1.8 s. With the quit
+    // dialog open, that timer used to keep running — the next round mounted
+    // and played unseen behind the modal, and a "Keep training" tap landed
+    // the user in a round whose stimulus they never saw (which then scored).
+    await createProfile(page, "Avbryt");
+    await page.goto("/session?exercise=reaction-time");
+    await page.getByRole("button", { name: /start reaction/i }).click();
+    const arm = page.getByRole("button", { name: /tap to arm/i });
+    await arm.waitFor({ state: "visible", timeout: 15_000 });
+    await arm.click();
+    const go = page.getByRole("button", { name: "GO!" });
+    await go.waitFor({ state: "visible", timeout: 10_000 });
+    await go.click();
+    await page.getByRole("button", { name: /^continue$/i }).waitFor({ timeout: 5_000 });
+
+    // Open the quit dialog and sit past the 1.8 s auto-advance window.
+    await page.getByRole("button", { name: /end session/i }).click();
+    await page.getByRole("dialog").waitFor();
+    await page.waitForTimeout(2_500);
+
+    // Dismiss it: the round must NOT have advanced behind the modal — the
+    // feedback interstitial is still there (before the fix, round 2 had armed).
+    await page.getByRole("button", { name: /keep training/i }).click();
+    await expect(page.getByRole("button", { name: /^continue$/i })).toBeVisible();
+  });
+
   test("backgrounding during the feedback screen pauses too, instead of scoring an unseen round", async ({
     page,
   }) => {
