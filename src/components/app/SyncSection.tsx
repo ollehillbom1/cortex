@@ -178,14 +178,18 @@ export function SyncSection() {
     if (busy) return;
     setBusy(true);
     try {
-      const { code, oldCopyDeleted } = await rotateGroupAfterLoss(getStorage());
+      const { code, oldCopyDeleted, newGroupSynced } = await rotateGroupAfterLoss(getStorage());
       setConfirmLost(false);
       setMessage(
-        oldCopyDeleted
-          ? t("New sync group created. The old code no longer unlocks anything.")
-          : t(
-              "New sync group created, but the old server copy could not be removed — it is frozen and holds nothing new.",
-            ),
+        !newGroupSynced
+          ? t(
+              "New code set up on this device, but its backup could not be uploaded yet — your old backup was kept safe. Reconnect and the change will finish.",
+            )
+          : oldCopyDeleted
+            ? t("New sync group created. The old code no longer unlocks anything.")
+            : t(
+                "New sync group created, but the old server copy could not be removed — it is frozen and holds nothing new.",
+              ),
       );
       setShownCode({ code, afterUpgrade: true });
     } catch (err) {

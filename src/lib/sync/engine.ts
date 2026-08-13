@@ -243,7 +243,7 @@ async function migrateLegacyGroup(credentials: SyncCredentials, passphrase: stri
  */
 export async function rotateGroupAfterLoss(
   storage: StorageAdapter,
-): Promise<{ code: string; oldCopyDeleted: boolean }> {
+): Promise<{ code: string; oldCopyDeleted: boolean; newGroupSynced: boolean }> {
   const oldGroupId = await storage.getMeta(META_SYNC_GROUP_ID);
   if (!oldGroupId) throw new Error("sync is not enabled");
   const oldCode = await storage.getMeta(META_SYNC_CODE);
@@ -263,10 +263,15 @@ export async function rotateGroupAfterLoss(
   const seed = generateSyncSeed();
   const code = formatSyncCode(seed);
   await persistCredentials(storage, await deriveCodeCredentials(seed), code);
-  await syncNow(storage);
+  // Push the household's data to the NEW group, and check it landed. The old
+  // record must not be deleted until the new one exists: if this push failed
+  // (server full, offline), the old copy is still the household's only
+  // backup — deleting it here would destroy it and leave the new group empty,
+  // in the very flow the user runs BECAUSE a device was lost.
+  const newGroupSynced = await syncNow(storage);
 
   let oldCopyDeleted = false;
-  if (oldToken) {
+  if (newGroupSynced && oldToken) {
     try {
       const res = await fetch(`/api/sync/${oldGroupId}`, {
         method: "DELETE",
@@ -274,12 +279,11 @@ export async function rotateGroupAfterLoss(
       });
       oldCopyDeleted = res.ok || res.status === 404;
     } catch {
-      // Network hiccup: the new group is already live; the old record is
-      // frozen and can be deleted later from any upgraded device... except
-      // its token has rotated away here. Report honestly instead.
+      // Network hiccup after the new copy is safely up: the old record is
+      // frozen and holds nothing new. Report it as kept rather than delete.
     }
   }
-  return { code, oldCopyDeleted };
+  return { code, oldCopyDeleted, newGroupSynced };
 }
 
 /**

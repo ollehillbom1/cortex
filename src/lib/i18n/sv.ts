@@ -118,6 +118,8 @@ export const SV: Record<string, string> = {
     "Ny synkgrupp skapad. Den gamla koden låser inte längre upp någonting.",
   "New sync group created, but the old server copy could not be removed — it is frozen and holds nothing new.":
     "Ny synkgrupp skapad, men den gamla serverkopian kunde inte tas bort — den är frusen och innehåller inget nytt.",
+  "New code set up on this device, but its backup could not be uploaded yet — your old backup was kept safe. Reconnect and the change will finish.":
+    "Ny kod inställd på den här enheten, men dess säkerhetskopia kunde inte laddas upp ännu — din gamla säkerhetskopia behölls. Återanslut så slutförs bytet.",
   "Could not rotate the sync group: {error}": "Kunde inte byta synkgrupp: {error}",
   "Delete server copy…": "Radera serverkopian …",
   "Delete the server copy?": "Radera serverkopian?",
