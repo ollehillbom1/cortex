@@ -272,6 +272,32 @@ describe("v3 sync protocol", () => {
     expect((await follower.listProfiles()).map((p) => p.name)).toContain("Anna");
   });
 
+  it("lost device: a failed upload to the new group keeps the old backup", async () => {
+    const records = mockServer();
+    const storage = await deviceWithProfile("Anna");
+    await createSyncGroup(storage);
+    const oldGroupId = [...records.keys()][0];
+    expect(records.size).toBe(1);
+
+    // The server now rejects writes to any NEW group (full / offline) but
+    // still serves the old record. Deleting the old copy here would destroy
+    // the household's only backup and leave the new group empty.
+    const passthrough = globalThis.fetch as typeof fetch;
+    vi.stubGlobal("fetch", (url: string | URL, init?: RequestInit) => {
+      const groupId = String(url).split("/").pop();
+      if (init?.method && init.method !== "DELETE" && groupId !== oldGroupId) {
+        return Promise.resolve(new Response(JSON.stringify({ error: "full" }), { status: 507 }));
+      }
+      return passthrough(url, init);
+    });
+
+    const { oldCopyDeleted, newGroupSynced } = await rotateGroupAfterLoss(storage);
+    expect(newGroupSynced).toBe(false);
+    expect(oldCopyDeleted).toBe(false);
+    // The old encrypted backup is still on the server — nothing was lost.
+    expect(records.has(oldGroupId)).toBe(true);
+  });
+
   it("delete: removes the server record with the capability, then disables locally", async () => {
     const records = mockServer();
     const storage = await deviceWithProfile("Anna");
