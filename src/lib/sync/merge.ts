@@ -121,7 +121,7 @@ function mergeDevices(
   return merged;
 }
 
-function mergeTombstones(a: SyncTombstones, b: SyncTombstones): SyncTombstones {
+export function mergeTombstones(a: SyncTombstones, b: SyncTombstones): SyncTombstones {
   const merged = emptyTombstones();
   for (const source of [a, b]) {
     for (const [id, at] of Object.entries(source.deletedProfiles)) {

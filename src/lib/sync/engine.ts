@@ -22,6 +22,7 @@ import { formatSyncCode, generateSyncSeed, parseSyncCode } from "./syncCode";
 import {
   emptyTombstones,
   mergeStates,
+  mergeTombstones,
   type SyncDeviceEntry,
   type SyncState,
   type SyncTombstones,
@@ -327,18 +328,48 @@ export async function disableSync(storage: StorageAdapter): Promise<void> {
   await storage.setMeta(META_SYNC_DEVICES, "");
 }
 
+/**
+ * Serialises every write to the tombstone meta key. Tombstones are the one
+ * piece of sync state whose loss RESURRECTS deleted profiles and cleared
+ * sessions, and three code paths write the key — the two record functions
+ * below and syncNow's own tombstone write, which reads early and writes
+ * after a network round-trip. A fire-and-forget syncNow (the runner fires
+ * one at the end of every session) overlapping a delete/reset would clobber
+ * the fresh tombstone with its stale snapshot. So every write goes through
+ * this queue AND unions with the currently-stored value: tombstones are
+ * monotonic (union, latest timestamp per key), so a union-at-write never
+ * loses one however the writes interleave. Same class as the crashLog race,
+ * higher stakes.
+ */
+let tombstoneQueue: Promise<SyncTombstones> = Promise.resolve(emptyTombstones());
+
+function commitTombstones(
+  storage: StorageAdapter,
+  incoming: SyncTombstones,
+): Promise<SyncTombstones> {
+  tombstoneQueue = tombstoneQueue.then(async () => {
+    const current = await loadTombstones(storage);
+    const union = mergeTombstones(current, incoming);
+    await storage.setMeta(META_SYNC_TOMBSTONES, JSON.stringify(union));
+    return union;
+  });
+  return tombstoneQueue;
+}
+
 /** Record a profile deletion so it sticks across synced devices. */
 export async function recordProfileDeletion(storage: StorageAdapter, profileId: string) {
-  const tombstones = await loadTombstones(storage);
-  tombstones.deletedProfiles[profileId] = new Date().toISOString();
-  await storage.setMeta(META_SYNC_TOMBSTONES, JSON.stringify(tombstones));
+  await commitTombstones(storage, {
+    deletedProfiles: { [profileId]: new Date().toISOString() },
+    clearedSessions: {},
+  });
 }
 
 /** Record a progression reset so old sessions do not resurrect via sync. */
 export async function recordSessionsCleared(storage: StorageAdapter, profileId: string) {
-  const tombstones = await loadTombstones(storage);
-  tombstones.clearedSessions[profileId] = new Date().toISOString();
-  await storage.setMeta(META_SYNC_TOMBSTONES, JSON.stringify(tombstones));
+  await commitTombstones(storage, {
+    deletedProfiles: {},
+    clearedSessions: { [profileId]: new Date().toISOString() },
+  });
 }
 
 /**
@@ -394,7 +425,10 @@ export async function syncNow(storage: StorageAdapter): Promise<boolean> {
       // from `merged` through nothing but timing, and gets destroyed.
       const snapshotSessionIds = new Set(local.sessions.map((s) => s.id));
       await applyLocally(storage, merged, snapshotSessionIds);
-      await storage.setMeta(META_SYNC_TOMBSTONES, JSON.stringify(merged.tombstones));
+      // Union, not overwrite: a delete/reset recorded during this cycle's
+      // network round-trip is in the stored value but not in `merged`
+      // (read before the trip). It survives here and propagates next cycle.
+      await commitTombstones(storage, merged.tombstones);
       await storage.setMeta(META_SYNC_DEVICES, JSON.stringify(merged.devices ?? {}));
 
       // 4. Push, guarded by the revision we pulled.
