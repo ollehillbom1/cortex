@@ -353,4 +353,68 @@ describe("applySession", () => {
     expect(out.profile.records["reaction-time:bestMs"].value).toBe(200);
     expect(out.newRecords).not.toContain("reaction-time:bestMs");
   });
+
+  // The three below close gaps a mutation audit found in applySession: the
+  // achievement-stamping block, the first-record newRecords branch, and the
+  // non-finite guard all had mutants no test killed.
+
+  it("stamps unlocked achievements onto the profile and keeps existing ones", () => {
+    const profile = createProfile({ id: "p1", name: "Test" });
+    profile.achievements = { "warming-up": "2026-07-01T00:00:00.000Z" };
+    const now = new Date(2026, 6, 31, 12, 0, 0);
+    const out = applySession({ profile, session: makeSession(), priorSessionCount: 0, now });
+    // Unlocking must WRITE to the profile, not just be reported in `unlocked`.
+    expect(out.unlocked).toContain("first-session");
+    expect(out.profile.achievements["first-session"]).toBe(now.toISOString());
+    // ...without dropping achievements earned before.
+    expect(out.profile.achievements["warming-up"]).toBe("2026-07-01T00:00:00.000Z");
+  });
+
+  it("reports a first-ever count record in newRecords", () => {
+    const profile = createProfile({ id: "p1", name: "Test" });
+    const out = applySession({
+      profile,
+      session: makeSession({
+        exercises: [
+          {
+            exerciseId: "number-span",
+            rounds: 4,
+            accuracy: 0.9,
+            levelBefore: 1,
+            levelAfter: 1,
+            xp: 10,
+            details: { maxSpan: 6 },
+          },
+        ],
+      }),
+      priorSessionCount: 0,
+      now: new Date(2026, 6, 31, 12, 0, 0),
+    });
+    expect(out.newRecords).toContain("number-span:maxSpan");
+    expect(out.profile.records["number-span:maxSpan"].value).toBe(6);
+  });
+
+  it("ignores a record whose value is not finite", () => {
+    const profile = createProfile({ id: "p1", name: "Test" });
+    const out = applySession({
+      profile,
+      session: makeSession({
+        exercises: [
+          {
+            exerciseId: "number-span",
+            rounds: 4,
+            accuracy: 0.9,
+            levelBefore: 1,
+            levelAfter: 1,
+            xp: 10,
+            details: { maxSpan: NaN },
+          },
+        ],
+      }),
+      priorSessionCount: 0,
+      now: new Date(2026, 6, 31, 12, 0, 0),
+    });
+    expect(out.profile.records["number-span:maxSpan"]).toBeUndefined();
+    expect(out.newRecords).not.toContain("number-span:maxSpan");
+  });
 });
