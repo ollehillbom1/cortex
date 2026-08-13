@@ -1,5 +1,13 @@
 # Changelog
 
+## v1.11.0 — 2026-08-13
+
+- fix(sync): keep the old backup when the lost-device rotation's push fails (#128)
+- test(e2e): filter WebKit's RSC-prefetch pageerror noise from the console net (#129)
+- fix(sync): stop reset resurrection and attempts-shrink in profile merge (#127)
+- test: add three standing bug-nets — property sweep, console net, monkey walk (#125)
+- fix(pwa): disable zoom app-wide, and own the accessibility trade openly (#124)
+
 ## v1.10.0 — 2026-08-12
 
 - feat(theme): give every modality a colour, and every exercise its own (#122)
