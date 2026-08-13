@@ -273,6 +273,25 @@ describe("applySession", () => {
     expect(out.session.unlocked).toContain("first-session");
   });
 
+  it("credits the streak to the day training began, not when the save crossed midnight", () => {
+    // Trained yesterday (the 30th). Tonight's session STARTED 23:59 on the
+    // 31st but the commit landed 00:03 on Aug 1. Anchored to the finish it is
+    // a 2-day gap from the 30th — reset, since there is no freeze. Anchored to
+    // the start it is a clean consecutive day. Dates built from local
+    // components so the assertion is timezone-independent (dayKey is local).
+    const profile = createProfile({ id: "p1", name: "Test" });
+    profile.streak = { current: 5, best: 5, lastActiveDay: "2026-07-30", freezes: 0 };
+    const out = applySession({
+      profile,
+      session: makeSession({ startedAt: new Date(2026, 6, 31, 23, 59, 0).toISOString() }),
+      priorSessionCount: 1,
+      now: new Date(2026, 7, 1, 0, 3, 0),
+    });
+    expect(out.streakReset).toBe(false);
+    expect(out.profile.streak.current).toBe(6);
+    expect(out.profile.streak.lastActiveDay).toBe("2026-07-31");
+  });
+
   it("tracks personal records, including lower-is-better reaction times", () => {
     const profile = createProfile({ id: "p1", name: "Test" });
     profile.records["reaction-time:bestMs"] = { value: 300, achievedAt: "2026-07-01" };

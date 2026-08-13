@@ -29,10 +29,16 @@ export interface ApplySessionOutput {
 
 export function applySession(input: ApplySessionInput): ApplySessionOutput {
   const now = input.now ?? new Date();
-  const today = dayKey(now);
   const { session } = input;
 
-  const streakUpdate = recordActiveDay(input.profile.streak, today);
+  // Anchor the streak to the day training BEGAN, not when the save committed.
+  // A session that starts before midnight and finishes just after it would
+  // otherwise land on the next day: a false gap from the previous day (burning
+  // a freeze or resetting), or — after an earlier session the same evening —
+  // double-counting that evening as two streak days. Records and updatedAt
+  // still use `now`; only the day the streak attributes to changes.
+  const streakDay = dayKey(new Date(session.startedAt));
+  const streakUpdate = recordActiveDay(input.profile.streak, streakDay);
 
   const { records, newRecords } = mergeRecords(input.profile.records, session.exercises, now);
 
