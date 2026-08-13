@@ -6,8 +6,14 @@ import { createProfile } from "@/lib/storage/profileFactory";
 import { CURRENT_DATA_VERSION } from "@/lib/storage/migrations";
 import type { SessionRecord } from "@/lib/domain/types";
 import { deriveCredentials, encryptJson } from "./crypto";
-import { emptyTombstones, type SyncState } from "./merge";
-import { enableSync, syncNow } from "./engine";
+import { emptyTombstones, type SyncState, type SyncTombstones } from "./merge";
+import {
+  enableSync,
+  META_SYNC_TOMBSTONES,
+  recordProfileDeletion,
+  recordSessionsCleared,
+  syncNow,
+} from "./engine";
 
 /**
  * Resetting progression on one device has to reach the others. The merge
@@ -98,6 +104,25 @@ describe("progression reset across devices", () => {
     // And a second sync does not bring them back.
     expect(await syncNow(storage)).toBe(true);
     expect(await storage.listSessions(PROFILE_ID)).toEqual([]);
+  });
+
+  it("concurrent tombstone writes never clobber each other", async () => {
+    // The runner fires syncNow in the background at the end of a session, so
+    // an in-flight cycle's tombstone write can land amid a delete and a
+    // reset. Read-modify-write on the single meta key kept only the last;
+    // deleted profiles and cleared sessions then resurrected on the next
+    // sync. The serialized union must keep every tombstone whatever the
+    // interleaving.
+    const storage = new IndexedDBAdapter();
+    await Promise.all([
+      recordProfileDeletion(storage, "prof-A"),
+      recordSessionsCleared(storage, "prof-B"),
+      recordProfileDeletion(storage, "prof-C"),
+      recordSessionsCleared(storage, "prof-D"),
+    ]);
+    const stored = JSON.parse((await storage.getMeta(META_SYNC_TOMBSTONES))!) as SyncTombstones;
+    expect(Object.keys(stored.deletedProfiles).sort()).toEqual(["prof-A", "prof-C"]);
+    expect(Object.keys(stored.clearedSessions).sort()).toEqual(["prof-B", "prof-D"]);
   });
 
   it("never deletes a session that was finished while the sync was running", async () => {
