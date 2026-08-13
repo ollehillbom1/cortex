@@ -1,5 +1,14 @@
 # Changelog
 
+## v1.11.1 — 2026-08-13
+
+- test(apply): close the record + achievement gaps a mutation audit found (#136)
+- fix(streak): anchor the streak to the session's start day, not the save time (#135)
+- fix(split-second): ignore a double-tap on the ring so a trial isn't skipped (#134)
+- fix(session): pause the feedback auto-advance while the quit dialog is open (#133)
+- fix(sync): serialise tombstone writes so a concurrent cycle cannot lose one (#132)
+- fix(session): persist a completed exercise's skill from its finalized block, not live state (#131)
+
 ## v1.11.0 — 2026-08-13
 
 - fix(sync): keep the old backup when the lost-device rotation's push fails (#128)
