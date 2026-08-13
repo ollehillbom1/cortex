@@ -186,20 +186,22 @@ export function mergeProfiles(
   const loserWasCleared = Boolean(clearedAt && (loser.updatedAt ?? "") < clearedAt);
 
   const skills: Profile["skills"] = { ...winner.skills };
-  for (const [id, loserSkill] of Object.entries(loser.skills)) {
-    const mine = skills[id as keyof Profile["skills"]];
-    if (!loserSkill) continue;
-    if (!mine || (loserSkill.updatedAt ?? "") > (mine.updatedAt ?? "")) {
-      skills[id as keyof Profile["skills"]] = loserSkill;
-    }
-    // attempts only ever grows, so a clock behind the other device must not
-    // make it shrink — that would re-trigger the x1.8 calibration ramp.
-    const chosen = skills[id as keyof Profile["skills"]];
-    if (chosen && mine) {
-      skills[id as keyof Profile["skills"]] = {
-        ...chosen,
-        attempts: Math.max(chosen.attempts, mine.attempts),
-      };
+  // A cleared winner carries {} skills, and merging the loser's back in is
+  // exactly the reset the user asked for, resurrected one device at a time —
+  // the same guard records and achievements already have.
+  if (!loserWasCleared) {
+    for (const [id, loserSkill] of Object.entries(loser.skills)) {
+      const mine = winner.skills[id as keyof Profile["skills"]];
+      if (!loserSkill) continue;
+      let chosen =
+        !mine || (loserSkill.updatedAt ?? "") > (mine.updatedAt ?? "") ? loserSkill : mine;
+      // attempts only ever grows, so a clock behind the other device must not
+      // make it shrink — that would re-trigger the x1.8 calibration ramp. Max
+      // against BOTH sides: when the winner is chosen but the loser trained
+      // more, comparing chosen against the winner alone was a no-op that lost
+      // the loser's higher count.
+      if (mine) chosen = { ...chosen, attempts: Math.max(loserSkill.attempts, mine.attempts) };
+      skills[id as keyof Profile["skills"]] = chosen;
     }
   }
 
@@ -221,10 +223,17 @@ export function mergeProfiles(
     }
   }
 
+  // A reset zeroes the streak (current, best, freezes, lastActiveDay). The
+  // loser still carries the pre-reset streak with a real lastActiveDay, so
+  // "further day wins" plus "Math.max(best)" would resurrect exactly what the
+  // reset cleared — the streak needs the same cleared-guard as skills.
   const aheadOnDays =
     (loser.streak.lastActiveDay ?? "") > (winner.streak.lastActiveDay ?? "")
       ? loser.streak
       : winner.streak;
+  const streak = loserWasCleared
+    ? winner.streak
+    : { ...aheadOnDays, best: Math.max(x.streak.best, y.streak.best) };
 
   return {
     ...winner,
@@ -232,10 +241,7 @@ export function mergeProfiles(
     skills,
     records,
     achievements,
-    streak: {
-      ...aheadOnDays,
-      best: Math.max(x.streak.best, y.streak.best),
-    },
+    streak,
   };
 }
 
