@@ -11,6 +11,17 @@ import { expect, test as base } from "@playwright/test";
  * errors. Everything the APP says via console.error — React warnings
  * included — stays fatal.
  */
+const BENIGN = [
+  /Failed to load resource/i,
+  /net::ERR_/i,
+  // WebKit-only: it blocks Next.js's RSC prefetch (the `_rsc` query param
+  // that <Link> warms) and reports it as a pageerror "due to access control
+  // checks". Benign — the real navigation refetches on click, and Chromium
+  // never emits it. Without this the net is flaky on WebKit for any test
+  // that renders a prefetching <Link>, which is every page.
+  /_rsc=.*due to access control checks/i,
+];
+
 export const test = base.extend<{ consoleNet: void }>({
   consoleNet: [
     async ({ page }, use, testInfo) => {
@@ -20,8 +31,7 @@ export const test = base.extend<{ consoleNet: void }>({
       });
       page.on("pageerror", (err) => errors.push(`pageerror: ${err.message}`));
       await use();
-      const benign = [/Failed to load resource/i, /net::ERR_/i];
-      const real = errors.filter((e) => !benign.some((p) => p.test(e)));
+      const real = errors.filter((e) => !BENIGN.some((p) => p.test(e)));
       expect(real, `console errors during "${testInfo.title}"`).toEqual([]);
     },
     { auto: true },
