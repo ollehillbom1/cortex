@@ -133,6 +133,12 @@ export function SessionRunner() {
   // updated as rounds beat them, so the per-round personal-best XP bonus sees
   // a best set two rounds ago instead of paying twice for the same value.
   const sessionRecords = useRef<Profile["records"] | null>(null);
+  // Skill estimate per exercise as of its last COMPLETED block. The live
+  // `skills` state updates every round, including rounds of a repeat block the
+  // user then discards (quit) or that is skipped as unavailable — so persisting
+  // live `skills` for a completed exercise would fold those discarded rounds
+  // into the saved estimate. This is snapshotted only when a block finalizes.
+  const finalizedSkills = useRef<Record<string, SkillState>>({});
   // State, not a ref: the per-round seed below is derived during render, and
   // refs may not be read there. Lazy init keeps it stable for the session.
   const [seedBase] = useState(timeSeed);
@@ -229,6 +235,10 @@ export function SessionRunner() {
     if (!currentItem || blockRounds.current.length === 0) return null;
     const id = currentItem.exerciseId;
     const rounds = blockRounds.current;
+    // Snapshot the estimate this COMPLETED block produced (same source as
+    // levelAfter below), so persistSession saves this rather than the live
+    // state a later discarded repeat block may have moved.
+    if (!practice) finalizedSkills.current[id] = skills[id] ?? initialSkill();
     const accuracy = rounds.reduce((a, r) => a + r.result.accuracy, 0) / rounds.length;
     const responseTimes = rounds
       .map((r) => r.result.responseMs)
@@ -289,7 +299,11 @@ export function SessionRunner() {
       };
       const priorSessions = await getStorage().listSessions(profile.id);
       const playedSkills = { ...profile.skills };
-      for (const e of exercises) playedSkills[e.exerciseId] = skills[e.exerciseId];
+      // The finalized snapshot, not live `skills`: a completed exercise whose
+      // repeat block was later discarded must be saved as its last completed
+      // block left it, not as the discarded rounds moved the live estimate.
+      for (const e of exercises)
+        playedSkills[e.exerciseId] = finalizedSkills.current[e.exerciseId] ?? skills[e.exerciseId];
       const applied = applySession({
         profile: { ...profile, skills: playedSkills },
         session: record,
