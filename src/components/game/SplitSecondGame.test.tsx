@@ -84,6 +84,29 @@ describe("SplitSecondGame", () => {
     expect(result.accuracy).toBeCloseTo(0.5);
   });
 
+  it("ignores a double-tap on the ring so the next trial is not skipped", () => {
+    const onRoundComplete = vi.fn();
+    renderGame(onRoundComplete);
+    stimulusToAnswer();
+
+    // Answer the centre, then tap two ring positions within the feedback
+    // window (stage stays "answer-target" until nextTrial fires). The second
+    // tap must be ignored — otherwise it scheduled a second nextTrial and the
+    // functional setTrialIndex advanced twice, skipping trial 2.
+    const t0 = trials[0];
+    fireEvent.click(screen.getByRole("button", { name: t0.centre === 0 ? "Circle" : "Square" }));
+    fireEvent.click(screen.getByRole("button", { name: `Position ${t0.target + 1}` }));
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: `Position ${((t0.target + 2) % params.positions) + 1}`,
+      }),
+    );
+    act(() => vi.advanceTimersByTime(750));
+
+    // On trial 2 of N (fixation), not trial 3 — trial 2 was not skipped.
+    expect(screen.getByText(/Eyes on the cross — 2\//)).toBeTruthy();
+  });
+
   it("does not accept ring answers before the symbol answer", () => {
     const onRoundComplete = vi.fn();
     renderGame(onRoundComplete);

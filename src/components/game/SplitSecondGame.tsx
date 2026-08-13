@@ -39,6 +39,12 @@ export function SplitSecondGame({ level, seed, audio, soundOn, onRoundComplete }
   const centreChoice = useRef<number | null>(null);
   const answerShownAt = useRef(0);
   const answerMs = useRef<number[]>([]);
+  // A ring answer schedules nextTrial in 700 ms but leaves `stage` on
+  // "answer-target" until it fires, so a second tap in that window passed the
+  // stage guard and scheduled a SECOND nextTrial — the functional
+  // setTrialIndex then advanced twice, silently skipping a trial (scored a
+  // miss). This latches the trial as answered until the next one begins.
+  const answered = useRef(false);
   const done = useRef(false);
   useEffect(
     () => () => {
@@ -86,6 +92,7 @@ export function SplitSecondGame({ level, seed, audio, soundOn, onRoundComplete }
 
   const nextTrial = useCallback(() => {
     if (done.current) return;
+    answered.current = false;
     setFeedback(null);
     if (trialIndex + 1 < trials.length) {
       setTrialIndex((i) => i + 1);
@@ -106,7 +113,8 @@ export function SplitSecondGame({ level, seed, audio, soundOn, onRoundComplete }
 
   const answerTarget = useCallback(
     (position: number) => {
-      if (stage !== "answer-target" || done.current) return;
+      if (stage !== "answer-target" || done.current || answered.current) return;
+      answered.current = true;
       const trial = trials[trialIndex];
       const centre = centreChoice.current;
       answers.current[trialIndex] = { centre, target: position };
