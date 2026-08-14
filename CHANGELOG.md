@@ -1,5 +1,9 @@
 # Changelog
 
+## v1.11.2 — 2026-08-14
+
+- fix(audio): recover the Web Audio context after an iOS interruption (#138)
+
 ## v1.11.1 — 2026-08-13
 
 - test(apply): close the record + achievement gaps a mutation audit found (#136)
