@@ -46,16 +46,31 @@ export class AudioEngine {
   async unlock(): Promise<boolean> {
     if (!AudioEngine.webAudioSupported()) return false;
     try {
-      if (!this.ctx) {
-        this.ctx = new AudioContext();
-        this.gain = this.ctx.createGain();
-        this.gain.connect(this.ctx.destination);
+      if (!this.ctx) this.create();
+      // Resume from any non-running state, not just "suspended": iOS uses a
+      // non-standard "interrupted" state when a phone call, Siri or another
+      // audio app takes over, and it does NOT auto-resume afterwards.
+      if (this.ctx!.state !== "running") await this.ctx!.resume().catch(() => {});
+      // iOS can leave a context interrupted by a call in a state resume()
+      // cannot restore — the auditory exercises then read as "audio
+      // unavailable" for the rest of the session. Recreate it once from this
+      // gesture; a fresh context reliably starts. (Reported: a call mid Tone
+      // Pattern / Sound Span left the next round unplayable.)
+      if (this.ctx!.state !== "running") {
+        await this.ctx!.close().catch(() => {});
+        this.create();
+        if (this.ctx!.state === "suspended") await this.ctx!.resume().catch(() => {});
       }
-      if (this.ctx.state === "suspended") await this.ctx.resume();
-      return this.ctx.state === "running";
+      return this.ctx!.state === "running";
     } catch {
       return false;
     }
+  }
+
+  private create(): void {
+    this.ctx = new AudioContext();
+    this.gain = this.ctx.createGain();
+    this.gain.connect(this.ctx.destination);
   }
 
   get unlocked(): boolean {
