@@ -86,7 +86,7 @@ reverse proxy), set `TRUSTED_PROXIES` to the addresses your own hops append
 to `X-Forwarded-For` — otherwise the rate limiter sees the chain's internal
 address as "the client" and every visitor shares one request budget. With a
 single reverse proxy, leave it unset. Note that the app can only fix its own
-keying: any per-IP limiting *inside* the proxy chain (e.g. Apache `mod_qos`)
+keying: any per-IP limiting _inside_ the proxy chain (e.g. Apache `mod_qos`)
 has the same problem and needs the equivalent fix there (`mod_remoteip`).
 
 ## Environment variables
