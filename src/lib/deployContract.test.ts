@@ -55,6 +55,15 @@ describe("deploy command", () => {
     expect(prod).toContain("0.0.0.0:9922:3000");
   });
 
+  it("names the proxy chain's own hops so rate limiting keys on the client", () => {
+    // Behind Cloudflare → tunnel → Apache, the rightmost X-Forwarded-For
+    // entry is the chain's internal 127.0.0.1 for every request. Without
+    // TRUSTED_PROXIES the whole internet shares one rate-limit bucket —
+    // which is how production actually ran for a day in 2026-08.
+    const rendered = command("prod").replace(/\\/g, "");
+    expect(rendered).toContain("-e TRUSTED_PROXIES=127.0.0.1");
+  });
+
   it("deploys a named tag, never a floating one", () => {
     // "Deploy main" cannot be rolled back to; a tag can.
     expect(command("prod")).toContain("cortex:v0.0.0-test");

@@ -81,11 +81,21 @@ For LAN-only use without a domain, options are: a local CA (e.g. `mkcert`) with
 the certificate installed on your devices, or Tailscale/`tailscale cert` which
 gives every node a valid HTTPS name with zero exposure to the internet.
 
+**If more than one proxy stands in front** (a CDN or tunnel ahead of the
+reverse proxy), set `TRUSTED_PROXIES` to the addresses your own hops append
+to `X-Forwarded-For` — otherwise the rate limiter sees the chain's internal
+address as "the client" and every visitor shares one request budget. With a
+single reverse proxy, leave it unset. Note that the app can only fix its own
+keying: any per-IP limiting _inside_ the proxy chain (e.g. Apache `mod_qos`)
+has the same problem and needs the equivalent fix there (`mod_remoteip`).
+
 ## Environment variables
 
 See `.env.example`. `PORT`, `HOSTNAME` and `SYNC_DATA_DIR` (default `./data`,
 `/app/data` in the image — where the sync endpoint stores encrypted blobs) are
 all a normal deployment needs; no secrets or API keys are required.
+`TRUSTED_PROXIES` matters only behind a chained proxy setup — see the
+reverse-proxy section above.
 
 Optionally, `COACH_API_BASE` + `COACH_MODEL` enable AI rewording of insights
 against a language-model endpoint you run yourself, e.g. Ollama on the same

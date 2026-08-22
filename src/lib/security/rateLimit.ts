@@ -83,18 +83,46 @@ export function createRateLimiter(options: {
 }
 
 /**
- * Client key for rate limiting, from the rightmost X-Forwarded-For entry.
+ * Client key for rate limiting: the rightmost X-Forwarded-For entry that is
+ * not one of our own proxy hops.
  *
  * Rightmost, not leftmost: each proxy appends the address it accepted the
- * connection from, so the last entry is the one our own proxy observed and
- * the only one an external client cannot choose freely. Requests that arrive
- * without the header (direct tailnet access, e2e against localhost) share
- * one bucket — those callers are trusted anyway.
+ * connection from, so entries grow more trustworthy to the right — the
+ * leftmost ones are whatever the client claimed. But the literal rightmost
+ * entry is only the client when exactly one proxy stands in front. Behind a
+ * chain (CDN → tunnel → reverse proxy), the last entry is the chain's own
+ * internal hop — the same address for every client on the internet, which
+ * silently collapses all buckets into one shared budget.
+ *
+ * TRUSTED_PROXIES names those own-hop addresses (comma-separated, matched
+ * exactly against the entry); the key is the first entry from the right that
+ * is not in the list. Unset, the plain rightmost entry is used, which is
+ * correct for a single proxy. Requests without the header (direct tailnet
+ * access, e2e against localhost) share one bucket — those callers are
+ * trusted anyway.
  */
-export function clientKey(headers: Headers): string {
+export function clientKey(
+  headers: Headers,
+  trustedProxies: readonly string[] = envTrustedProxies(),
+): string {
   const forwarded = headers.get("x-forwarded-for");
   if (!forwarded) return "direct";
-  const parts = forwarded.split(",");
-  const last = parts[parts.length - 1].trim();
-  return last || "direct";
+  const parts = forwarded
+    .split(",")
+    .map((part) => part.trim())
+    .filter(Boolean);
+  if (parts.length === 0) return "direct";
+  let index = parts.length - 1;
+  while (index > 0 && trustedProxies.includes(parts[index].toLowerCase())) index -= 1;
+  return parts[index];
+}
+
+let cachedTrustedProxies: string[] | undefined;
+
+function envTrustedProxies(): string[] {
+  cachedTrustedProxies ??= (process.env.TRUSTED_PROXIES ?? "")
+    .split(",")
+    .map((entry) => entry.trim().toLowerCase())
+    .filter(Boolean);
+  return cachedTrustedProxies;
 }
