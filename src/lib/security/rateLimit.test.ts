@@ -75,4 +75,38 @@ describe("clientKey", () => {
     expect(clientKey(new Headers())).toBe("direct");
     expect(clientKey(new Headers({ "x-forwarded-for": "  " }))).toBe("direct");
   });
+
+  it("walks past trusted proxy hops to the real client", () => {
+    // The 2026-08 production chain: Cloudflare appends the client address,
+    // then Apache appends the local tunnel hop. Keying on the literal
+    // rightmost entry gave every client on the internet the same bucket.
+    const headers = new Headers({ "x-forwarded-for": "9.9.9.9, 127.0.0.1" });
+    expect(clientKey(headers, ["127.0.0.1"])).toBe("9.9.9.9");
+  });
+
+  it("does not let a spoofed header reach past a trusted hop", () => {
+    // The client-controlled entries sit to the LEFT of the entry the first
+    // trusted proxy appended; the walk must stop at the first untrusted
+    // entry rather than continue into the spoofed ones.
+    const headers = new Headers({ "x-forwarded-for": "1.2.3.4, 9.9.9.9, 127.0.0.1" });
+    expect(clientKey(headers, ["127.0.0.1"])).toBe("9.9.9.9");
+  });
+
+  it("skips several trusted hops in a row", () => {
+    const headers = new Headers({ "x-forwarded-for": "9.9.9.9, 10.0.0.2, 127.0.0.1" });
+    expect(clientKey(headers, ["127.0.0.1", "10.0.0.2"])).toBe("9.9.9.9");
+  });
+
+  it("keys on the leftmost entry when every entry is a trusted hop", () => {
+    // Traffic originating inside the chain itself (proxy health checks).
+    // One bucket for all of it is fine; returning "direct" would merge it
+    // with the tailnet callers, which have a different trust story.
+    const headers = new Headers({ "x-forwarded-for": "127.0.0.1" });
+    expect(clientKey(headers, ["127.0.0.1"])).toBe("127.0.0.1");
+  });
+
+  it("changes nothing when no trusted proxies are configured", () => {
+    const headers = new Headers({ "x-forwarded-for": "1.2.3.4, 9.9.9.9" });
+    expect(clientKey(headers, [])).toBe("9.9.9.9");
+  });
 });

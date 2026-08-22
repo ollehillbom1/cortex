@@ -61,6 +61,15 @@ case "$ENVIRONMENT" in
   *) echo "unknown environment: $ENVIRONMENT" >&2; exit 2 ;;
 esac
 
+# The proxy chain in front of production ends in hops of its own (Cloudflare
+# → tunnel → Apache), so the rightmost X-Forwarded-For entry the app sees is
+# the chain's internal address, not the client. TRUSTED_PROXIES names those
+# hops so the rate limiter can key on the real client; see clientKey() in
+# src/lib/security/rateLimit.ts. Staging is loopback-only (no proxy, no XFF)
+# but gets the same value so the two environments do not quietly diverge.
+TRUSTED_PROXIES="${CORTEX_TRUSTED_PROXIES:-127.0.0.1}"
+RUNTIME_ENV=(-e "TRUSTED_PROXIES=$TRUSTED_PROXIES")
+
 # The hardened runtime. Every flag here was verified against the full app
 # surface (pages, health, sync writes) before being made the default; see
 # docs/deployment.md. Do not thin this list to make something work without
@@ -78,7 +87,7 @@ HARDENING=(
 )
 
 IMAGE="cortex:$TAG"
-CMD=(docker run -d --name "$NAME" "${HARDENING[@]}" -p "$PORT_BINDING" -v "$VOLUME:/app/data" "$IMAGE")
+CMD=(docker run -d --name "$NAME" "${HARDENING[@]}" "${RUNTIME_ENV[@]}" -p "$PORT_BINDING" -v "$VOLUME:/app/data" "$IMAGE")
 
 if [ "${PRINT_ONLY:-0}" = 1 ]; then
   printf '%q ' "${CMD[@]}"; echo
@@ -126,7 +135,7 @@ else
   if [ -n "$PREVIOUS" ] && [ "$PREVIOUS" != "$IMAGE" ]; then
     echo "rolling back to $PREVIOUS" >&2
     docker rm -f "$NAME" >/dev/null 2>&1 || true
-    docker run -d --name "$NAME" "${HARDENING[@]}" -p "$PORT_BINDING" -v "$VOLUME:/app/data" "$PREVIOUS" >/dev/null
+    docker run -d --name "$NAME" "${HARDENING[@]}" "${RUNTIME_ENV[@]}" -p "$PORT_BINDING" -v "$VOLUME:/app/data" "$PREVIOUS" >/dev/null
     # Verify the rollback the same way, so "rolled back" is never a hope.
     rb_deadline=$(( $(date +%s) + TIMEOUT ))
     while [ "$(date +%s)" -lt "$rb_deadline" ]; do
