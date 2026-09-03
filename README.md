@@ -156,12 +156,13 @@ rotated logs. The app needs none of what is closed off.
 
 For an ongoing deployment there is a small operations toolkit in `ops/`:
 
-| Script           | What it does                                                                                                                      |
-| ---------------- | --------------------------------------------------------------------------------------------------------------------------------- |
-| `release.sh`     | changelog + version + git tag + image, gated on clean main and green CI                                                           |
-| `deploy.sh`      | run a named tag in prod or staging; accepts a deploy only when it actually serves, otherwise rolls back and verifies the rollback |
-| `watchdog.sh`    | probe health, TLS expiry, container, disk, backup freshness; page a human on the second consecutive failure                       |
-| `backup-sync.sh` | encrypted backup of the sync volume that decrypts its own output, plus a restore drill that diffs against live                    |
+| Script                 | What it does                                                                                                                      |
+| ---------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
+| `release.sh`           | changelog + version + git tag + image, gated on clean main and green CI                                                           |
+| `deploy.sh`            | run a named tag in prod or staging; accepts a deploy only when it actually serves, otherwise rolls back and verifies the rollback |
+| `watchdog.sh`          | probe health, TLS expiry, container, disk, backup freshness; page a human on the second consecutive failure                       |
+| `host-disk-hygiene.sh` | bound reproducible host build/test caches before disk usage reaches the watchdog alarm threshold                                  |
+| `backup-sync.sh`       | encrypted backup of the sync volume that decrypts its own output, plus a restore drill that diffs against live                    |
 
 Everything deployment-specific — hostnames, alarm targets — is read from the
 environment. None of it belongs in a public repository, and a test fails the

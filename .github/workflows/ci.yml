@@ -29,6 +29,10 @@ jobs:
         run: npm run typecheck
       - name: Unit tests
         run: npm run test
+      - name: Host operations self-tests
+        run: |
+          bash ops/watchdog.sh --self-test
+          bash ops/host-disk-hygiene.sh --self-test
       - name: Production build
         run: npm run build
         env:

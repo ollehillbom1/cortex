@@ -146,6 +146,23 @@ ops/watchdog.sh --self-test    # state machine, offline, no SMS (also runs in CI
 ops/watchdog.sh --test-alarm   # one real message, so you know the path works
 ```
 
+On a combined application/build host, install the bounded cache hygiene timer
+as a first line of defence against test and build artefacts filling the root
+filesystem:
+
+```bash
+ops/install-host-disk-hygiene.sh --user
+ops/host-disk-hygiene.sh --check
+```
+
+The timer runs hourly but mutates nothing below 80% root usage. Above that
+threshold it removes only aged, reproducible Jest/local-CI cache entries and
+old Docker build cache. It protects shared caches while Jest, Vitest, or local
+CI is running; detached scratch-cache roots remain eligible, but anything with
+Git worktree metadata fails closed. It never prunes Docker images, volumes,
+container logs, application data, repositories, or Git worktrees. The Cortex
+watchdog still pages at 90%.
+
 > **A watchdog on the Docker host cannot report that the Docker host is
 > down.** The install supports `--remote-only` for exactly this: run it on a
 > second machine (the reverse-proxy RPi is the natural home) and it probes the
