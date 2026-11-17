@@ -221,7 +221,7 @@ ops/release.sh prepare 1.2.3                # changelog + version bump, as a PR
 # …merge that PR…
 ops/release.sh tag 1.2.3                    # verify green CI, tag, build image
 ops/deploy.sh --env staging --tag v1.2.3    # loopback :9923, its own volume
-ops/deploy.sh --env prod    --tag v1.2.3    # :9922, the live sync volume
+ops/deploy.sh --env prod    --tag v1.2.3    # :9922 (loopback + proxy address), the live sync volume
 ops/deploy.sh --env prod    --tag v1.2.2    # rollback = a deliberate choice
 ```
 
@@ -236,6 +236,33 @@ passed". `deploy.sh` holds the hardened runtime flags (one place,
 pinned by `deployContract.test.ts`) and accepts a deploy only when the new
 container **actually answers on its port**; anything else rolls back to the
 previous image and verifies that the rollback serves.
+
+Production publishes port 9922 on loopback plus the address(es) the reverse
+proxy reaches the host on — never on `0.0.0.0`, which would expose the app
+on every interface and past the host firewall (Docker-published ports
+bypass it). Those addresses belong to the host, not the repository, so
+`deploy.sh` reads them from `CORTEX_PROD_PROXY_ADDRS`, normally set in
+`~/.config/cortex/deploy.env` (override the path with
+`CORTEX_DEPLOY_ENV_FILE`):
+
+```bash
+# ~/.config/cortex/deploy.env — comma- or space-separated, IPv6 allowed
+CORTEX_PROD_PROXY_ADDRS=<proxy-facing address of this host>
+```
+
+Only that key is read from the file (it is not sourced), and a value in the
+environment wins over it. A production deploy refuses to run without it
+(`none` means loopback only), accepts only plain IPv4/IPv6 literals, refuses
+every spelling of a wildcard (an empty list element included — Docker reads
+`-p :9922:3000` as all interfaces), IPv4-mapped and link-local IPv6, and an
+address that is not assigned to the host as `ip -o addr` prints it (write
+IPv6 compressed, in lower case) — all before the running container is
+removed.
+
+Binding to loopback alone would deploy "healthy" —
+the health check runs on this host — while the public app behind the proxy
+answers 503. If the proxy address belongs to a VPN interface, that interface
+must be up before Docker starts the container after a reboot.
 
 ## Running without Docker
 
