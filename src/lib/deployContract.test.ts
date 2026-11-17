@@ -21,7 +21,11 @@ const script = new URL("../../ops/deploy.sh", import.meta.url).pathname;
 function command(env: "prod" | "staging", proxyAddrs = "192.0.2.10"): string {
   return execFileSync("bash", [script, "--tag", "v0.0.0-test", "--env", env, "--print-only"], {
     encoding: "utf8",
-    env: { ...process.env, CORTEX_DEPLOY_ENV_FILE: "/nonexistent", CORTEX_PROD_PROXY_ADDRS: proxyAddrs },
+    env: {
+      ...process.env,
+      CORTEX_DEPLOY_ENV_FILE: "/nonexistent",
+      CORTEX_PROD_PROXY_ADDRS: proxyAddrs,
+    },
   });
 }
 
@@ -30,7 +34,11 @@ function command(env: "prod" | "staging", proxyAddrs = "192.0.2.10"): string {
 function refusal(proxyAddrs: string): string | null {
   const r = spawnSync("bash", [script, "--tag", "v0.0.0-test", "--env", "prod", "--print-only"], {
     encoding: "utf8",
-    env: { ...process.env, CORTEX_DEPLOY_ENV_FILE: "/nonexistent", CORTEX_PROD_PROXY_ADDRS: proxyAddrs },
+    env: {
+      ...process.env,
+      CORTEX_DEPLOY_ENV_FILE: "/nonexistent",
+      CORTEX_PROD_PROXY_ADDRS: proxyAddrs,
+    },
   });
   return r.status === 2 && r.stderr.includes("CORTEX_PROD_PROXY_ADDRS:") ? r.stderr : null;
 }
@@ -112,13 +120,32 @@ describe("deploy command", () => {
   });
 
   it.each([
-    ",", "a,,b", ",192.0.2.10", // empty field: Docker reads it as all interfaces
-    "0.0.0.0", "000.0.0.0", "::", "::0", "0:0:0:0:0:0:0:0", "[::]", "[0.0.0.0]", "::ffff:0.0.0.0",
-    "*", "0", "0.0.0.0/0", "256.1.1.1", "host.example", "None", "192.0.2.10,0.0.0.0",
-    "127.0.0.1", "::1", // loopback is always published; it is not a proxy address
-    "::ffff:0:0", "0::ffff:0:0", // IPv4-mapped 0.0.0.0 in hex form
+    ",",
+    "a,,b",
+    ",192.0.2.10", // empty field: Docker reads it as all interfaces
+    "0.0.0.0",
+    "000.0.0.0",
+    "::",
+    "::0",
+    "0:0:0:0:0:0:0:0",
+    "[::]",
+    "[0.0.0.0]",
+    "::ffff:0.0.0.0",
+    "*",
+    "0",
+    "0.0.0.0/0",
+    "256.1.1.1",
+    "host.example",
+    "None",
+    "192.0.2.10,0.0.0.0",
+    "127.0.0.1",
+    "::1", // loopback is always published; it is not a proxy address
+    "::ffff:0:0",
+    "0::ffff:0:0", // IPv4-mapped 0.0.0.0 in hex form
     "fe80::1", // link-local: unbindable without a zone
-    "1::2::3", "192.0.2.10,", "192.0.2.10\n0.0.0.0",
+    "1::2::3",
+    "192.0.2.10,",
+    "192.0.2.10\n0.0.0.0",
   ])("refuses %j as a proxy address", (value) => {
     expect(refusal(value)).not.toBeNull();
   });
